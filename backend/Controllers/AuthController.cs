@@ -18,6 +18,9 @@ public class AuthController : ControllerBase
         _logger = logger;
     }
 
+    /// <summary>
+    /// Authenticates user credentials and returns JWT tokens
+    /// </summary>
     [HttpPost("login")]
     public async Task<ActionResult<LoginResponseDto>> Login([FromBody] LoginDto request)
     {
@@ -44,6 +47,9 @@ public class AuthController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Revokes the provided refresh token, effectively logging out the user
+    /// </summary>
     [HttpPost("logout")]
     public async Task<IActionResult> Logout([FromBody] LogoutDto request)
     {
@@ -70,6 +76,9 @@ public class AuthController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Exchanges a valid refresh token for new access and refresh tokens
+    /// </summary>
     [HttpPost("refresh")]
     public async Task<ActionResult<LoginResponseDto>> RefreshToken([FromBody] RefreshTokenDto request)
     {

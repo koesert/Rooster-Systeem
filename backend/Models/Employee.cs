@@ -25,5 +25,8 @@ public class Employee
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
+    /// <summary>
+    /// Computed property that combines first and last name for display purposes
+    /// </summary>
     public string FullName => $"{FirstName} {LastName}";
 }

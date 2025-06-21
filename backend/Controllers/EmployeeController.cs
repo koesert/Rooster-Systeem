@@ -8,7 +8,7 @@ namespace backend.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize] // All endpoints require authentication
 public class EmployeeController : ControllerBase
 {
     private readonly IEmployeeService _employeeService;
@@ -192,6 +192,10 @@ public class EmployeeController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Validates employee credentials without performing a full login.
+    /// Useful for password verification scenarios.
+    /// </summary>
     [HttpPost("validate")]
     public async Task<ActionResult<bool>> ValidateEmployee([FromBody] LoginDto request)
     {

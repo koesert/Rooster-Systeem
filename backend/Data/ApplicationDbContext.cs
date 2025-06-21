@@ -16,8 +16,10 @@ public class ApplicationDbContext : DbContext
 	{
 		base.OnModelCreating(modelBuilder);
 
+		// Configure Employee entity
 		modelBuilder.Entity<Employee>(entity =>
 		{
+			// Ensure username uniqueness at database level
 			entity.HasIndex(e => e.Username)
 				  .IsUnique()
 				  .HasDatabaseName("IX_Employees_Username");
@@ -38,6 +40,7 @@ public class ApplicationDbContext : DbContext
 				  .IsRequired()
 				  .HasMaxLength(100);
 
+			// Auto-populate timestamps using SQLite datetime function
 			entity.Property(e => e.CreatedAt)
 				  .HasDefaultValueSql("datetime('now')");
 
@@ -45,6 +48,7 @@ public class ApplicationDbContext : DbContext
 				  .HasDefaultValueSql("datetime('now')");
 		});
 
+		// Configure RefreshToken entity
 		modelBuilder.Entity<RefreshToken>(entity =>
 		{
 			entity.Property(rt => rt.Token)
@@ -57,11 +61,14 @@ public class ApplicationDbContext : DbContext
 			entity.Property(rt => rt.CreatedAt)
 				  .HasDefaultValueSql("datetime('now')");
 
+			// Set up foreign key relationship with cascade delete
+			// When an employee is deleted, all their refresh tokens are automatically removed
 			entity.HasOne(rt => rt.Employee)
 				  .WithMany()
 				  .HasForeignKey(rt => rt.EmployeeId)
 				  .OnDelete(DeleteBehavior.Cascade);
 
+			// Index for efficient token lookups during authentication
 			entity.HasIndex(rt => rt.Token)
 				  .HasDatabaseName("IX_RefreshTokens_Token");
 
@@ -69,6 +76,8 @@ public class ApplicationDbContext : DbContext
 				  .HasDatabaseName("IX_RefreshTokens_EmployeeId");
 		});
 
+		// Seed default admin user for initial system access
+		// Password: "Admin123" (meets validation requirements)
 		var adminPasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123");
 
 		modelBuilder.Entity<Employee>().HasData(

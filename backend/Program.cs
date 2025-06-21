@@ -10,22 +10,23 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllers();
 
-// Add Entity Framework
+// Configure Entity Framework with SQLite database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")
         ?? "Data Source=Data/restaurant_roster.db"));
 
-// Register custom services
+// Register custom services with dependency injection
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
-// Add JWT Settings to configuration
+// Configure JWT settings programmatically
+// In production, these should be stored in secure configuration
 var jwtKey = "RestaurantRoster_SuperSecure_JWT_Key_2025_With_Random_Characters_!@#$%^&*()";
 builder.Configuration["JwtSettings:Key"] = jwtKey;
 builder.Configuration["JwtSettings:Issuer"] = "RestaurantRoster";
 builder.Configuration["JwtSettings:Audience"] = "RestaurantRoster";
 
-// Add JWT Authentication
+// Configure JWT Bearer authentication
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -42,7 +43,7 @@ builder.Services.AddAuthentication(options =>
         ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
         ValidAudience = builder.Configuration["JwtSettings:Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
-        ClockSkew = TimeSpan.Zero
+        ClockSkew = TimeSpan.Zero // Remove default 5-minute clock skew for precise expiration
     };
 });
 
@@ -50,7 +51,7 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Add CORS policy for frontend (Next.js will run on port 3000)
+// Configure CORS for frontend communication (Next.js on port 3000)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend",
@@ -59,13 +60,14 @@ builder.Services.AddCors(options =>
             policy.WithOrigins("http://localhost:3000")
                   .AllowAnyHeader()
                   .AllowAnyMethod()
-                  .AllowCredentials();
+                  .AllowCredentials(); // Required for JWT cookies if used
         });
 });
 
 var app = builder.Build();
 
-// Ensure database is created and seeded
+// Ensure database is created and seeded on startup
+// This approach is acceptable for development but should use migrations in production
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -89,10 +91,10 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// Use CORS
+// Apply CORS policy before authentication
 app.UseCors("AllowFrontend");
 
-// Add authentication and authorization middleware
+// Authentication must come before authorization
 app.UseAuthentication();
 app.UseAuthorization();
 

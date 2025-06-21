@@ -45,6 +45,8 @@ public class AuthService : IAuthService
                 return null;
             }
 
+            // Security measure: invalidate all existing tokens for this user
+            // Prevents token accumulation and ensures single-session behavior
             await RevokeAllUserTokensAsync(employee.Id);
 
             var accessToken = GenerateAccessToken(employee);
@@ -88,6 +90,7 @@ public class AuthService : IAuthService
                 return false;
             }
 
+            // Mark token as revoked rather than deleting for audit trail
             token.IsRevoked = true;
             await _context.SaveChangesAsync();
 
@@ -104,6 +107,7 @@ public class AuthService : IAuthService
     {
         try
         {
+            // Find valid, non-revoked, non-expired refresh token
             var token = await _context.RefreshTokens
                 .Include(rt => rt.Employee)
                 .FirstOrDefaultAsync(rt => rt.Token == refreshToken && !rt.IsRevoked && rt.ExpiresAt > DateTime.UtcNow);
@@ -113,8 +117,10 @@ public class AuthService : IAuthService
                 return null;
             }
 
+            // Revoke the used refresh token (single-use tokens)
             token.IsRevoked = true;
 
+            // Generate new token pair
             var accessToken = GenerateAccessToken(token.Employee);
             var newRefreshToken = await GenerateRefreshTokenAsync(token.Employee.Id);
 
@@ -144,6 +150,10 @@ public class AuthService : IAuthService
         }
     }
 
+    /// <summary>
+    /// Generates a short-lived JWT access token (30 minutes)
+    /// Contains user identity claims for API authorization
+    /// </summary>
     public string GenerateAccessToken(Employee employee)
     {
         var jwtKey = _configuration["JwtSettings:Key"] ?? throw new InvalidOperationException("JWT Key not configured");
@@ -170,6 +180,10 @@ public class AuthService : IAuthService
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
+    /// <summary>
+    /// Generates a cryptographically secure refresh token (30 days lifespan)
+    /// Stored in database for validation during token refresh requests
+    /// </summary>
     public async Task<string> GenerateRefreshTokenAsync(int employeeId)
     {
         var randomBytes = new byte[64];
@@ -202,6 +216,10 @@ public class AuthService : IAuthService
         return refreshToken != null;
     }
 
+    /// <summary>
+    /// Revokes all active refresh tokens for a user
+    /// Used during login for security and during account management
+    /// </summary>
     public async Task RevokeAllUserTokensAsync(int employeeId)
     {
         var tokens = await _context.RefreshTokens

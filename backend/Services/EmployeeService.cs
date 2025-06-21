@@ -35,11 +35,13 @@ public class EmployeeService : IEmployeeService
 
     public async Task<Employee> CreateEmployeeAsync(Employee employee, string password)
     {
+        // Enforce username uniqueness business rule
         if (await UsernameExistsAsync(employee.Username))
         {
             throw new InvalidOperationException($"Username '{employee.Username}' already exists");
         }
 
+        // Hash password using BCrypt for secure storage
         employee.PasswordHash = BCrypt.Net.BCrypt.HashPassword(password);
         employee.CreatedAt = DateTime.UtcNow;
         employee.UpdatedAt = DateTime.UtcNow;
@@ -58,6 +60,7 @@ public class EmployeeService : IEmployeeService
             return null;
         }
 
+        // Check username uniqueness only if username is being changed
         if (existingEmployee.Username != employee.Username &&
             await UsernameExistsAsync(employee.Username))
         {
@@ -69,6 +72,7 @@ public class EmployeeService : IEmployeeService
         existingEmployee.Username = employee.Username;
         existingEmployee.UpdatedAt = DateTime.UtcNow;
 
+        // Only update password if a new one is provided (optional during updates)
         if (!string.IsNullOrEmpty(employee.PasswordHash))
         {
             existingEmployee.PasswordHash = BCrypt.Net.BCrypt.HashPassword(employee.PasswordHash);
@@ -97,6 +101,10 @@ public class EmployeeService : IEmployeeService
             .AnyAsync(e => e.Username == username);
     }
 
+    /// <summary>
+    /// Verifies user credentials using BCrypt hash comparison
+    /// Returns false for non-existent users to prevent username enumeration
+    /// </summary>
     public async Task<bool> ValidatePasswordAsync(string username, string password)
     {
         var employee = await GetEmployeeByUsernameAsync(username);
