@@ -9,7 +9,7 @@ builder.Services.AddControllers();
 
 // Add Entity Framework
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection") 
         ?? "Data Source=Data/restaurant_roster.db"));
 
 // Register custom services

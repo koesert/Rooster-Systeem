@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using backend.Models;
 using backend.Services;
+using backend.DTOs;
 
 namespace backend.Controllers;
 
@@ -18,22 +19,21 @@ public class EmployeeController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Employee>>> GetAllEmployees()
+    public async Task<ActionResult<IEnumerable<EmployeeResponseDto>>> GetAllEmployees()
     {
         try
         {
             var employees = await _employeeService.GetAllEmployeesAsync();
 
-            // Remove password hashes from response for security
-            var employeesResponse = employees.Select(e => new
+            var employeesResponse = employees.Select(e => new EmployeeResponseDto
             {
-                e.Id,
-                e.FirstName,
-                e.LastName,
-                e.Username,
-                e.FullName,
-                e.CreatedAt,
-                e.UpdatedAt
+                Id = e.Id,
+                FirstName = e.FirstName,
+                LastName = e.LastName,
+                Username = e.Username,
+                FullName = e.FullName,
+                CreatedAt = e.CreatedAt,
+                UpdatedAt = e.UpdatedAt
             });
 
             return Ok(employeesResponse);
@@ -46,7 +46,7 @@ public class EmployeeController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<Employee>> GetEmployee(int id)
+    public async Task<ActionResult<EmployeeResponseDto>> GetEmployee(int id)
     {
         try
         {
@@ -57,16 +57,15 @@ public class EmployeeController : ControllerBase
                 return NotFound($"Employee with ID {id} not found");
             }
 
-            // Remove password hash from response for security
-            var employeeResponse = new
+            var employeeResponse = new EmployeeResponseDto
             {
-                employee.Id,
-                employee.FirstName,
-                employee.LastName,
-                employee.Username,
-                employee.FullName,
-                employee.CreatedAt,
-                employee.UpdatedAt
+                Id = employee.Id,
+                FirstName = employee.FirstName,
+                LastName = employee.LastName,
+                Username = employee.Username,
+                FullName = employee.FullName,
+                CreatedAt = employee.CreatedAt,
+                UpdatedAt = employee.UpdatedAt
             };
 
             return Ok(employeeResponse);
@@ -79,7 +78,7 @@ public class EmployeeController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<Employee>> CreateEmployee([FromBody] CreateEmployeeRequest request)
+    public async Task<ActionResult<EmployeeResponseDto>> CreateEmployee([FromBody] CreateEmployeeDto request)
     {
         try
         {
@@ -97,16 +96,15 @@ public class EmployeeController : ControllerBase
 
             var createdEmployee = await _employeeService.CreateEmployeeAsync(employee, request.Password);
 
-            // Remove password hash from response
-            var employeeResponse = new
+            var employeeResponse = new EmployeeResponseDto
             {
-                createdEmployee.Id,
-                createdEmployee.FirstName,
-                createdEmployee.LastName,
-                createdEmployee.Username,
-                createdEmployee.FullName,
-                createdEmployee.CreatedAt,
-                createdEmployee.UpdatedAt
+                Id = createdEmployee.Id,
+                FirstName = createdEmployee.FirstName,
+                LastName = createdEmployee.LastName,
+                Username = createdEmployee.Username,
+                FullName = createdEmployee.FullName,
+                CreatedAt = createdEmployee.CreatedAt,
+                UpdatedAt = createdEmployee.UpdatedAt
             };
 
             return CreatedAtAction(nameof(GetEmployee), new { id = createdEmployee.Id }, employeeResponse);
@@ -123,7 +121,7 @@ public class EmployeeController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateEmployee(int id, [FromBody] UpdateEmployeeRequest request)
+    public async Task<IActionResult> UpdateEmployee(int id, [FromBody] UpdateEmployeeDto request)
     {
         try
         {
@@ -137,7 +135,7 @@ public class EmployeeController : ControllerBase
                 FirstName = request.FirstName,
                 LastName = request.LastName,
                 Username = request.Username,
-                PasswordHash = request.Password // Will be hashed in service if provided
+                PasswordHash = request.Password ?? string.Empty
             };
 
             var updatedEmployee = await _employeeService.UpdateEmployeeAsync(id, employee);
@@ -147,16 +145,15 @@ public class EmployeeController : ControllerBase
                 return NotFound($"Employee with ID {id} not found");
             }
 
-            // Remove password hash from response
-            var employeeResponse = new
+            var employeeResponse = new EmployeeResponseDto
             {
-                updatedEmployee.Id,
-                updatedEmployee.FirstName,
-                updatedEmployee.LastName,
-                updatedEmployee.Username,
-                updatedEmployee.FullName,
-                updatedEmployee.CreatedAt,
-                updatedEmployee.UpdatedAt
+                Id = updatedEmployee.Id,
+                FirstName = updatedEmployee.FirstName,
+                LastName = updatedEmployee.LastName,
+                Username = updatedEmployee.Username,
+                FullName = updatedEmployee.FullName,
+                CreatedAt = updatedEmployee.CreatedAt,
+                UpdatedAt = updatedEmployee.UpdatedAt
             };
 
             return Ok(employeeResponse);
@@ -194,7 +191,7 @@ public class EmployeeController : ControllerBase
     }
 
     [HttpPost("validate")]
-    public async Task<ActionResult<bool>> ValidateEmployee([FromBody] LoginRequest request)
+    public async Task<ActionResult<bool>> ValidateEmployee([FromBody] LoginDto request)
     {
         try
         {
@@ -212,26 +209,4 @@ public class EmployeeController : ControllerBase
             return StatusCode(500, "An error occurred while validating credentials");
         }
     }
-}
-
-public class CreateEmployeeRequest
-{
-    public required string FirstName { get; set; }
-    public required string LastName { get; set; }
-    public required string Username { get; set; }
-    public required string Password { get; set; }
-}
-
-public class UpdateEmployeeRequest
-{
-    public required string FirstName { get; set; }
-    public required string LastName { get; set; }
-    public required string Username { get; set; }
-    public string? Password { get; set; } // Optional for updates
-}
-
-public class LoginRequest
-{
-    public required string Username { get; set; }
-    public required string Password { get; set; }
 }
