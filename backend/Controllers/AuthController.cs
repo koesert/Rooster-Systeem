@@ -96,14 +96,3 @@ public class AuthController : ControllerBase
         }
     }
 }
-
-// Additional DTOs for auth endpoints
-public class LogoutDto
-{
-    public required string RefreshToken { get; set; }
-}
-
-public class RefreshTokenDto
-{
-    public required string RefreshToken { get; set; }
-}

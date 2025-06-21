@@ -16,15 +16,12 @@ public class ApplicationDbContext : DbContext
 	{
 		base.OnModelCreating(modelBuilder);
 
-		// Configure Employee entity
 		modelBuilder.Entity<Employee>(entity =>
 		{
-			// Make Username unique
 			entity.HasIndex(e => e.Username)
 				  .IsUnique()
 				  .HasDatabaseName("IX_Employees_Username");
 
-			// Configure properties
 			entity.Property(e => e.FirstName)
 				  .IsRequired()
 				  .HasMaxLength(50);
@@ -48,7 +45,6 @@ public class ApplicationDbContext : DbContext
 				  .HasDefaultValueSql("datetime('now')");
 		});
 
-		// Configure RefreshToken entity
 		modelBuilder.Entity<RefreshToken>(entity =>
 		{
 			entity.Property(rt => rt.Token)
@@ -61,13 +57,11 @@ public class ApplicationDbContext : DbContext
 			entity.Property(rt => rt.CreatedAt)
 				  .HasDefaultValueSql("datetime('now')");
 
-			// Configure relationship with Employee
 			entity.HasOne(rt => rt.Employee)
 				  .WithMany()
 				  .HasForeignKey(rt => rt.EmployeeId)
 				  .OnDelete(DeleteBehavior.Cascade);
 
-			// Index for performance
 			entity.HasIndex(rt => rt.Token)
 				  .HasDatabaseName("IX_RefreshTokens_Token");
 
@@ -75,7 +69,6 @@ public class ApplicationDbContext : DbContext
 				  .HasDatabaseName("IX_RefreshTokens_EmployeeId");
 		});
 
-		// Seed default admin user
 		var adminPasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123");
 
 		modelBuilder.Entity<Employee>().HasData(

@@ -35,13 +35,11 @@ public class EmployeeService : IEmployeeService
 
     public async Task<Employee> CreateEmployeeAsync(Employee employee, string password)
     {
-        // Check if username already exists
         if (await UsernameExistsAsync(employee.Username))
         {
             throw new InvalidOperationException($"Username '{employee.Username}' already exists");
         }
 
-        // Hash the password
         employee.PasswordHash = BCrypt.Net.BCrypt.HashPassword(password);
         employee.CreatedAt = DateTime.UtcNow;
         employee.UpdatedAt = DateTime.UtcNow;
@@ -60,20 +58,17 @@ public class EmployeeService : IEmployeeService
             return null;
         }
 
-        // Check if username is being changed and if new username already exists
         if (existingEmployee.Username != employee.Username &&
             await UsernameExistsAsync(employee.Username))
         {
             throw new InvalidOperationException($"Username '{employee.Username}' already exists");
         }
 
-        // Update properties
         existingEmployee.FirstName = employee.FirstName;
         existingEmployee.LastName = employee.LastName;
         existingEmployee.Username = employee.Username;
         existingEmployee.UpdatedAt = DateTime.UtcNow;
 
-        // Only update password if it's provided (not empty)
         if (!string.IsNullOrEmpty(employee.PasswordHash))
         {
             existingEmployee.PasswordHash = BCrypt.Net.BCrypt.HashPassword(employee.PasswordHash);

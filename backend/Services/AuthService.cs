@@ -33,28 +33,23 @@ public class AuthService : IAuthService
     {
         try
         {
-            // Validate credentials
             var isValid = await _employeeService.ValidatePasswordAsync(username, password);
             if (!isValid)
             {
                 return null;
             }
 
-            // Get employee
             var employee = await _employeeService.GetEmployeeByUsernameAsync(username);
             if (employee == null)
             {
                 return null;
             }
 
-            // Revoke existing refresh tokens for this user
             await RevokeAllUserTokensAsync(employee.Id);
 
-            // Generate tokens
             var accessToken = GenerateAccessToken(employee);
             var refreshToken = await GenerateRefreshTokenAsync(employee.Id);
 
-            // Create response
             var response = new LoginResponseDto
             {
                 AccessToken = accessToken,
@@ -118,10 +113,8 @@ public class AuthService : IAuthService
                 return null;
             }
 
-            // Revoke old token
             token.IsRevoked = true;
 
-            // Generate new tokens
             var accessToken = GenerateAccessToken(token.Employee);
             var newRefreshToken = await GenerateRefreshTokenAsync(token.Employee.Id);
 

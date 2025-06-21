@@ -17,6 +17,5 @@ public class RefreshToken
     public bool IsRevoked { get; set; } = false;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    // Navigation property
     public Employee Employee { get; set; } = null!;
 }
