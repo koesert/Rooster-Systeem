@@ -1,4 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 using backend.Data;
 using backend.Services;
 
@@ -9,11 +12,39 @@ builder.Services.AddControllers();
 
 // Add Entity Framework
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection") 
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")
         ?? "Data Source=Data/restaurant_roster.db"));
 
 // Register custom services
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+
+// Add JWT Settings to configuration
+var jwtKey = "RestaurantRoster_SuperSecure_JWT_Key_2025_With_Random_Characters_!@#$%^&*()";
+builder.Configuration["JwtSettings:Key"] = jwtKey;
+builder.Configuration["JwtSettings:Issuer"] = "RestaurantRoster";
+builder.Configuration["JwtSettings:Audience"] = "RestaurantRoster";
+
+// Add JWT Authentication
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
+        ValidAudience = builder.Configuration["JwtSettings:Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+        ClockSkew = TimeSpan.Zero
+    };
+});
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -61,6 +92,8 @@ app.UseHttpsRedirection();
 // Use CORS
 app.UseCors("AllowFrontend");
 
+// Add authentication and authorization middleware
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

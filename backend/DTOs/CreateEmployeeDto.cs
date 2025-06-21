@@ -17,6 +17,7 @@ public class CreateEmployeeDto
     public required string Username { get; set; }
 
     [Required(ErrorMessage = "Password is required")]
-    [MinLength(4, ErrorMessage = "Password must be at least 4 characters")]
+    [MinLength(6, ErrorMessage = "Password must be at least 6 characters")]
+    [RegularExpression(@"^(?=.*[A-Z])(?=.*\d).+$", ErrorMessage = "Password must contain at least 1 uppercase letter and 1 number")]
     public required string Password { get; set; }
 }

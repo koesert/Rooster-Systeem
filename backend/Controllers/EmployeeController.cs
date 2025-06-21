@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using backend.Models;
 using backend.Services;
 using backend.DTOs;
@@ -7,6 +8,7 @@ namespace backend.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class EmployeeController : ControllerBase
 {
     private readonly IEmployeeService _employeeService;
