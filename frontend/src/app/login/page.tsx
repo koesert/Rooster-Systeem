@@ -18,9 +18,9 @@ export default function LoginPage() {
 
   // Redirect if already logged in
   useEffect(() => {
-    // if (user && !isLoading) {
-    //   router.push('/home');
-    // }
+    if (user && !isLoading) {
+      router.push('/home');
+    }
   }, [user, isLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -140,7 +140,7 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-4 flex items-center"
+                    className="absolute inset-y-0 right-0 pr-4 flex items-center cursor-pointer"
                     disabled={isSubmitting}
                   >
                     {showPassword ? (
@@ -168,7 +168,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="group relative w-full flex justify-center py-3.5 px-4 border border-transparent text-sm font-semibold rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:-translate-y-0.5"
+                className="group relative w-full flex justify-center py-3.5 px-4 border border-transparent text-sm font-semibold rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:-translate-y-0.5 cursor-pointer"
                 style={{
                   background: 'linear-gradient(135deg, #d5896f, #d5896f90)',
                   boxShadow: '0 10px 25px rgba(213, 137, 111, 0.25)'

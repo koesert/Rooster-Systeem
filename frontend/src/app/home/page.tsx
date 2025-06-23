@@ -130,12 +130,12 @@ export default function HomePage() {
                   Welkom terug, {user.fullName}. Je dashboard is klaar voor gebruik.
                 </p>
               </div>
-              <button
+              <button 
                 onClick={() => {
                   setShowWelcomeNotification(false);
                   clearJustLoggedIn();
                 }}
-                className="flex-shrink-0 p-1 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+                className="flex-shrink-0 p-1 rounded-lg hover:bg-gray-100 transition-colors duration-200 cursor-pointer"
               >
                 <X className="h-4 w-4" style={{ color: '#67697c' }} />
               </button>
@@ -215,7 +215,7 @@ export default function HomePage() {
                     <button
                       key={index}
                       onClick={action.onClick}
-                      className="group p-6 bg-white/60 backdrop-blur-sm rounded-xl border border-white/30 hover:bg-white/80 transition-all duration-300 hover:shadow-lg hover:scale-105 text-left"
+                      className="group p-6 bg-white/60 backdrop-blur-sm rounded-xl border border-white/30 hover:bg-white/80 transition-all duration-300 hover:shadow-lg hover:scale-105 text-left cursor-pointer"
                     >
                       <div className="flex items-start space-x-4">
                         <div className="p-3 rounded-xl" style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}>
