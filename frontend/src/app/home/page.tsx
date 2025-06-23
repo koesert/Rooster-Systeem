@@ -12,47 +12,38 @@ export default function HomePage() {
   const router = useRouter();
   const [showWelcomeNotification, setShowWelcomeNotification] = useState(false);
 
-  // Redirect to login if not authenticated
+  // Set page title
+  useEffect(() => {
+    document.title = 'Jill Dashboard - Home';
+  }, []);
+
+  // Handle authentication
   useEffect(() => {
     if (!isLoading && !user) {
       router.push('/login');
     }
   }, [user, isLoading, router]);
 
-  // Set page title
-  useEffect(() => {
-    document.title = 'Jill Dashboard - Home';
-  }, []);
-
   // Handle welcome notification
   useEffect(() => {
     if (justLoggedIn && user) {
       setShowWelcomeNotification(true);
-      // Auto-hide after 5 seconds
       const timer = setTimeout(() => {
         setShowWelcomeNotification(false);
         clearJustLoggedIn();
       }, 5000);
-
       return () => clearTimeout(timer);
     }
   }, [justLoggedIn, user, clearJustLoggedIn]);
 
-  // Clear notification when leaving page
-  useEffect(() => {
-    return () => {
-      if (justLoggedIn) {
-        clearJustLoggedIn();
-      }
-    };
-  }, [justLoggedIn, clearJustLoggedIn]);
-
+  // Show loading screen while checking authentication
   if (isLoading) {
     return <LoadingScreen message="Dashboard laden" />;
   }
 
+  // Don't render anything if not authenticated (will redirect)
   if (!user) {
-    return null; // Will redirect to login
+    return null;
   }
 
   const quickActions = [
@@ -67,21 +58,21 @@ export default function HomePage() {
       title: 'Planning bekijken',
       description: 'Bekijk de werkplanning van deze week',
       icon: Calendar,
-      onClick: () => router.push('/planning'),
+      onClick: () => console.log('Planning - nog niet geïmplementeerd'),
       gradient: 'from-amber-400 to-amber-600'
     },
     {
       title: 'Rapporten',
       description: 'Bekijk werktijd rapporten en statistieken',
       icon: BarChart3,
-      onClick: () => router.push('/reports'),
+      onClick: () => console.log('Rapporten - nog niet geïmplementeerd'),
       gradient: 'from-orange-500 to-red-500'
     },
     {
       title: 'Instellingen',
       description: 'Beheer systeem instellingen',
       icon: Settings,
-      onClick: () => router.push('/settings'),
+      onClick: () => console.log('Instellingen - nog niet geïmplementeerd'),
       gradient: 'from-gray-400 to-gray-600'
     }
   ];
@@ -114,7 +105,7 @@ export default function HomePage() {
     <div className="flex min-h-screen" style={{ background: 'linear-gradient(135deg, #e8eef2 0%, #f5f7fa 100%)' }}>
       <Sidebar />
 
-      {/* Welcome Notification - only shows after fresh login */}
+      {/* Welcome Notification */}
       {showWelcomeNotification && (
         <div className="fixed top-4 right-4 z-50 max-w-md">
           <div className="bg-white/95 backdrop-blur-lg rounded-xl shadow-2xl border border-white/20 p-4 transform transition-all duration-500 ease-out animate-slide-in" style={{ boxShadow: '0 25px 50px rgba(103, 105, 124, 0.15)' }}>
@@ -130,7 +121,7 @@ export default function HomePage() {
                   Welkom terug, {user.fullName}. Je dashboard is klaar voor gebruik.
                 </p>
               </div>
-              <button 
+              <button
                 onClick={() => {
                   setShowWelcomeNotification(false);
                   clearJustLoggedIn();
@@ -144,7 +135,7 @@ export default function HomePage() {
         </div>
       )}
 
-      <main className="flex-1 p-8">
+      <main className="flex-1 p-8 overflow-y-auto">
         <div className="max-w-7xl mx-auto">
           {/* Header Section */}
           <div className="mb-8">

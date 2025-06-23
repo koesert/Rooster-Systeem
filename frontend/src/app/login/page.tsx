@@ -204,7 +204,7 @@ export default function LoginPage() {
         {/* Footer */}
         <div className="text-center">
           <p className="text-sm" style={{ color: '#67697c' }}>
-            Hulp nodig? Neem contact op met de werkgever.
+            Hulp nodig? Neem contact op met je werkgever.
           </p>
         </div>
       </div>

@@ -31,22 +31,23 @@ export default function Sidebar() {
   const isActive = (path: string) => pathname === path;
 
   return (
-    <div className="sticky bottom-0 text-white w-64 min-h-screen p-4 flex flex-col relative overflow-hidden" style={{ background: 'linear-gradient(180deg, #120309, #090c02)' }}>
+    <div className="sticky top-0 h-screen text-white w-64 p-4 flex flex-col relative overflow-hidden" style={{ background: 'linear-gradient(180deg, #120309, #090c02)' }}>
       {/* Decorative background elements */}
       <div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-10" style={{ background: 'linear-gradient(135deg, #d5896f, #e8eef2)' }}></div>
       <div className="absolute bottom-1/3 left-0 w-24 h-24 rounded-full blur-2xl opacity-8" style={{ background: 'linear-gradient(45deg, #d5896f, #67697c)' }}></div>
 
       {/* Header */}
       <div className="mb-8 relative z-10">
-        <div className="p-4 rounded-xl mb-4 cursor-pointer" 
-             style={{ background: 'linear-gradient(135deg, #d5896f20, #d5896f10)', border: '1px solid rgba(213, 137, 111, 0.2)' }}
-             onClick={() => router.push('/home')}>
+        <div className="p-4 rounded-xl mb-4 cursor-pointer"
+          style={{ background: 'linear-gradient(135deg, #d5896f20, #d5896f10)', border: '1px solid rgba(213, 137, 111, 0.2)' }}
+          onClick={() => router.push('/home')}>
           <h1 className="text-xl font-bold text-white">Jill Dashboard</h1>
         </div>
         {user && (
           <div className="px-4">
-            <p className="text-sm" style={{ color: '#e8eef2' }}>Welkom,</p>
-            <p className="font-semibold" style={{ color: '#d5896f' }}>{user.fullName}</p>
+            <p className="text-sm" style={{ color: '#e8eef2' }}>
+              Welkom, <span className="font-semibold" style={{ color: '#d5896f' }}>{user.fullName}</span>
+            </p>
           </div>
         )}
       </div>
@@ -56,12 +57,11 @@ export default function Sidebar() {
         <ul className="space-y-3">
           {navigationItems.map((item, index) => (
             <li key={index}>
-              <button 
+              <button
                 onClick={item.onClick}
-                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-300 group hover:shadow-lg ${
-                  isActive(item.path) ? 'shadow-lg' : ''
-                }`}
-                style={{ 
+                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-300 group hover:shadow-lg ${isActive(item.path) ? 'shadow-lg' : ''
+                  }`}
+                style={{
                   color: isActive(item.path) ? '#ffffff' : '#e8eef2',
                   background: isActive(item.path) ? 'linear-gradient(135deg, #d5896f40, #d5896f30)' : 'transparent'
                 }}
@@ -99,7 +99,7 @@ export default function Sidebar() {
           style={{ color: '#e8eef2' }}
           onMouseEnter={(e) => {
             const target = e.target as HTMLElement;
-            target.style.background = 'linear-gradient(135deg, #dc2626, #ef4444)';
+            target.style.background = 'linear-gradient(135deg,rgb(224, 61, 61),rgb(226, 119, 119))';
             target.style.color = '#ffffff';
             target.style.transform = 'translateX(4px)';
           }}
@@ -110,7 +110,7 @@ export default function Sidebar() {
             target.style.transform = 'translateX(0px)';
           }}
         >
-          <div className="p-2 rounded-lg transition-all duration-300" style={{ background: 'linear-gradient(135deg, #dc262640, #dc262620)' }}>
+          <div className="p-2 rounded-lg transition-all duration-300" style={{ background: 'linear-gradient(135deg,rgba(173, 33, 33, 0.25), #dc262620)' }}>
             <LogOut size={20} className="text-red-300" />
           </div>
           <span className="font-medium">Uitloggen</span>
