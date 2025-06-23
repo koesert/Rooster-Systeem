@@ -3,14 +3,16 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useModal } from '@/contexts/ModalContext';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
-import { Users, Plus, Search, Edit, Trash2, Eye, UserPlus } from 'lucide-react';
+import { Users, Search, Edit, Trash2, Eye, UserPlus, AlertTriangle, CheckCircle, Info, RefreshCcw } from 'lucide-react';
 import { Employee } from '@/types/auth';
 import * as api from '@/lib/api';
 
 export default function EmployeesPage() {
   const { user, isLoading } = useAuth();
+  const { showConfirm, showAlert } = useModal();
   const router = useRouter();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -50,17 +52,97 @@ export default function EmployeesPage() {
     }
   };
 
-  const handleDeleteEmployee = async (id: number, name: string) => {
-    if (confirm(`Weet je zeker dat je ${name} wilt verwijderen?`)) {
-      try {
-        await api.deleteEmployee(id);
-        // Refresh the list
-        await loadEmployees();
-      } catch (error: any) {
-        console.error('Error deleting employee:', error);
-        alert('Fout bij het verwijderen van de medewerker. Probeer het opnieuw.');
+  const handleDeleteEmployee = (employee: Employee) => {
+    showConfirm({
+      title: 'Medewerker verwijderen',
+      message: `Weet je zeker dat je "${employee.fullName}" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.`,
+      confirmText: 'Ja, verwijderen',
+      cancelText: 'Annuleren',
+      variant: 'danger',
+      icon: <AlertTriangle className="h-6 w-6 text-red-600" />,
+      onConfirm: async () => {
+        try {
+          await api.deleteEmployee(employee.id);
+          await loadEmployees();
+
+          // Show success message
+          showAlert({
+            title: 'Medewerker verwijderd',
+            message: `${employee.fullName} is succesvol verwijderd uit het systeem.`,
+            confirmText: 'OK',
+            icon: <CheckCircle className="h-6 w-6 text-green-600" />
+          });
+        } catch (error: any) {
+          console.error('Error deleting employee:', error);
+          showAlert({
+            title: 'Fout bij verwijderen',
+            message: 'Er is een fout opgetreden bij het verwijderen van de medewerker. Probeer het opnieuw.',
+            confirmText: 'OK',
+            icon: <AlertTriangle className="h-6 w-6 text-red-600" />
+          });
+        }
       }
-    }
+    });
+  };
+
+  const handleViewEmployee = (employee: Employee) => {
+    showAlert({
+      title: `Medewerker: ${employee.fullName}`,
+      message: `
+        Gebruikersnaam: ${employee.username}
+        ID: ${employee.id}
+        Aangemaakt: ${new Date(employee.createdAt).toLocaleDateString('nl-NL')}
+        Laatste update: ${new Date(employee.updatedAt).toLocaleDateString('nl-NL')}
+      `,
+      confirmText: 'Sluiten',
+      icon: <Info className="h-6 w-6 text-blue-600" />
+    });
+  };
+
+  const handleEditEmployee = (employee: Employee) => {
+    showAlert({
+      title: 'Functie nog niet beschikbaar',
+      message: `Bewerken van "${employee.fullName}" komt binnenkort beschikbaar.`,
+      confirmText: 'OK',
+      icon: <Info className="h-6 w-6 text-blue-600" />
+    });
+  };
+
+  const handleBulkActions = () => {
+    showAlert({
+      title: 'Bulk acties',
+      message: 'Bulk bewerkingen voor medewerkers komen binnenkort beschikbaar.',
+      confirmText: 'OK',
+      icon: <Info className="h-6 w-6 text-blue-600" />
+    });
+  };
+
+  const handleExport = () => {
+    showConfirm({
+      title: 'Medewerkers exporteren',
+      message: 'Wil je alle medewerkergegevens exporteren naar een CSV-bestand?',
+      confirmText: 'Exporteren',
+      cancelText: 'Annuleren',
+      variant: 'success',
+      icon: <Info className="h-6 w-6 text-green-600" />,
+      onConfirm: async () => {
+        showAlert({
+          title: 'Export gestart',
+          message: 'Je export wordt voorbereid. Dit kan een paar minuten duren.',
+          confirmText: 'OK',
+          icon: <CheckCircle className="h-6 w-6 text-green-600" />
+        });
+      }
+    });
+  };
+
+  const handleImport = () => {
+    showAlert({
+      title: 'Import functie',
+      message: 'Import functionaliteit voor medewerkers komt binnenkort beschikbaar.',
+      confirmText: 'OK',
+      icon: <Info className="h-6 w-6 text-blue-600" />
+    });
   };
 
   if (isLoading) {
@@ -179,7 +261,7 @@ export default function EmployeesPage() {
                   className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200 cursor-pointer"
                   style={{ color: '#67697c' }}
                 >
-                  <Plus className="h-4 w-4" />
+                  <RefreshCcw className="h-4 w-4" />
                   <span>Vernieuwen</span>
                 </button>
               </div>
@@ -273,21 +355,21 @@ export default function EmployeesPage() {
                           <td className="px-6 py-4">
                             <div className="flex items-center justify-center space-x-2">
                               <button
-                                onClick={() => console.log('View employee', employee.id)}
+                                onClick={() => handleViewEmployee(employee)}
                                 className="p-2 rounded-lg bg-blue-100 hover:bg-blue-200 transition-colors duration-200 cursor-pointer"
                                 title="Bekijken"
                               >
                                 <Eye className="h-4 w-4 text-blue-600" />
                               </button>
                               <button
-                                onClick={() => console.log('Edit employee', employee.id)}
+                                onClick={() => handleEditEmployee(employee)}
                                 className="p-2 rounded-lg bg-orange-100 hover:bg-orange-200 transition-colors duration-200 cursor-pointer"
                                 title="Bewerken"
                               >
                                 <Edit className="h-4 w-4 text-orange-600" />
                               </button>
                               <button
-                                onClick={() => handleDeleteEmployee(employee.id, employee.fullName)}
+                                onClick={() => handleDeleteEmployee(employee)}
                                 className="p-2 rounded-lg bg-red-100 hover:bg-red-200 transition-colors duration-200 cursor-pointer"
                                 title="Verwijderen"
                               >
@@ -302,66 +384,6 @@ export default function EmployeesPage() {
                 </table>
               </div>
             )}
-          </div>
-
-          {/* Quick Actions */}
-          <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <button
-              onClick={() => router.push('/employees/create')}
-              className="group p-6 bg-white/60 backdrop-blur-sm rounded-xl border border-white/30 hover:bg-white/80 transition-all duration-300 hover:shadow-lg hover:scale-105 text-left cursor-pointer"
-            >
-              <div className="flex items-start space-x-4">
-                <div className="p-3 rounded-xl" style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}>
-                  <UserPlus className="h-6 w-6 text-white" />
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold mb-2" style={{ color: '#120309' }}>
-                    Nieuwe Medewerker
-                  </h4>
-                  <p className="text-sm" style={{ color: '#67697c' }}>
-                    Voeg een nieuwe medewerker toe aan het systeem
-                  </p>
-                </div>
-              </div>
-            </button>
-
-            <button
-              onClick={() => console.log('Export data')}
-              className="group p-6 bg-white/60 backdrop-blur-sm rounded-xl border border-white/30 hover:bg-white/80 transition-all duration-300 hover:shadow-lg hover:scale-105 text-left cursor-pointer"
-            >
-              <div className="flex items-start space-x-4">
-                <div className="p-3 rounded-xl" style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}>
-                  <Plus className="h-6 w-6 text-white" />
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold mb-2" style={{ color: '#120309' }}>
-                    Exporteren
-                  </h4>
-                  <p className="text-sm" style={{ color: '#67697c' }}>
-                    Download medewerker gegevens
-                  </p>
-                </div>
-              </div>
-            </button>
-
-            <button
-              onClick={() => console.log('Import data')}
-              className="group p-6 bg-white/60 backdrop-blur-sm rounded-xl border border-white/30 hover:bg-white/80 transition-all duration-300 hover:shadow-lg hover:scale-105 text-left cursor-pointer"
-            >
-              <div className="flex items-start space-x-4">
-                <div className="p-3 rounded-xl" style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>
-                  <Plus className="h-6 w-6 text-white" />
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold mb-2" style={{ color: '#120309' }}>
-                    Importeren
-                  </h4>
-                  <p className="text-sm" style={{ color: '#67697c' }}>
-                    Upload medewerker gegevens
-                  </p>
-                </div>
-              </div>
-            </button>
           </div>
         </div>
       </main>

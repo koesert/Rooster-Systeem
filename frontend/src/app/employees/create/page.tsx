@@ -181,7 +181,7 @@ export default function CreateEmployeePage() {
 
           {/* Form Section */}
           <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8">
-            <form onSubmit={handleSubmit} className="space-y-8">
+            <form onSubmit={handleSubmit} autoComplete="off" className="space-y-8">
               {/* General Error */}
               {error && (
                 <div className="p-4 bg-red-50/80 backdrop-blur-sm border border-red-200/50 rounded-xl text-red-700 text-center font-medium">
@@ -206,7 +206,9 @@ export default function CreateEmployeePage() {
                       </div>
                       <input
                         id="firstName"
+                        name="new-firstname"
                         type="text"
+                        autoComplete="off"
                         value={formData.firstName}
                         onChange={(e) => handleInputChange('firstName', e.target.value)}
                         className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.firstName ? 'border-red-300' : 'border-gray-200'}`}
@@ -244,7 +246,9 @@ export default function CreateEmployeePage() {
                       </div>
                       <input
                         id="lastName"
+                        name="new-lastname"
                         type="text"
+                        autoComplete="off"
                         value={formData.lastName}
                         onChange={(e) => handleInputChange('lastName', e.target.value)}
                         className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.lastName ? 'border-red-300' : 'border-gray-200'}`}
@@ -290,7 +294,9 @@ export default function CreateEmployeePage() {
                       </div>
                       <input
                         id="username"
+                        name="new-username"
                         type="text"
+                        autoComplete="off"
                         value={formData.username}
                         onChange={(e) => handleInputChange('username', e.target.value.toLowerCase())}
                         className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.username ? 'border-red-300' : 'border-gray-200'}`}
@@ -331,7 +337,9 @@ export default function CreateEmployeePage() {
                       </div>
                       <input
                         id="password"
+                        name="new-password"
                         type={showPassword ? 'text' : 'password'}
+                        autoComplete="new-password"
                         value={formData.password}
                         onChange={(e) => handleInputChange('password', e.target.value)}
                         className={`w-full pl-12 pr-12 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.password ? 'border-red-300' : 'border-gray-200'}`}

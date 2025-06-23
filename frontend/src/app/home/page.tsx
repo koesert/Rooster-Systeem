@@ -55,49 +55,11 @@ export default function HomePage() {
       gradient: 'from-orange-400 to-orange-600'
     },
     {
-      title: 'Planning bekijken',
-      description: 'Bekijk de werkplanning van deze week',
-      icon: Calendar,
-      onClick: () => console.log('Planning - nog niet geïmplementeerd'),
-      gradient: 'from-amber-400 to-amber-600'
-    },
-    {
-      title: 'Rapporten',
-      description: 'Bekijk werktijd rapporten en statistieken',
-      icon: BarChart3,
-      onClick: () => console.log('Rapporten - nog niet geïmplementeerd'),
-      gradient: 'from-orange-500 to-red-500'
-    },
-    {
       title: 'Instellingen',
       description: 'Beheer systeem instellingen',
       icon: Settings,
       onClick: () => console.log('Instellingen - nog niet geïmplementeerd'),
       gradient: 'from-gray-400 to-gray-600'
-    }
-  ];
-
-  const stats = [
-    {
-      title: 'Actieve Medewerkers',
-      value: '24',
-      icon: Users,
-      change: '+2 deze maand',
-      positive: true
-    },
-    {
-      title: 'Geplande Uren',
-      value: '168h',
-      icon: Clock,
-      change: '+12h deze week',
-      positive: true
-    },
-    {
-      title: 'Efficiency',
-      value: '94%',
-      icon: TrendingUp,
-      change: '+3% t.o.v. vorige maand',
-      positive: true
     }
   ];
 
@@ -145,27 +107,9 @@ export default function HomePage() {
               <div className="absolute bottom-0 left-0 w-24 h-24 rounded-full blur-2xl opacity-15" style={{ background: 'linear-gradient(45deg, #d5896f, #67697c)' }}></div>
 
               <div className="relative z-10">
-                <h1 className="text-4xl font-bold mb-4" style={{ background: 'linear-gradient(135deg, #120309, #67697c)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                <h1 className="text-4xl font-bold" style={{ background: 'linear-gradient(135deg, #120309, #67697c)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                   Welkom in je Jill Dashboard, {user.firstName}
                 </h1>
-
-                {/* Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-                  {stats.map((stat, index) => (
-                    <div key={index} className="bg-white/60 backdrop-blur-sm rounded-xl p-6 border border-white/30 hover:bg-white/80 transition-all duration-300 hover:shadow-lg">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="p-2 rounded-lg" style={{ background: 'linear-gradient(135deg, #d5896f20, #d5896f10)' }}>
-                          <stat.icon className="h-6 w-6" style={{ color: '#d5896f' }} />
-                        </div>
-                        <span className={`text-sm font-medium ${stat.positive ? 'text-green-600' : 'text-red-600'}`}>
-                          {stat.change}
-                        </span>
-                      </div>
-                      <h3 className="text-sm font-medium mb-1" style={{ color: '#67697c' }}>{stat.title}</h3>
-                      <p className="text-2xl font-bold" style={{ color: '#120309' }}>{stat.value}</p>
-                    </div>
-                  ))}
-                </div>
               </div>
             </div>
           </div>
@@ -224,30 +168,6 @@ export default function HomePage() {
                     </button>
                   ))}
                 </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Recent Activity Section */}
-          <div className="mt-8">
-            <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-6">
-              <h3 className="text-xl font-semibold mb-4" style={{ color: '#120309' }}>
-                Recente activiteit
-              </h3>
-              <div className="space-y-3">
-                {[
-                  { action: 'Nieuwe medewerker toegevoegd', time: '2 uur geleden', user: 'Systeem' },
-                  { action: 'Planning geüpdatet voor volgende week', time: '4 uur geleden', user: user.fullName },
-                  { action: 'Rapport gegenereerd', time: '1 dag geleden', user: user.fullName }
-                ].map((activity, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 rounded-xl hover:bg-white/40 transition-all duration-200" style={{ background: 'linear-gradient(135deg, #e8eef220, #e8eef210)' }}>
-                    <div>
-                      <p className="font-medium" style={{ color: '#120309' }}>{activity.action}</p>
-                      <p className="text-sm" style={{ color: '#67697c' }}>Door {activity.user}</p>
-                    </div>
-                    <span className="text-sm" style={{ color: '#67697c' }}>{activity.time}</span>
-                  </div>
-                ))}
               </div>
             </div>
           </div>
