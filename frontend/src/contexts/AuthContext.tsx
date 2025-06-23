@@ -74,8 +74,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Logout error:', error);
     } finally {
       setUser(null);
-      // Redirect to login page
-      window.location.href = '/login';
+      // Redirect to landing page instead of login
+      window.location.href = '/';
     }
   };
 
@@ -86,5 +86,5 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isLoading,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 };

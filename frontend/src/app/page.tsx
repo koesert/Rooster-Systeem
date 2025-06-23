@@ -17,6 +17,11 @@ export default function HomePage() {
     }
   }, [user, isLoading, router]);
 
+  // Set page title
+  useEffect(() => {
+    document.title = 'Jill Dashboard - Home';
+  }, []);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #e8eef2 0%, #67697c 100%)' }}>
@@ -37,28 +42,28 @@ export default function HomePage() {
       title: 'Medewerkers beheren',
       description: 'Bekijk en beheer alle medewerkers',
       icon: Users,
-      onClick: () => console.log('Navigate to employees'),
+      onClick: () => router.push('/employees'),
       gradient: 'from-orange-400 to-orange-600'
     },
     {
       title: 'Planning bekijken',
       description: 'Bekijk de werkplanning van deze week',
       icon: Calendar,
-      onClick: () => console.log('Navigate to planning'),
+      onClick: () => router.push('/planning'),
       gradient: 'from-amber-400 to-amber-600'
     },
     {
       title: 'Rapporten',
       description: 'Bekijk werktijd rapporten en statistieken',
       icon: BarChart3,
-      onClick: () => console.log('Navigate to reports'),
+      onClick: () => router.push('/reports'),
       gradient: 'from-orange-500 to-red-500'
     },
     {
       title: 'Instellingen',
       description: 'Beheer systeem instellingen',
       icon: Settings,
-      onClick: () => console.log('Navigate to settings'),
+      onClick: () => router.push('/settings'),
       gradient: 'from-gray-400 to-gray-600'
     }
   ];
@@ -102,7 +107,7 @@ export default function HomePage() {
 
               <div className="relative z-10">
                 <h1 className="text-4xl font-bold mb-4" style={{ background: 'linear-gradient(135deg, #120309, #67697c)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                  Welkom bij Jill medewerker omgeving
+                  Welkom in je Jill Dashboard
                 </h1>
 
                 <div className="rounded-xl p-6 mb-6" style={{ background: 'linear-gradient(135deg, #d5896f20, #e8eef220)', border: '1px solid #d5896f40' }}>

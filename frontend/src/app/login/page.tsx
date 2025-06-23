@@ -65,10 +65,10 @@ export default function LoginPage() {
             <User className="h-10 w-10 text-white" />
           </div>
           <h2 className="text-3xl font-bold" style={{ background: 'linear-gradient(135deg, #120309, #67697c)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            Jill medewerker omgeving
+            Jill Dashboard
           </h2>
           <p className="mt-3 font-medium" style={{ color: '#67697c' }}>
-            Welkom terug! Meld je aan om door te gaan.
+            Log in om je dashboard te bekijken
           </p>
         </div>
 
@@ -194,7 +194,7 @@ export default function LoginPage() {
                   }
                 }}
               >
-                <span className="absolute left-0 inset-y-0 flex items-center pl-4">
+                <span className="absolute left-0 inset-y-0 flex items-center pl-4 border border-transparent">
                   {isSubmitting ? (
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                   ) : (
@@ -210,7 +210,7 @@ export default function LoginPage() {
         {/* Footer */}
         <div className="text-center">
           <p className="text-sm" style={{ color: '#67697c' }}>
-            Hulp nodig? Neem contact op met de systeembeheerder.
+            Hulp nodig? Neem contact op met de werkgever.
           </p>
         </div>
       </div>
