@@ -17,6 +17,7 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<Employee | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [justLoggedIn, setJustLoggedIn] = useState(false);
 
   // Check for existing session on mount
   useEffect(() => {
@@ -49,6 +50,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       const response = await api.login({ username, password });
       setUser(response.user);
+      setJustLoggedIn(true); // Mark that user just logged in
       return { success: true };
     } catch (error: any) {
       let errorMessage = 'Inloggen mislukt';
@@ -74,9 +76,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Logout error:', error);
     } finally {
       setUser(null);
-      // Redirect to landing page instead of login
-      window.location.href = '/';
+      setJustLoggedIn(false);
+      // Redirect to login page
+      window.location.href = '/login';
     }
+  };
+
+  const clearJustLoggedIn = () => {
+    setJustLoggedIn(false);
   };
 
   const value = {
@@ -84,6 +91,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     login,
     logout,
     isLoading,
+    justLoggedIn,
+    clearJustLoggedIn,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

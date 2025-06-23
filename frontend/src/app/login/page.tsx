@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import LoadingScreen from '@/components/LoadingScreen';
 import { User, Lock, LogIn, Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
@@ -17,9 +18,9 @@ export default function LoginPage() {
 
   // Redirect if already logged in
   useEffect(() => {
-    if (user && !isLoading) {
-      router.push('/');
-    }
+    // if (user && !isLoading) {
+    //   router.push('/home');
+    // }
   }, [user, isLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -30,7 +31,7 @@ export default function LoginPage() {
     const result = await login(username, password);
 
     if (result.success) {
-      router.push('/');
+      router.push('/home');
     } else {
       setError(result.error || 'Inloggen mislukt');
     }
@@ -39,14 +40,7 @@ export default function LoginPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #e8eef2 0%, #67697c 100%)' }}>
-        <div className="flex flex-col items-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: '#d5896f' }}></div>
-          <div className="font-medium" style={{ color: '#67697c' }}>Laden...</div>
-        </div>
-      </div>
-    );
+    return <LoadingScreen message="Inlogstatus controleren" />;
   }
 
   return (
@@ -194,7 +188,7 @@ export default function LoginPage() {
                   }
                 }}
               >
-                <span className="absolute left-0 inset-y-0 flex items-center pl-4 border border-transparent">
+                <span className="absolute left-0 inset-y-0 flex items-center pl-4">
                   {isSubmitting ? (
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                   ) : (
