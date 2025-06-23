@@ -1,4 +1,4 @@
-import { LoginRequest, LoginResponse } from '@/types/auth';
+import { LoginRequest, LoginResponse, Employee, CreateEmployeeRequest } from '@/types/auth';
 
 const API_BASE_URL = 'http://localhost:5000/api';
 
@@ -145,6 +145,30 @@ export const refreshAccessToken = async (): Promise<boolean> => {
 };
 
 // Employee API functions
-export const getAllEmployees = async () => {
+export const getAllEmployees = async (): Promise<Employee[]> => {
   return apiRequest('/employee');
+};
+
+export const createEmployee = async (employeeData: CreateEmployeeRequest): Promise<Employee> => {
+  return apiRequest('/employee', {
+    method: 'POST',
+    body: JSON.stringify(employeeData),
+  });
+};
+
+export const getEmployeeById = async (id: number): Promise<Employee> => {
+  return apiRequest(`/employee/${id}`);
+};
+
+export const updateEmployee = async (id: number, employeeData: Partial<CreateEmployeeRequest>): Promise<Employee> => {
+  return apiRequest(`/employee/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(employeeData),
+  });
+};
+
+export const deleteEmployee = async (id: number): Promise<void> => {
+  return apiRequest(`/employee/${id}`, {
+    method: 'DELETE',
+  });
 };

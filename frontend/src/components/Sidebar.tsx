@@ -1,6 +1,6 @@
 'use client';
 
-import { Users, LogOut, Home } from 'lucide-react';
+import { Users, LogOut, Home, UserPlus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
 
@@ -28,7 +28,12 @@ export default function Sidebar() {
     }
   ];
 
-  const isActive = (path: string) => pathname === path;
+  const isActive = (path: string) => {
+    if (path === '/employees') {
+      return pathname === '/employees';
+    }
+    return pathname === path;
+  };
 
   return (
     <div className="sticky top-0 h-screen text-white w-64 p-4 flex flex-col relative overflow-hidden" style={{ background: 'linear-gradient(180deg, #120309, #090c02)' }}>

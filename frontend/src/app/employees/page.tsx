@@ -6,16 +6,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
 import { Users, Plus, Search, Edit, Trash2, Eye, UserPlus } from 'lucide-react';
-
-interface Employee {
-  id: number;
-  firstName: string;
-  lastName: string;
-  username: string;
-  fullName: string;
-  createdAt: string;
-  updatedAt: string;
-}
+import { Employee } from '@/types/auth';
+import * as api from '@/lib/api';
 
 export default function EmployeesPage() {
   const { user, isLoading } = useAuth();
@@ -23,6 +15,7 @@ export default function EmployeesPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -45,54 +38,28 @@ export default function EmployeesPage() {
 
   const loadEmployees = async () => {
     setIsLoadingEmployees(true);
+    setError(null);
     try {
-      // Mock data for now - replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate loading
-
-      const mockEmployees: Employee[] = [
-        {
-          id: 1,
-          firstName: 'Admin',
-          lastName: 'User',
-          username: 'admin',
-          fullName: 'Admin User',
-          createdAt: '2025-06-21T00:00:00Z',
-          updatedAt: '2025-06-21T00:00:00Z'
-        },
-        {
-          id: 2,
-          firstName: 'John',
-          lastName: 'Doe',
-          username: 'john.doe',
-          fullName: 'John Doe',
-          createdAt: '2025-06-20T00:00:00Z',
-          updatedAt: '2025-06-21T00:00:00Z'
-        },
-        {
-          id: 3,
-          firstName: 'Jane',
-          lastName: 'Smith',
-          username: 'jane.smith',
-          fullName: 'Jane Smith',
-          createdAt: '2025-06-19T00:00:00Z',
-          updatedAt: '2025-06-20T00:00:00Z'
-        },
-        {
-          id: 4,
-          firstName: 'Mike',
-          lastName: 'Johnson',
-          username: 'mike.johnson',
-          fullName: 'Mike Johnson',
-          createdAt: '2025-06-18T00:00:00Z',
-          updatedAt: '2025-06-19T00:00:00Z'
-        }
-      ];
-
-      setEmployees(mockEmployees);
-    } catch (error) {
+      const employeesData = await api.getAllEmployees();
+      setEmployees(employeesData);
+    } catch (error: any) {
       console.error('Error loading employees:', error);
+      setError('Fout bij het laden van medewerkers. Probeer het opnieuw.');
     } finally {
       setIsLoadingEmployees(false);
+    }
+  };
+
+  const handleDeleteEmployee = async (id: number, name: string) => {
+    if (confirm(`Weet je zeker dat je ${name} wilt verwijderen?`)) {
+      try {
+        await api.deleteEmployee(id);
+        // Refresh the list
+        await loadEmployees();
+      } catch (error: any) {
+        console.error('Error deleting employee:', error);
+        alert('Fout bij het verwijderen van de medewerker. Probeer het opnieuw.');
+      }
     }
   };
 
@@ -140,7 +107,7 @@ export default function EmployeesPage() {
                   </div>
 
                   <button
-                    onClick={() => console.log('Add employee')}
+                    onClick={() => router.push('/employees/create')}
                     className="flex items-center space-x-2 px-6 py-3 rounded-xl text-white font-semibold transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer"
                     style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}
                   >
@@ -182,15 +149,40 @@ export default function EmployeesPage() {
             </div>
           </div>
 
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50/80 backdrop-blur-sm border border-red-200/50 rounded-xl text-red-700 text-center">
+              {error}
+              <button
+                onClick={loadEmployees}
+                className="ml-4 text-red-600 underline hover:text-red-800 cursor-pointer"
+              >
+                Opnieuw proberen
+              </button>
+            </div>
+          )}
+
           {/* Employees Table */}
           <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 overflow-hidden">
             <div className="p-6 border-b border-gray-200/50">
-              <h3 className="text-xl font-semibold" style={{ color: '#120309' }}>
-                Medewerkers Overzicht
-              </h3>
-              <p className="text-sm mt-1" style={{ color: '#67697c' }}>
-                {filteredEmployees.length} van {employees.length} medewerkers
-              </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-semibold" style={{ color: '#120309' }}>
+                    Medewerkers Overzicht
+                  </h3>
+                  <p className="text-sm mt-1" style={{ color: '#67697c' }}>
+                    {filteredEmployees.length} van {employees.length} medewerkers
+                  </p>
+                </div>
+                <button
+                  onClick={loadEmployees}
+                  className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200 cursor-pointer"
+                  style={{ color: '#67697c' }}
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Vernieuwen</span>
+                </button>
+              </div>
             </div>
 
             {isLoadingEmployees ? (
@@ -217,9 +209,9 @@ export default function EmployeesPage() {
                           <div className="flex flex-col items-center space-y-3">
                             <Users className="h-12 w-12" style={{ color: '#67697c' }} />
                             <p className="font-medium" style={{ color: '#67697c' }}>
-                              {searchTerm ? 'Geen medewerkers gevonden' : 'Nog geen medewerkers'}
+                              {searchTerm ? 'Geen medewerkers gevonden met deze zoekterm' : 'Nog geen medewerkers'}
                             </p>
-                            {searchTerm && (
+                            {searchTerm ? (
                               <button
                                 onClick={() => setSearchTerm('')}
                                 className="text-sm underline cursor-pointer"
@@ -227,12 +219,21 @@ export default function EmployeesPage() {
                               >
                                 Wis zoekterm
                               </button>
+                            ) : (
+                              <button
+                                onClick={() => router.push('/employees/create')}
+                                className="flex items-center space-x-2 px-4 py-2 rounded-lg text-white font-medium transition-all duration-200 hover:scale-105 cursor-pointer"
+                                style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}
+                              >
+                                <UserPlus className="h-4 w-4" />
+                                <span>Eerste medewerker toevoegen</span>
+                              </button>
                             )}
                           </div>
                         </td>
                       </tr>
                     ) : (
-                      filteredEmployees.map((employee, index) => (
+                      filteredEmployees.map((employee) => (
                         <tr
                           key={employee.id}
                           className="border-b border-gray-200/30 hover:bg-white/40 transition-all duration-200"
@@ -253,12 +254,20 @@ export default function EmployeesPage() {
                           </td>
                           <td className="px-6 py-4">
                             <span style={{ color: '#67697c' }}>
-                              {new Date(employee.createdAt).toLocaleDateString('nl-NL')}
+                              {new Date(employee.createdAt).toLocaleDateString('nl-NL', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric'
+                              })}
                             </span>
                           </td>
                           <td className="px-6 py-4">
                             <span style={{ color: '#67697c' }}>
-                              {new Date(employee.updatedAt).toLocaleDateString('nl-NL')}
+                              {new Date(employee.updatedAt).toLocaleDateString('nl-NL', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric'
+                              })}
                             </span>
                           </td>
                           <td className="px-6 py-4">
@@ -278,7 +287,7 @@ export default function EmployeesPage() {
                                 <Edit className="h-4 w-4 text-orange-600" />
                               </button>
                               <button
-                                onClick={() => console.log('Delete employee', employee.id)}
+                                onClick={() => handleDeleteEmployee(employee.id, employee.fullName)}
                                 className="p-2 rounded-lg bg-red-100 hover:bg-red-200 transition-colors duration-200 cursor-pointer"
                                 title="Verwijderen"
                               >
@@ -298,19 +307,19 @@ export default function EmployeesPage() {
           {/* Quick Actions */}
           <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
             <button
-              onClick={() => console.log('Bulk actions')}
+              onClick={() => router.push('/employees/create')}
               className="group p-6 bg-white/60 backdrop-blur-sm rounded-xl border border-white/30 hover:bg-white/80 transition-all duration-300 hover:shadow-lg hover:scale-105 text-left cursor-pointer"
             >
               <div className="flex items-start space-x-4">
-                <div className="p-3 rounded-xl" style={{ background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)' }}>
-                  <Users className="h-6 w-6 text-white" />
+                <div className="p-3 rounded-xl" style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}>
+                  <UserPlus className="h-6 w-6 text-white" />
                 </div>
                 <div className="flex-1">
                   <h4 className="font-semibold mb-2" style={{ color: '#120309' }}>
-                    Bulk Acties
+                    Nieuwe Medewerker
                   </h4>
                   <p className="text-sm" style={{ color: '#67697c' }}>
-                    Bewerk meerdere medewerkers tegelijk
+                    Voeg een nieuwe medewerker toe aan het systeem
                   </p>
                 </div>
               </div>

@@ -20,6 +20,13 @@ export interface LoginResponse {
   expiresAt: string;
 }
 
+export interface CreateEmployeeRequest {
+  firstName: string;
+  lastName: string;
+  username: string;
+  password: string;
+}
+
 export interface RefreshTokenRequest {
   refreshToken: string;
 }
