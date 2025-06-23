@@ -23,6 +23,11 @@ export default function LoginPage() {
     }
   }, [user, isLoading, router]);
 
+  // Set page title
+  useEffect(() => {
+    document.title = 'Jill Dashboard - Inloggen';
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');

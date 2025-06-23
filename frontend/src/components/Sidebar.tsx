@@ -59,7 +59,7 @@ export default function Sidebar() {
             <li key={index}>
               <button
                 onClick={item.onClick}
-                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-300 group hover:shadow-lg ${isActive(item.path) ? 'shadow-lg' : ''
+                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-300 group cursor-pointer hover:shadow-lg ${isActive(item.path) ? 'shadow-lg' : ''
                   }`}
                 style={{
                   color: isActive(item.path) ? '#ffffff' : '#e8eef2',

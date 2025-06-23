@@ -9,11 +9,6 @@ export default function RootPage() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
 
-  // Set page title
-  useEffect(() => {
-    document.title = 'Jill Dashboard';
-  }, []);
-
   // Redirect based on auth status
   useEffect(() => {
     if (!isLoading) {

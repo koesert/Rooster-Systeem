@@ -177,17 +177,6 @@ export default function EmployeesPage() {
                       />
                     </div>
                   </div>
-
-                  {/* Stats */}
-                  <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-white/30">
-                    <h3 className="text-sm font-medium mb-1" style={{ color: '#67697c' }}>Totaal Medewerkers</h3>
-                    <p className="text-2xl font-bold" style={{ color: '#120309' }}>{employees.length}</p>
-                  </div>
-
-                  <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-white/30">
-                    <h3 className="text-sm font-medium mb-1" style={{ color: '#67697c' }}>Actieve Accounts</h3>
-                    <p className="text-2xl font-bold text-green-600">{employees.length}</p>
-                  </div>
                 </div>
               </div>
             </div>

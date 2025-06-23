@@ -12,11 +12,6 @@ export default function HomePage() {
   const router = useRouter();
   const [showWelcomeNotification, setShowWelcomeNotification] = useState(false);
 
-  // Set page title
-  useEffect(() => {
-    document.title = 'Jill Dashboard - Home';
-  }, []);
-
   // Handle authentication
   useEffect(() => {
     if (!isLoading && !user) {
@@ -35,6 +30,11 @@ export default function HomePage() {
       return () => clearTimeout(timer);
     }
   }, [justLoggedIn, user, clearJustLoggedIn]);
+
+    // Set page title
+  useEffect(() => {
+    document.title = 'Jill Dashboard - Home';
+  }, []);
 
   // Show loading screen while checking authentication
   if (isLoading) {
