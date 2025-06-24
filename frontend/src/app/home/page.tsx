@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
-import { Users, Calendar, BarChart3, Settings, Clock, TrendingUp, CheckCircle, X } from 'lucide-react';
+import { Users, Calendar, BarChart3, Settings, Clock, TrendingUp, CheckCircle, X, Hand } from 'lucide-react';
 
 export default function HomePage() {
   usePageTitle('Dashboard - Home');
@@ -106,7 +106,7 @@ export default function HomePage() {
 
               <div className="relative z-10">
                 <h1 className="text-4xl font-bold" style={{ background: 'linear-gradient(135deg, #120309, #67697c)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                  Welkom in je Jill Dashboard, {user.firstName}
+                  Welkom in je Dashboard, {user.firstName}!
                 </h1>
               </div>
             </div>
@@ -114,29 +114,6 @@ export default function HomePage() {
 
           {/* Main Content Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Account Information */}
-            <div className="lg:col-span-1">
-              <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-6 h-fit">
-                <h3 className="text-xl font-semibold mb-4" style={{ color: '#120309' }}>
-                  Account informatie
-                </h3>
-                <div className="space-y-4">
-                  <div className="p-4 rounded-xl" style={{ background: 'linear-gradient(135deg, #e8eef240, #e8eef220)' }}>
-                    <p className="text-sm font-medium mb-1" style={{ color: '#67697c' }}>Gebruikersnaam</p>
-                    <p className="font-semibold" style={{ color: '#120309' }}>{user.username}</p>
-                  </div>
-                  <div className="p-4 rounded-xl" style={{ background: 'linear-gradient(135deg, #e8eef240, #e8eef220)' }}>
-                    <p className="text-sm font-medium mb-1" style={{ color: '#67697c' }}>Naam</p>
-                    <p className="font-semibold" style={{ color: '#120309' }}>{user.fullName}</p>
-                  </div>
-                  <div className="p-4 rounded-xl" style={{ background: 'linear-gradient(135deg, #e8eef240, #e8eef220)' }}>
-                    <p className="text-sm font-medium mb-1" style={{ color: '#67697c' }}>Account aangemaakt</p>
-                    <p className="font-semibold" style={{ color: '#120309' }}>{new Date(user.createdAt).toLocaleDateString('nl-NL')}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             {/* Quick Actions */}
             <div className="lg:col-span-2">
               <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-6">

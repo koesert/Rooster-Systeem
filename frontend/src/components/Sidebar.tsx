@@ -1,6 +1,6 @@
 'use client';
 
-import { Users, LogOut, Home, Shield } from 'lucide-react';
+import { Users, LogOut, Home, Shield, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
 
@@ -21,6 +21,13 @@ export default function Sidebar() {
       path: '/home',
       onClick: () => router.push('/home'),
       allowedRoles: ['all'] // All users can access dashboard
+    },
+    {
+      name: 'Mijn profiel',
+      icon: User,
+      path: '/profile',
+      onClick: () => router.push('/profile'),
+      allowedRoles: ['all'] // All users can access their profile
     }
   ];
 

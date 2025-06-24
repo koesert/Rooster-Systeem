@@ -126,12 +126,22 @@ export default function EmployeesPage() {
   };
 
   const handleEditEmployee = (employee: Employee) => {
-    showAlert({
-      title: 'Functie nog niet beschikbaar',
-      message: `Bewerken van "${employee.fullName}" komt binnenkort beschikbaar.`,
-      confirmText: 'OK',
-      icon: <Info className="h-6 w-6 text-blue-600" />
-    });
+    // If user is editing themselves, go to profile edit
+    if (employee.id === user?.id) {
+      router.push('/profile/edit');
+    } else {
+      // Only managers can edit other employees
+      if (!isManager()) {
+        showAlert({
+          title: 'Onvoldoende rechten',
+          message: 'Je kunt alleen je eigen profiel bewerken.',
+          confirmText: 'OK',
+          icon: <AlertTriangle className="h-6 w-6 text-red-600" />
+        });
+        return;
+      }
+      router.push(`/employees/edit/${employee.id}`);
+    }
   };
 
   if (isLoading) {

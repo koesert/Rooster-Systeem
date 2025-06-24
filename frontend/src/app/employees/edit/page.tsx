@@ -1,66 +1,148 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
-import { UserPlus, User, Lock, Eye, EyeOff, ArrowLeft, Save, X, Shield, Calendar } from 'lucide-react';
-import { CreateEmployeeRequest, Role } from '@/types/auth';
+import { Edit, User, Lock, Eye, EyeOff, ArrowLeft, Save, X, Shield, Calendar } from 'lucide-react';
+import { UpdateEmployeeRequest, Role, Employee } from '@/types/auth';
 import * as api from '@/lib/api';
 
-export default function CreateEmployeePage() {
-  usePageTitle('Dashboard - Nieuwe medewerker');
+export default function EditEmployeePage() {
+  const params = useParams();
+  const employeeId = parseInt(params.id as string);
 
-  const { user, isLoading, hasAccess, isManager, getRoleName } = useAuth();
+  usePageTitle('Dashboard - Medewerker bewerken');
+
+  const { user, isLoading, isManager, getRoleName } = useAuth();
   const router = useRouter();
 
+  // State for employee data
+  const [employee, setEmployee] = useState<Employee | null>(null);
+  const [isLoadingEmployee, setIsLoadingEmployee] = useState(true);
+
   // Form state
-  const [formData, setFormData] = useState<CreateEmployeeRequest>({
+  const [formData, setFormData] = useState<UpdateEmployeeRequest>({
     firstName: '',
     lastName: '',
     username: '',
     password: '',
     role: Role.Werknemer,
-    hireDate: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD format
+    hireDate: '',
     birthDate: ''
   });
 
+  // Password confirmation state
+  const [confirmPassword, setConfirmPassword] = useState('');
+
   // UI state
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  // Redirect to login if not authenticated or no access
+  // Check if current user is editing their own profile
+  const isEditingSelf = user?.id === employeeId;
+  const canEdit = isManager() || isEditingSelf;
+
+  // Redirect if not authenticated or no access
   useEffect(() => {
     if (!isLoading && !user) {
       router.push('/login');
-    } else if (!isLoading && user && !isManager()) {
-      // Only Managers can create employees
-      router.push('/employees');
+    } else if (!isLoading && user && !canEdit) {
+      router.push('/home');
     }
-  }, [user, isLoading, router, isManager]);
+  }, [user, isLoading, router, canEdit]);
+
+  // Load employee data
+  useEffect(() => {
+    if (user && canEdit) {
+      loadEmployee();
+    }
+  }, [user, canEdit, employeeId]);
+
+  const loadEmployee = async () => {
+    setIsLoadingEmployee(true);
+    setError(null);
+
+    try {
+      const employeeData = await api.getEmployeeById(employeeId);
+      setEmployee(employeeData);
+
+      // Pre-fill form with existing data
+      setFormData({
+        firstName: employeeData.firstName,
+        lastName: employeeData.lastName,
+        username: employeeData.username,
+        password: '', // Always empty for security
+        role: employeeData.role,
+        hireDate: employeeData.hireDate.split('T')[0], // Convert to YYYY-MM-DD
+        birthDate: employeeData.birthDate.split('T')[0]
+      });
+    } catch (error: any) {
+      console.error('Error loading employee:', error);
+      setError('Fout bij het laden van medewerkersgegevens');
+    } finally {
+      setIsLoadingEmployee(false);
+    }
+  };
 
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
 
-    // First name validation
-    if (!formData.firstName.trim()) {
-      errors.firstName = 'Voornaam is verplicht';
-    } else if (formData.firstName.length > 50) {
-      errors.firstName = 'Voornaam mag maximaal 50 tekens bevatten';
+    // Only validate fields that can be edited based on user role
+    if (isManager()) {
+      // Managers can edit everything
+
+      // First name validation
+      if (!formData.firstName.trim()) {
+        errors.firstName = 'Voornaam is verplicht';
+      } else if (formData.firstName.length > 50) {
+        errors.firstName = 'Voornaam mag maximaal 50 tekens bevatten';
+      }
+
+      // Last name validation
+      if (!formData.lastName.trim()) {
+        errors.lastName = 'Achternaam is verplicht';
+      } else if (formData.lastName.length > 50) {
+        errors.lastName = 'Achternaam mag maximaal 50 tekens bevatten';
+      }
+
+      // Hire date validation
+      if (!formData.hireDate) {
+        errors.hireDate = 'Datum in dienst is verplicht';
+      } else {
+        const hireDate = new Date(formData.hireDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (hireDate > today) {
+          errors.hireDate = 'Datum in dienst kan niet in de toekomst liggen';
+        }
+      }
+
+      // Birth date validation
+      if (!formData.birthDate) {
+        errors.birthDate = 'Geboortedatum is verplicht';
+      } else {
+        const birthDate = new Date(formData.birthDate);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+        if (age > 100) {
+          errors.birthDate = 'Controleer de geboortedatum';
+        }
+      }
     }
 
-    // Last name validation
-    if (!formData.lastName.trim()) {
-      errors.lastName = 'Achternaam is verplicht';
-    } else if (formData.lastName.length > 50) {
-      errors.lastName = 'Achternaam mag maximaal 50 tekens bevatten';
-    }
-
-    // Username validation
+    // Username validation (both managers and employees)
     if (!formData.username.trim()) {
       errors.username = 'Gebruikersnaam is verplicht';
     } else if (formData.username.length > 30) {
@@ -69,50 +151,19 @@ export default function CreateEmployeePage() {
       errors.username = 'Gebruikersnaam mag alleen letters, cijfers, punten, underscores en streepjes bevatten';
     }
 
-    // Password validation
-    if (!formData.password) {
-      errors.password = 'Wachtwoord is verplicht';
-    } else if (formData.password.length < 6) {
-      errors.password = 'Wachtwoord moet minimaal 6 tekens bevatten';
-    } else if (!/(?=.*[A-Z])/.test(formData.password)) {
-      errors.password = 'Wachtwoord moet minimaal 1 hoofdletter bevatten';
-    } else if (!/(?=.*\d)/.test(formData.password)) {
-      errors.password = 'Wachtwoord moet minimaal 1 cijfer bevatten';
-    }
-
-    // Role validation (only managers can assign manager role)
-    if (formData.role === Role.Manager && !isManager()) {
-      errors.role = 'Alleen managers kunnen andere managers in dienst nemen';
-    }
-
-    // Hire date validation
-    if (!formData.hireDate) {
-      errors.hireDate = 'Datum in dienst is verplicht';
-    } else {
-      const hireDate = new Date(formData.hireDate);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      if (hireDate > today) {
-        errors.hireDate = 'Datum in dienst kan niet in de toekomst liggen';
-      }
-    }
-
-    // Birth date validation
-    if (!formData.birthDate) {
-      errors.birthDate = 'Geboortedatum is verplicht';
-    } else {
-      const birthDate = new Date(formData.birthDate);
-      const today = new Date();
-      let age = today.getFullYear() - birthDate.getFullYear();
-      const monthDiff = today.getMonth() - birthDate.getMonth();
-
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-        age--;
+    // Password validation (optional for updates, but if provided must be valid)
+    if (formData.password) {
+      if (formData.password.length < 6) {
+        errors.password = 'Wachtwoord moet minimaal 6 tekens bevatten';
+      } else if (!/(?=.*[A-Z])/.test(formData.password)) {
+        errors.password = 'Wachtwoord moet minimaal 1 hoofdletter bevatten';
+      } else if (!/(?=.*\d)/.test(formData.password)) {
+        errors.password = 'Wachtwoord moet minimaal 1 cijfer bevatten';
       }
 
-      if (age > 100) {
-        errors.birthDate = 'Controleer de geboortedatum';
+      // Password confirmation
+      if (formData.password !== confirmPassword) {
+        errors.confirmPassword = 'Wachtwoorden komen niet overeen';
       }
     }
 
@@ -120,7 +171,7 @@ export default function CreateEmployeePage() {
     return Object.keys(errors).length === 0;
   };
 
-  const handleInputChange = (field: keyof CreateEmployeeRequest, value: string | Role) => {
+  const handleInputChange = (field: keyof UpdateEmployeeRequest, value: string | Role) => {
     setFormData(prev => ({ ...prev, [field]: value }));
 
     // Clear field error when user starts typing
@@ -145,14 +196,36 @@ export default function CreateEmployeePage() {
     setError(null);
 
     try {
-      await api.createEmployee(formData);
+      // Create update payload based on user role
+      let updateData: UpdateEmployeeRequest;
 
-      // Success! Redirect to employees page
+      if (isManager()) {
+        // Managers can update everything
+        updateData = {
+          ...formData,
+          password: formData.password || undefined // Only include password if provided
+        };
+      } else {
+        // Employees can only update username and password
+        updateData = {
+          firstName: employee!.firstName, // Keep existing values
+          lastName: employee!.lastName,
+          username: formData.username,
+          password: formData.password || undefined,
+          role: employee!.role,
+          hireDate: employee!.hireDate,
+          birthDate: employee!.birthDate
+        };
+      }
+
+      await api.updateEmployee(employeeId, updateData);
+
+      // Go back to employees list after successful update
       router.push('/employees');
     } catch (error: any) {
-      console.error('Error creating employee:', error);
+      console.error('Error updating employee:', error);
 
-      let errorMessage = 'Er is een fout opgetreden bij het aanmaken van de medewerker';
+      let errorMessage = 'Er is een fout opgetreden bij het bijwerken van de medewerker';
 
       if (error.status === 400) {
         if (error.message.includes('Username') && error.message.includes('already exists')) {
@@ -161,6 +234,8 @@ export default function CreateEmployeePage() {
         } else {
           errorMessage = 'Controleer je invoer en probeer het opnieuw';
         }
+      } else if (error.status === 403) {
+        errorMessage = 'Je hebt geen rechten om deze medewerker te bewerken';
       } else if (error.status === 500) {
         errorMessage = 'Server fout. Probeer het later opnieuw';
       }
@@ -171,13 +246,18 @@ export default function CreateEmployeePage() {
     }
   };
 
-  if (isLoading) {
-    return <LoadingScreen message="Pagina laden" />;
+  if (isLoading || isLoadingEmployee) {
+    return <LoadingScreen message="Gegevens laden" />;
   }
 
-  if (!user) {
-    return null; // Will redirect to login
+  if (!user || !employee) {
+    return null;
   }
+
+  const canEditField = (field: string) => {
+    if (isManager()) return true;
+    return field === 'username' || field === 'password';
+  };
 
   return (
     <div className="flex min-h-screen" style={{ background: 'linear-gradient(135deg, #e8eef2 0%, #f5f7fa 100%)' }}>
@@ -196,21 +276,21 @@ export default function CreateEmployeePage() {
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center space-x-4">
                     <button
-                      onClick={() => router.push('/employees')}
+                      onClick={() => router.back()}
                       className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200 cursor-pointer"
-                      title="Terug naar medewerkers"
+                      title="Terug"
                     >
                       <ArrowLeft className="h-5 w-5" style={{ color: '#67697c' }} />
                     </button>
                     <div className="p-3 rounded-xl" style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}>
-                      <UserPlus className="h-8 w-8 text-white" />
+                      <Edit className="h-8 w-8 text-white" />
                     </div>
                     <div>
                       <h1 className="text-4xl font-bold" style={{ background: 'linear-gradient(135deg, #120309, #67697c)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                        Nieuwe medewerker
+                        {isEditingSelf ? 'Mijn profiel bewerken' : `${employee.fullName} bewerken`}
                       </h1>
                       <p className="text-lg mt-1" style={{ color: '#67697c' }}>
-                        Voeg een nieuwe medewerker toe aan het systeem
+                        {isEditingSelf ? 'Pas je profielgegevens aan' : 'Bewerk medewerkersgegevens'}
                       </p>
                     </div>
                   </div>
@@ -242,36 +322,30 @@ export default function CreateEmployeePage() {
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <User className="h-5 w-5" style={{ color: '#67697c' }} />
+                        <User className="h-5 w-5" style={{ color: canEditField('firstName') ? '#67697c' : '#9ca3af' }} />
                       </div>
                       <input
                         id="firstName"
-                        name="new-firstname"
                         type="text"
-                        autoComplete="off"
                         value={formData.firstName}
                         onChange={(e) => handleInputChange('firstName', e.target.value)}
-                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.firstName ? 'border-red-300' : 'border-gray-200'}`}
-                        style={{ color: '#120309' }}
-                        placeholder="Voer de voornaam in"
-                        disabled={isSubmitting}
+                        disabled={!canEditField('firstName') || isSubmitting}
+                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none transition-all duration-300 ${!canEditField('firstName')
+                            ? 'bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200'
+                            : fieldErrors.firstName
+                              ? 'border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
+                              : 'border-gray-200 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
+                          }`}
+                        style={{ color: canEditField('firstName') ? '#120309' : '#9ca3af' }}
+                        placeholder="Voornaam"
                         maxLength={50}
-                        onFocus={(e) => {
-                          if (!fieldErrors.firstName) {
-                            const target = e.target as HTMLInputElement;
-                            target.style.boxShadow = '0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)';
-                            target.style.borderColor = '#d5896f';
-                          }
-                        }}
-                        onBlur={(e) => {
-                          const target = e.target as HTMLInputElement;
-                          target.style.boxShadow = '';
-                          target.style.borderColor = fieldErrors.firstName ? '#fca5a5' : '#d1d5db';
-                        }}
                       />
                     </div>
                     {fieldErrors.firstName && (
                       <p className="mt-2 text-sm text-red-600">{fieldErrors.firstName}</p>
+                    )}
+                    {!canEditField('firstName') && (
+                      <p className="mt-2 text-xs text-gray-500">Dit veld kan niet worden bewerkt</p>
                     )}
                   </div>
 
@@ -282,36 +356,30 @@ export default function CreateEmployeePage() {
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <User className="h-5 w-5" style={{ color: '#67697c' }} />
+                        <User className="h-5 w-5" style={{ color: canEditField('lastName') ? '#67697c' : '#9ca3af' }} />
                       </div>
                       <input
                         id="lastName"
-                        name="new-lastname"
                         type="text"
-                        autoComplete="off"
                         value={formData.lastName}
                         onChange={(e) => handleInputChange('lastName', e.target.value)}
-                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.lastName ? 'border-red-300' : 'border-gray-200'}`}
-                        style={{ color: '#120309' }}
-                        placeholder="Voer de achternaam in"
-                        disabled={isSubmitting}
+                        disabled={!canEditField('lastName') || isSubmitting}
+                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none transition-all duration-300 ${!canEditField('lastName')
+                            ? 'bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200'
+                            : fieldErrors.lastName
+                              ? 'border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
+                              : 'border-gray-200 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
+                          }`}
+                        style={{ color: canEditField('lastName') ? '#120309' : '#9ca3af' }}
+                        placeholder="Achternaam"
                         maxLength={50}
-                        onFocus={(e) => {
-                          if (!fieldErrors.lastName) {
-                            const target = e.target as HTMLInputElement;
-                            target.style.boxShadow = '0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)';
-                            target.style.borderColor = '#d5896f';
-                          }
-                        }}
-                        onBlur={(e) => {
-                          const target = e.target as HTMLInputElement;
-                          target.style.boxShadow = '';
-                          target.style.borderColor = fieldErrors.lastName ? '#fca5a5' : '#d1d5db';
-                        }}
                       />
                     </div>
                     {fieldErrors.lastName && (
                       <p className="mt-2 text-sm text-red-600">{fieldErrors.lastName}</p>
+                    )}
+                    {!canEditField('lastName') && (
+                      <p className="mt-2 text-xs text-gray-500">Dit veld kan niet worden bewerkt</p>
                     )}
                   </div>
                 </div>
@@ -334,15 +402,14 @@ export default function CreateEmployeePage() {
                       </div>
                       <input
                         id="username"
-                        name="new-username"
                         type="text"
-                        autoComplete="off"
                         value={formData.username}
                         onChange={(e) => handleInputChange('username', e.target.value.toLowerCase())}
-                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.username ? 'border-red-300' : 'border-gray-200'}`}
+                        disabled={isSubmitting}
+                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.username ? 'border-red-300' : 'border-gray-200'
+                          }`}
                         style={{ color: '#120309' }}
                         placeholder="bijv. john.doe"
-                        disabled={isSubmitting}
                         maxLength={30}
                         onFocus={(e) => {
                           if (!fieldErrors.username) {
@@ -369,7 +436,7 @@ export default function CreateEmployeePage() {
                   {/* Password */}
                   <div>
                     <label htmlFor="password" className="block text-sm font-semibold mb-2" style={{ color: '#120309' }}>
-                      Wachtwoord <span className="text-red-500">*</span>
+                      Nieuw wachtwoord <span className="text-gray-500">(optioneel)</span>
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -377,15 +444,14 @@ export default function CreateEmployeePage() {
                       </div>
                       <input
                         id="password"
-                        name="new-password"
                         type={showPassword ? 'text' : 'password'}
-                        autoComplete="new-password"
                         value={formData.password}
                         onChange={(e) => handleInputChange('password', e.target.value)}
-                        className={`w-full pl-12 pr-12 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.password ? 'border-red-300' : 'border-gray-200'}`}
-                        style={{ color: '#120309' }}
-                        placeholder="Voer een veilig wachtwoord in"
                         disabled={isSubmitting}
+                        className={`w-full pl-12 pr-12 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.password ? 'border-red-300' : 'border-gray-200'
+                          }`}
+                        style={{ color: '#120309' }}
+                        placeholder="Laat leeg om huidige wachtwoord te behouden"
                         onFocus={(e) => {
                           if (!fieldErrors.password) {
                             const target = e.target as HTMLInputElement;
@@ -420,6 +486,63 @@ export default function CreateEmployeePage() {
                     </p>
                   </div>
                 </div>
+
+                {/* Password Confirmation - only show if password is being changed */}
+                {formData.password && (
+                  <div className="mt-6">
+                    <label htmlFor="confirmPassword" className="block text-sm font-semibold mb-2" style={{ color: '#120309' }}>
+                      Bevestig nieuw wachtwoord <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <Lock className="h-5 w-5" style={{ color: '#67697c' }} />
+                      </div>
+                      <input
+                        id="confirmPassword"
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        value={confirmPassword}
+                        onChange={(e) => {
+                          setConfirmPassword(e.target.value);
+                          if (fieldErrors.confirmPassword) {
+                            setFieldErrors(prev => ({ ...prev, confirmPassword: '' }));
+                          }
+                        }}
+                        disabled={isSubmitting}
+                        className={`w-full pl-12 pr-12 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.confirmPassword ? 'border-red-300' : 'border-gray-200'
+                          }`}
+                        style={{ color: '#120309' }}
+                        placeholder="Bevestig je nieuwe wachtwoord"
+                        onFocus={(e) => {
+                          if (!fieldErrors.confirmPassword) {
+                            const target = e.target as HTMLInputElement;
+                            target.style.boxShadow = '0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)';
+                            target.style.borderColor = '#d5896f';
+                          }
+                        }}
+                        onBlur={(e) => {
+                          const target = e.target as HTMLInputElement;
+                          target.style.boxShadow = '';
+                          target.style.borderColor = fieldErrors.confirmPassword ? '#fca5a5' : '#d1d5db';
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute inset-y-0 right-0 pr-4 flex items-center cursor-pointer"
+                        disabled={isSubmitting}
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="h-5 w-5 hover:opacity-70 transition-opacity duration-200" style={{ color: '#67697c' }} />
+                        ) : (
+                          <Eye className="h-5 w-5 hover:opacity-70 transition-opacity duration-200" style={{ color: '#67697c' }} />
+                        )}
+                      </button>
+                    </div>
+                    {fieldErrors.confirmPassword && (
+                      <p className="mt-2 text-sm text-red-600">{fieldErrors.confirmPassword}</p>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Role and Dates Information */}
@@ -435,42 +558,26 @@ export default function CreateEmployeePage() {
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Shield className="h-5 w-5" style={{ color: '#67697c' }} />
+                        <Shield className="h-5 w-5" style={{ color: canEditField('role') ? '#67697c' : '#9ca3af' }} />
                       </div>
                       <select
                         id="role"
                         value={formData.role}
                         onChange={(e) => handleInputChange('role', parseInt(e.target.value) as Role)}
-                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.role ? 'border-red-300' : 'border-gray-200'}`}
-                        style={{ color: '#120309' }}
-                        disabled={isSubmitting}
-                        onFocus={(e) => {
-                          if (!fieldErrors.role) {
-                            const target = e.target as HTMLSelectElement;
-                            target.style.boxShadow = '0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)';
-                            target.style.borderColor = '#d5896f';
-                          }
-                        }}
-                        onBlur={(e) => {
-                          const target = e.target as HTMLSelectElement;
-                          target.style.boxShadow = '';
-                          target.style.borderColor = fieldErrors.role ? '#fca5a5' : '#d1d5db';
-                        }}
+                        disabled={!canEditField('role') || isSubmitting}
+                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none transition-all duration-300 ${!canEditField('role')
+                            ? 'bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200'
+                            : 'border-gray-200 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
+                          }`}
+                        style={{ color: canEditField('role') ? '#120309' : '#9ca3af' }}
                       >
                         <option value={Role.Werknemer}>{getRoleName(Role.Werknemer)}</option>
                         <option value={Role.ShiftLeider}>{getRoleName(Role.ShiftLeider)}</option>
-                        {isManager() && (
-                          <option value={Role.Manager}>{getRoleName(Role.Manager)}</option>
-                        )}
+                        <option value={Role.Manager}>{getRoleName(Role.Manager)}</option>
                       </select>
                     </div>
-                    {fieldErrors.role && (
-                      <p className="mt-2 text-sm text-red-600">{fieldErrors.role}</p>
-                    )}
-                    {!isManager() && (
-                      <p className="mt-2 text-xs" style={{ color: '#67697c' }}>
-                        Alleen managers kunnen andere managers in dienst nemen
-                      </p>
+                    {!canEditField('role') && (
+                      <p className="mt-2 text-xs text-gray-500">Dit veld kan niet worden bewerkt</p>
                     )}
                   </div>
 
@@ -481,34 +588,29 @@ export default function CreateEmployeePage() {
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Calendar className="h-5 w-5" style={{ color: '#67697c' }} />
+                        <Calendar className="h-5 w-5" style={{ color: canEditField('hireDate') ? '#67697c' : '#9ca3af' }} />
                       </div>
                       <input
                         id="hireDate"
-                        name="hire-date"
                         type="date"
                         value={formData.hireDate}
                         onChange={(e) => handleInputChange('hireDate', e.target.value)}
-                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.hireDate ? 'border-red-300' : 'border-gray-200'}`}
-                        style={{ color: '#120309' }}
-                        disabled={isSubmitting}
+                        disabled={!canEditField('hireDate') || isSubmitting}
+                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none transition-all duration-300 ${!canEditField('hireDate')
+                            ? 'bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200'
+                            : fieldErrors.hireDate
+                              ? 'border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
+                              : 'border-gray-200 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
+                          }`}
+                        style={{ color: canEditField('hireDate') ? '#120309' : '#9ca3af' }}
                         max={new Date().toISOString().split('T')[0]}
-                        onFocus={(e) => {
-                          if (!fieldErrors.hireDate) {
-                            const target = e.target as HTMLInputElement;
-                            target.style.boxShadow = '0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)';
-                            target.style.borderColor = '#d5896f';
-                          }
-                        }}
-                        onBlur={(e) => {
-                          const target = e.target as HTMLInputElement;
-                          target.style.boxShadow = '';
-                          target.style.borderColor = fieldErrors.hireDate ? '#fca5a5' : '#d1d5db';
-                        }}
                       />
                     </div>
                     {fieldErrors.hireDate && (
                       <p className="mt-2 text-sm text-red-600">{fieldErrors.hireDate}</p>
+                    )}
+                    {!canEditField('hireDate') && (
+                      <p className="mt-2 text-xs text-gray-500">Dit veld kan niet worden bewerkt</p>
                     )}
                   </div>
 
@@ -519,34 +621,29 @@ export default function CreateEmployeePage() {
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Calendar className="h-5 w-5" style={{ color: '#67697c' }} />
+                        <Calendar className="h-5 w-5" style={{ color: canEditField('birthDate') ? '#67697c' : '#9ca3af' }} />
                       </div>
                       <input
                         id="birthDate"
-                        name="birth-date"
                         type="date"
                         value={formData.birthDate}
                         onChange={(e) => handleInputChange('birthDate', e.target.value)}
-                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.birthDate ? 'border-red-300' : 'border-gray-200'}`}
-                        style={{ color: '#120309' }}
-                        disabled={isSubmitting}
+                        disabled={!canEditField('birthDate') || isSubmitting}
+                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none transition-all duration-300 ${!canEditField('birthDate')
+                            ? 'bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200'
+                            : fieldErrors.birthDate
+                              ? 'border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
+                              : 'border-gray-200 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
+                          }`}
+                        style={{ color: canEditField('birthDate') ? '#120309' : '#9ca3af' }}
                         max={new Date().toISOString().split('T')[0]}
-                        onFocus={(e) => {
-                          if (!fieldErrors.birthDate) {
-                            const target = e.target as HTMLInputElement;
-                            target.style.boxShadow = '0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)';
-                            target.style.borderColor = '#d5896f';
-                          }
-                        }}
-                        onBlur={(e) => {
-                          const target = e.target as HTMLInputElement;
-                          target.style.boxShadow = '';
-                          target.style.borderColor = fieldErrors.birthDate ? '#fca5a5' : '#d1d5db';
-                        }}
                       />
                     </div>
                     {fieldErrors.birthDate && (
                       <p className="mt-2 text-sm text-red-600">{fieldErrors.birthDate}</p>
+                    )}
+                    {!canEditField('birthDate') && (
+                      <p className="mt-2 text-xs text-gray-500">Dit veld kan niet worden bewerkt</p>
                     )}
                   </div>
                 </div>
@@ -556,7 +653,7 @@ export default function CreateEmployeePage() {
               <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200/50">
                 <button
                   type="button"
-                  onClick={() => router.push('/employees')}
+                  onClick={() => router.back()}
                   disabled={isSubmitting}
                   className="flex items-center space-x-2 px-6 py-3 rounded-xl border border-gray-300 text-gray-700 font-semibold transition-all duration-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
@@ -566,6 +663,7 @@ export default function CreateEmployeePage() {
 
                 <button
                   type="submit"
+                  onClick={() => router.push('/employees')}
                   disabled={isSubmitting}
                   className="flex items-center space-x-2 px-6 py-3 rounded-xl text-white font-semibold transition-all duration-300 hover:shadow-lg hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}
@@ -573,11 +671,12 @@ export default function CreateEmployeePage() {
                   {isSubmitting ? (
                     <>
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                      <span>Aanmaken...</span>
+                      <span>Opslaan...</span>
                     </>
                   ) : (
                     <>
-                      <span>Medewerker aanmaken</span>
+                      <Save className="h-5 w-5" />
+                      <span>Wijzigingen opslaan</span>
                     </>
                   )}
                 </button>
