@@ -22,6 +22,15 @@ public class Employee
     [MaxLength(100, ErrorMessage = "Password hash cannot exceed 100 characters")]
     public string PasswordHash { get; set; } = string.Empty;
 
+    [Required(ErrorMessage = "Role is required")]
+    public Role Role { get; set; } = Role.Werknemer;
+
+    [Required(ErrorMessage = "Hire date is required")]
+    public DateTime HireDate { get; set; } = DateTime.UtcNow;
+
+    [Required(ErrorMessage = "Birth date is required")]
+    public DateTime BirthDate { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 

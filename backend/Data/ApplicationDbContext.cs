@@ -40,6 +40,18 @@ public class ApplicationDbContext : DbContext
 				  .IsRequired()
 				  .HasMaxLength(100);
 
+			// Configure Role enum
+			entity.Property(e => e.Role)
+				  .IsRequired()
+				  .HasConversion<int>();
+
+			// Configure date fields
+			entity.Property(e => e.HireDate)
+				  .IsRequired();
+
+			entity.Property(e => e.BirthDate)
+				  .IsRequired();
+
 			// Auto-populate timestamps using SQLite datetime function
 			entity.Property(e => e.CreatedAt)
 				  .HasDefaultValueSql("datetime('now')");
@@ -88,6 +100,9 @@ public class ApplicationDbContext : DbContext
 				LastName = "User",
 				Username = "admin",
 				PasswordHash = adminPasswordHash,
+				Role = Role.Manager,
+				HireDate = DateTime.UtcNow,
+				BirthDate = new DateTime(1990, 1, 1), // Default birth date
 				CreatedAt = DateTime.UtcNow,
 				UpdatedAt = DateTime.UtcNow
 			}

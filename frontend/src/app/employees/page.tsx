@@ -6,12 +6,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useModal } from '@/contexts/ModalContext';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
-import { Users, Search, Edit, Trash2, Eye, UserPlus, AlertTriangle, CheckCircle, Info, RefreshCcw } from 'lucide-react';
-import { Employee } from '@/types/auth';
+import { Users, Search, Edit, Trash2, Eye, UserPlus, AlertTriangle, CheckCircle, Info, RefreshCcw, Shield } from 'lucide-react';
+import { Employee, Role } from '@/types/auth';
 import * as api from '@/lib/api';
 
 export default function EmployeesPage() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, hasAccess, isManager, getRoleName } = useAuth();
   const { showConfirm, showAlert } = useModal();
   const router = useRouter();
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -19,12 +19,15 @@ export default function EmployeesPage() {
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Redirect to login if not authenticated
+  // Redirect to login if not authenticated or no access
   useEffect(() => {
     if (!isLoading && !user) {
       router.push('/login');
+    } else if (!isLoading && user && !isManager()) {
+      // Only Managers can access employee management
+      router.push('/home');
     }
-  }, [user, isLoading, router]);
+  }, [user, isLoading, router, isManager]);
 
   // Set page title
   useEffect(() => {
@@ -53,6 +56,28 @@ export default function EmployeesPage() {
   };
 
   const handleDeleteEmployee = (employee: Employee) => {
+    // Only managers can delete employees
+    if (!isManager()) {
+      showAlert({
+        title: 'Onvoldoende rechten',
+        message: 'Alleen managers kunnen medewerkers verwijderen.',
+        confirmText: 'OK',
+        icon: <AlertTriangle className="h-6 w-6 text-red-600" />
+      });
+      return;
+    }
+
+    // Prevent deleting yourself
+    if (employee.id === user?.id) {
+      showAlert({
+        title: 'Actie niet toegestaan',
+        message: 'Je kunt jezelf niet verwijderen.',
+        confirmText: 'OK',
+        icon: <AlertTriangle className="h-6 w-6 text-orange-600" />
+      });
+      return;
+    }
+
     showConfirm({
       title: 'Medewerker verwijderen',
       message: `Weet je zeker dat je "${employee.fullName}" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.`,
@@ -90,7 +115,10 @@ export default function EmployeesPage() {
       title: `Medewerker: ${employee.fullName}`,
       message: `
         Gebruikersnaam: ${employee.username}
+        Functie: ${getRoleName(employee.role)}
         ID: ${employee.id}
+        In dienst sinds: ${new Date(employee.hireDate).toLocaleDateString('nl-NL')}
+        Geboortedatum: ${new Date(employee.birthDate).toLocaleDateString('nl-NL')}
         Aangemaakt: ${new Date(employee.createdAt).toLocaleDateString('nl-NL')}
         Laatste update: ${new Date(employee.updatedAt).toLocaleDateString('nl-NL')}
       `,
@@ -189,7 +217,18 @@ export default function EmployeesPage() {
                   </div>
 
                   <button
-                    onClick={() => router.push('/employees/create')}
+                    onClick={() => {
+                      if (!isManager()) {
+                        showAlert({
+                          title: 'Onvoldoende rechten',
+                          message: 'Je hebt geen rechten om nieuwe medewerkers toe te voegen.',
+                          confirmText: 'OK',
+                          icon: <AlertTriangle className="h-6 w-6 text-red-600" />
+                        });
+                        return;
+                      }
+                      router.push('/employees/create');
+                    }}
                     className="flex items-center space-x-2 px-6 py-3 rounded-xl text-white font-semibold transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer"
                     style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}
                   >
@@ -279,6 +318,8 @@ export default function EmployeesPage() {
                     <tr>
                       <th className="px-6 py-4 text-left text-sm font-semibold" style={{ color: '#120309' }}>Naam</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold" style={{ color: '#120309' }}>Gebruikersnaam</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold" style={{ color: '#120309' }}>Functie</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold" style={{ color: '#120309' }}>In Dienst Sinds</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold" style={{ color: '#120309' }}>Aangemaakt</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold" style={{ color: '#120309' }}>Laatste Update</th>
                       <th className="px-6 py-4 text-center text-sm font-semibold" style={{ color: '#120309' }}>Acties</th>
@@ -287,7 +328,7 @@ export default function EmployeesPage() {
                   <tbody>
                     {filteredEmployees.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="px-6 py-12 text-center">
+                        <td colSpan={7} className="px-6 py-12 text-center">
                           <div className="flex flex-col items-center space-y-3">
                             <Users className="h-12 w-12" style={{ color: '#67697c' }} />
                             <p className="font-medium" style={{ color: '#67697c' }}>
@@ -302,14 +343,16 @@ export default function EmployeesPage() {
                                 Wis zoekterm
                               </button>
                             ) : (
-                              <button
-                                onClick={() => router.push('/employees/create')}
-                                className="flex items-center space-x-2 px-4 py-2 rounded-lg text-white font-medium transition-all duration-200 hover:scale-105 cursor-pointer"
-                                style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}
-                              >
-                                <UserPlus className="h-4 w-4" />
-                                <span>Eerste medewerker toevoegen</span>
-                              </button>
+                              isManager() && (
+                                <button
+                                  onClick={() => router.push('/employees/create')}
+                                  className="flex items-center space-x-2 px-4 py-2 rounded-lg text-white font-medium transition-all duration-200 hover:scale-105 cursor-pointer"
+                                  style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}
+                                >
+                                  <UserPlus className="h-4 w-4" />
+                                  <span>Eerste medewerker toevoegen</span>
+                                </button>
+                              )
                             )}
                           </div>
                         </td>
@@ -333,6 +376,29 @@ export default function EmployeesPage() {
                           </td>
                           <td className="px-6 py-4">
                             <span className="font-medium" style={{ color: '#120309' }}>{employee.username}</span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                employee.role === Role.Manager
+                                  ? 'bg-purple-100 text-purple-800'
+                                  : employee.role === Role.ShiftLeider
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-gray-100 text-gray-800'
+                              }`}
+                            >
+                              <Shield className="h-3 w-3 mr-1" />
+                              {getRoleName(employee.role)}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span style={{ color: '#67697c' }}>
+                              {new Date(employee.hireDate).toLocaleDateString('nl-NL', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric'
+                              })}
+                            </span>
                           </td>
                           <td className="px-6 py-4">
                             <span style={{ color: '#67697c' }}>
@@ -361,20 +427,26 @@ export default function EmployeesPage() {
                               >
                                 <Eye className="h-4 w-4 text-blue-600" />
                               </button>
-                              <button
-                                onClick={() => handleEditEmployee(employee)}
-                                className="p-2 rounded-lg bg-orange-100 hover:bg-orange-200 transition-colors duration-200 cursor-pointer"
-                                title="Bewerken"
-                              >
-                                <Edit className="h-4 w-4 text-orange-600" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteEmployee(employee)}
-                                className="p-2 rounded-lg bg-red-100 hover:bg-red-200 transition-colors duration-200 cursor-pointer"
-                                title="Verwijderen"
-                              >
-                                <Trash2 className="h-4 w-4 text-red-600" />
-                              </button>
+                              {isManager() && (
+                                <>
+                                  <button
+                                    onClick={() => handleEditEmployee(employee)}
+                                    className="p-2 rounded-lg bg-orange-100 hover:bg-orange-200 transition-colors duration-200 cursor-pointer"
+                                    title="Bewerken"
+                                  >
+                                    <Edit className="h-4 w-4 text-orange-600" />
+                                  </button>
+                                  {employee.id !== user?.id && (
+                                    <button
+                                      onClick={() => handleDeleteEmployee(employee)}
+                                      className="p-2 rounded-lg bg-red-100 hover:bg-red-200 transition-colors duration-200 cursor-pointer"
+                                      title="Verwijderen"
+                                    >
+                                      <Trash2 className="h-4 w-4 text-red-600" />
+                                    </button>
+                                  )}
+                                </>
+                              )}
                             </div>
                           </td>
                         </tr>

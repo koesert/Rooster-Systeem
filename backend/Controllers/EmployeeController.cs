@@ -8,7 +8,7 @@ namespace backend.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize] // All endpoints require authentication
+[Authorize(Policy = "ManagerOnly")] // Only Managers can access employee management
 public class EmployeeController : ControllerBase
 {
     private readonly IEmployeeService _employeeService;
@@ -34,6 +34,9 @@ public class EmployeeController : ControllerBase
                 LastName = e.LastName,
                 Username = e.Username,
                 FullName = e.FullName,
+                Role = e.Role,
+                HireDate = e.HireDate,
+                BirthDate = e.BirthDate,
                 CreatedAt = e.CreatedAt,
                 UpdatedAt = e.UpdatedAt
             });
@@ -66,6 +69,9 @@ public class EmployeeController : ControllerBase
                 LastName = employee.LastName,
                 Username = employee.Username,
                 FullName = employee.FullName,
+                Role = employee.Role,
+                HireDate = employee.HireDate,
+                BirthDate = employee.BirthDate,
                 CreatedAt = employee.CreatedAt,
                 UpdatedAt = employee.UpdatedAt
             };
@@ -93,7 +99,10 @@ public class EmployeeController : ControllerBase
             {
                 FirstName = request.FirstName,
                 LastName = request.LastName,
-                Username = request.Username
+                Username = request.Username,
+                Role = request.Role,
+                HireDate = request.HireDate,
+                BirthDate = request.BirthDate
             };
 
             var createdEmployee = await _employeeService.CreateEmployeeAsync(employee, request.Password);
@@ -105,6 +114,9 @@ public class EmployeeController : ControllerBase
                 LastName = createdEmployee.LastName,
                 Username = createdEmployee.Username,
                 FullName = createdEmployee.FullName,
+                Role = createdEmployee.Role,
+                HireDate = createdEmployee.HireDate,
+                BirthDate = createdEmployee.BirthDate,
                 CreatedAt = createdEmployee.CreatedAt,
                 UpdatedAt = createdEmployee.UpdatedAt
             };
@@ -137,6 +149,9 @@ public class EmployeeController : ControllerBase
                 FirstName = request.FirstName,
                 LastName = request.LastName,
                 Username = request.Username,
+                Role = request.Role,
+                HireDate = request.HireDate,
+                BirthDate = request.BirthDate,
                 PasswordHash = request.Password ?? string.Empty
             };
 
@@ -154,6 +169,9 @@ public class EmployeeController : ControllerBase
                 LastName = updatedEmployee.LastName,
                 Username = updatedEmployee.Username,
                 FullName = updatedEmployee.FullName,
+                Role = updatedEmployee.Role,
+                HireDate = updatedEmployee.HireDate,
+                BirthDate = updatedEmployee.BirthDate,
                 CreatedAt = updatedEmployee.CreatedAt,
                 UpdatedAt = updatedEmployee.UpdatedAt
             };

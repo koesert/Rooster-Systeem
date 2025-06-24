@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using System.Text;
 using backend.Data;
 using backend.Services;
@@ -47,9 +48,58 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+// Configure Authorization policies for role-based access control
+builder.Services.AddAuthorization(options =>
+{
+    // Manager policy - only managers can access
+    options.AddPolicy("ManagerOnly", policy =>
+        policy.RequireClaim("Role", "Manager"));
+
+    // Manager or Shift Leader policy
+    options.AddPolicy("ManagerOrShiftLeider", policy =>
+        policy.RequireClaim("Role", "Manager", "ShiftLeider"));
+
+    // All authenticated users (any role)
+    options.AddPolicy("AllRoles", policy =>
+        policy.RequireClaim("Role", "Manager", "ShiftLeider", "Werknemer"));
+});
+
+// Configure Swagger/OpenAPI
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo 
+    { 
+        Title = "Restaurant Roster API", 
+        Version = "v1",
+        Description = "API for managing restaurant employees with role-based access control"
+    });
+
+    // Add JWT authentication to Swagger
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header using the Bearer scheme. Enter 'Bearer' [space] and then your token in the text input below.",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] {}
+        }
+    });
+});
 
 // Configure CORS for frontend communication (Next.js on port 3000)
 builder.Services.AddCors(options =>
@@ -83,13 +133,14 @@ using (var scope = app.Services.CreateScope())
 }
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+// Always enable Swagger for testing
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
-app.UseHttpsRedirection();
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Restaurant Roster API v1");
+    c.RoutePrefix = string.Empty; // This makes swagger available at the root URL
+    c.DocumentTitle = "Restaurant Roster API";
+});
 
 // Apply CORS policy before authentication
 app.UseCors("AllowFrontend");

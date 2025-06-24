@@ -5,12 +5,12 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
-import { UserPlus, User, Lock, Eye, EyeOff, ArrowLeft, Save, X } from 'lucide-react';
-import { CreateEmployeeRequest } from '@/types/auth';
+import { UserPlus, User, Lock, Eye, EyeOff, ArrowLeft, Save, X, Shield, Calendar } from 'lucide-react';
+import { CreateEmployeeRequest, Role } from '@/types/auth';
 import * as api from '@/lib/api';
 
 export default function CreateEmployeePage() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, hasAccess, isManager, getRoleName } = useAuth();
   const router = useRouter();
 
   // Form state
@@ -18,7 +18,10 @@ export default function CreateEmployeePage() {
     firstName: '',
     lastName: '',
     username: '',
-    password: ''
+    password: '',
+    role: Role.Werknemer,
+    hireDate: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD format
+    birthDate: ''
   });
 
   // UI state
@@ -27,12 +30,15 @@ export default function CreateEmployeePage() {
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  // Redirect to login if not authenticated
+  // Redirect to login if not authenticated or no access
   useEffect(() => {
     if (!isLoading && !user) {
       router.push('/login');
+    } else if (!isLoading && user && !isManager()) {
+      // Only Managers can create employees
+      router.push('/employees');
     }
-  }, [user, isLoading, router]);
+  }, [user, isLoading, router, isManager]);
 
   // Set page title
   useEffect(() => {
@@ -76,11 +82,49 @@ export default function CreateEmployeePage() {
       errors.password = 'Wachtwoord moet minimaal 1 cijfer bevatten';
     }
 
+    // Role validation (only managers can assign manager role)
+    if (formData.role === Role.Manager && !isManager()) {
+      errors.role = 'Alleen managers kunnen andere managers in dienst nemen';
+    }
+
+    // Hire date validation
+    if (!formData.hireDate) {
+      errors.hireDate = 'Datum in dienst is verplicht';
+    } else {
+      const hireDate = new Date(formData.hireDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      if (hireDate > today) {
+        errors.hireDate = 'Datum in dienst kan niet in de toekomst liggen';
+      }
+    }
+
+    // Birth date validation
+    if (!formData.birthDate) {
+      errors.birthDate = 'Geboortedatum is verplicht';
+    } else {
+      const birthDate = new Date(formData.birthDate);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      
+      if (age < 16) {
+        errors.birthDate = 'Medewerker moet minimaal 16 jaar oud zijn';
+      } else if (age > 100) {
+        errors.birthDate = 'Controleer de geboortedatum';
+      }
+    }
+
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
-  const handleInputChange = (field: keyof CreateEmployeeRequest, value: string) => {
+  const handleInputChange = (field: keyof CreateEmployeeRequest, value: string | Role) => {
     setFormData(prev => ({ ...prev, [field]: value }));
 
     // Clear field error when user starts typing
@@ -382,6 +426,136 @@ export default function CreateEmployeePage() {
                 </div>
               </div>
 
+              {/* Role and Dates Information */}
+              <div>
+                <h3 className="text-xl font-semibold mb-6" style={{ color: '#120309' }}>
+                  Functie & Gegevens
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Role */}
+                  <div>
+                    <label htmlFor="role" className="block text-sm font-semibold mb-2" style={{ color: '#120309' }}>
+                      Rol <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <Shield className="h-5 w-5" style={{ color: '#67697c' }} />
+                      </div>
+                      <select
+                        id="role"
+                        value={formData.role}
+                        onChange={(e) => handleInputChange('role', parseInt(e.target.value) as Role)}
+                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.role ? 'border-red-300' : 'border-gray-200'}`}
+                        style={{ color: '#120309' }}
+                        disabled={isSubmitting}
+                        onFocus={(e) => {
+                          if (!fieldErrors.role) {
+                            const target = e.target as HTMLSelectElement;
+                            target.style.boxShadow = '0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)';
+                            target.style.borderColor = '#d5896f';
+                          }
+                        }}
+                        onBlur={(e) => {
+                          const target = e.target as HTMLSelectElement;
+                          target.style.boxShadow = '';
+                          target.style.borderColor = fieldErrors.role ? '#fca5a5' : '#d1d5db';
+                        }}
+                      >
+                        <option value={Role.Werknemer}>{getRoleName(Role.Werknemer)}</option>
+                        <option value={Role.ShiftLeider}>{getRoleName(Role.ShiftLeider)}</option>
+                        {isManager() && (
+                          <option value={Role.Manager}>{getRoleName(Role.Manager)}</option>
+                        )}
+                      </select>
+                    </div>
+                    {fieldErrors.role && (
+                      <p className="mt-2 text-sm text-red-600">{fieldErrors.role}</p>
+                    )}
+                    {!isManager() && (
+                      <p className="mt-2 text-xs" style={{ color: '#67697c' }}>
+                        Alleen managers kunnen andere managers in dienst nemen
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Hire Date */}
+                  <div>
+                    <label htmlFor="hireDate" className="block text-sm font-semibold mb-2" style={{ color: '#120309' }}>
+                      In dienst sinds <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <Calendar className="h-5 w-5" style={{ color: '#67697c' }} />
+                      </div>
+                      <input
+                        id="hireDate"
+                        name="hire-date"
+                        type="date"
+                        value={formData.hireDate}
+                        onChange={(e) => handleInputChange('hireDate', e.target.value)}
+                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.hireDate ? 'border-red-300' : 'border-gray-200'}`}
+                        style={{ color: '#120309' }}
+                        disabled={isSubmitting}
+                        max={new Date().toISOString().split('T')[0]}
+                        onFocus={(e) => {
+                          if (!fieldErrors.hireDate) {
+                            const target = e.target as HTMLInputElement;
+                            target.style.boxShadow = '0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)';
+                            target.style.borderColor = '#d5896f';
+                          }
+                        }}
+                        onBlur={(e) => {
+                          const target = e.target as HTMLInputElement;
+                          target.style.boxShadow = '';
+                          target.style.borderColor = fieldErrors.hireDate ? '#fca5a5' : '#d1d5db';
+                        }}
+                      />
+                    </div>
+                    {fieldErrors.hireDate && (
+                      <p className="mt-2 text-sm text-red-600">{fieldErrors.hireDate}</p>
+                    )}
+                  </div>
+
+                  {/* Birth Date */}
+                  <div>
+                    <label htmlFor="birthDate" className="block text-sm font-semibold mb-2" style={{ color: '#120309' }}>
+                      Geboortedatum <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <Calendar className="h-5 w-5" style={{ color: '#67697c' }} />
+                      </div>
+                      <input
+                        id="birthDate"
+                        name="birth-date"
+                        type="date"
+                        value={formData.birthDate}
+                        onChange={(e) => handleInputChange('birthDate', e.target.value)}
+                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.birthDate ? 'border-red-300' : 'border-gray-200'}`}
+                        style={{ color: '#120309' }}
+                        disabled={isSubmitting}
+                        max={new Date().toISOString().split('T')[0]}
+                        onFocus={(e) => {
+                          if (!fieldErrors.birthDate) {
+                            const target = e.target as HTMLInputElement;
+                            target.style.boxShadow = '0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)';
+                            target.style.borderColor = '#d5896f';
+                          }
+                        }}
+                        onBlur={(e) => {
+                          const target = e.target as HTMLInputElement;
+                          target.style.boxShadow = '';
+                          target.style.borderColor = fieldErrors.birthDate ? '#fca5a5' : '#d1d5db';
+                        }}
+                      />
+                    </div>
+                    {fieldErrors.birthDate && (
+                      <p className="mt-2 text-sm text-red-600">{fieldErrors.birthDate}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               {/* Form Actions */}
               <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200/50">
                 <button
@@ -407,7 +581,6 @@ export default function CreateEmployeePage() {
                     </>
                   ) : (
                     <>
-                      <Save className="h-5 w-5" />
                       <span>Medewerker Aanmaken</span>
                     </>
                   )}

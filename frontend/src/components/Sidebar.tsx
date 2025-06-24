@@ -1,11 +1,11 @@
 'use client';
 
-import { Users, LogOut, Home, UserPlus } from 'lucide-react';
+import { Users, LogOut, Home, Shield } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
 
 export default function Sidebar() {
-  const { logout, user } = useAuth();
+  const { logout, user, isManager, getRoleName } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -13,24 +13,31 @@ export default function Sidebar() {
     logout();
   };
 
+  // Build navigation items based on user role
   const navigationItems = [
     {
       name: 'Dashboard',
       icon: Home,
       path: '/home',
-      onClick: () => router.push('/home')
-    },
-    {
-      name: 'Medewerkers beheren',
-      icon: Users,
-      path: '/employees',
-      onClick: () => router.push('/employees')
+      onClick: () => router.push('/home'),
+      allowedRoles: ['all'] // All users can access dashboard
     }
   ];
 
+  // Only add employee management for managers
+  if (isManager()) {
+    navigationItems.push({
+      name: 'Medewerkers beheren',
+      icon: Users,
+      path: '/employees',
+      onClick: () => router.push('/employees'),
+      allowedRoles: ['manager']
+    });
+  }
+
   const isActive = (path: string) => {
     if (path === '/employees') {
-      return pathname === '/employees';
+      return pathname === '/employees' || pathname.startsWith('/employees/');
     }
     return pathname === path;
   };

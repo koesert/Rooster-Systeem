@@ -46,6 +46,17 @@ public class EmployeeService : IEmployeeService
         employee.CreatedAt = DateTime.UtcNow;
         employee.UpdatedAt = DateTime.UtcNow;
 
+        // Validate dates
+        if (employee.BirthDate > DateTime.UtcNow)
+        {
+            throw new InvalidOperationException("Birth date cannot be in the future");
+        }
+
+        if (employee.HireDate > DateTime.UtcNow.AddDays(1)) // Allow next day for timezone differences
+        {
+            throw new InvalidOperationException("Hire date cannot be more than one day in the future");
+        }
+
         _context.Employees.Add(employee);
         await _context.SaveChangesAsync();
 
@@ -67,9 +78,23 @@ public class EmployeeService : IEmployeeService
             throw new InvalidOperationException($"Username '{employee.Username}' already exists");
         }
 
+        // Validate dates
+        if (employee.BirthDate > DateTime.UtcNow)
+        {
+            throw new InvalidOperationException("Birth date cannot be in the future");
+        }
+
+        if (employee.HireDate > DateTime.UtcNow.AddDays(1)) // Allow next day for timezone differences
+        {
+            throw new InvalidOperationException("Hire date cannot be more than one day in the future");
+        }
+
         existingEmployee.FirstName = employee.FirstName;
         existingEmployee.LastName = employee.LastName;
         existingEmployee.Username = employee.Username;
+        existingEmployee.Role = employee.Role;
+        existingEmployee.HireDate = employee.HireDate;
+        existingEmployee.BirthDate = employee.BirthDate;
         existingEmployee.UpdatedAt = DateTime.UtcNow;
 
         // Only update password if a new one is provided (optional during updates)

@@ -1,4 +1,4 @@
-import { LoginRequest, LoginResponse, Employee, CreateEmployeeRequest } from '@/types/auth';
+import { LoginRequest, LoginResponse, Employee, CreateEmployeeRequest, UpdateEmployeeRequest } from '@/types/auth';
 
 const API_BASE_URL = 'http://localhost:5000/api';
 
@@ -66,8 +66,25 @@ const apiRequest = async (url: string, options: RequestInit = {}): Promise<any> 
   }
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new ApiError(response.status, errorText || 'Er is een fout opgetreden');
+    let errorMessage = 'Er is een fout opgetreden';
+
+    try {
+      const errorData = await response.text();
+      if (errorData) {
+        errorMessage = errorData;
+      }
+    } catch (e) {
+      // Use default error message if parsing fails
+    }
+
+    // Handle specific error cases
+    if (response.status === 403) {
+      errorMessage = 'Je hebt geen toegang tot deze functie. Alleen managers kunnen medewerkers beheren.';
+    } else if (response.status === 401) {
+      errorMessage = 'Je sessie is verlopen. Log opnieuw in.';
+    }
+
+    throw new ApiError(response.status, errorMessage);
   }
 
   const contentType = response.headers.get('content-type');
@@ -132,6 +149,10 @@ export const refreshAccessToken = async (): Promise<boolean> => {
       const data: LoginResponse = await response.json();
       setAccessToken(data.accessToken);
       setRefreshToken(data.refreshToken);
+
+      // Update stored user data
+      localStorage.setItem('userData', JSON.stringify(data.user));
+
       return true;
     }
   } catch (error) {
@@ -160,7 +181,7 @@ export const getEmployeeById = async (id: number): Promise<Employee> => {
   return apiRequest(`/employee/${id}`);
 };
 
-export const updateEmployee = async (id: number, employeeData: Partial<CreateEmployeeRequest>): Promise<Employee> => {
+export const updateEmployee = async (id: number, employeeData: UpdateEmployeeRequest): Promise<Employee> => {
   return apiRequest(`/employee/${id}`, {
     method: 'PUT',
     body: JSON.stringify(employeeData),

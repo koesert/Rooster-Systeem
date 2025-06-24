@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using backend.Models;
 
 namespace backend.DTOs;
 
@@ -20,4 +21,13 @@ public class CreateEmployeeDto
     [MinLength(6, ErrorMessage = "Password must be at least 6 characters")]
     [RegularExpression(@"^(?=.*[A-Z])(?=.*\d).+$", ErrorMessage = "Password must contain at least 1 uppercase letter and 1 number")]
     public required string Password { get; set; }
+
+    [Required(ErrorMessage = "Role is required")]
+    public Role Role { get; set; } = Role.Werknemer;
+
+    [Required(ErrorMessage = "Hire date is required")]
+    public DateTime HireDate { get; set; } = DateTime.UtcNow;
+
+    [Required(ErrorMessage = "Birth date is required")]
+    public DateTime BirthDate { get; set; }
 }

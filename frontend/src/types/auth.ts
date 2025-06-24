@@ -1,9 +1,18 @@
+export enum Role {
+  Werknemer = 0,
+  ShiftLeider = 1,
+  Manager = 2
+}
+
 export interface Employee {
   id: number;
   firstName: string;
   lastName: string;
   username: string;
   fullName: string;
+  role: Role;
+  hireDate: string;
+  birthDate: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -25,6 +34,19 @@ export interface CreateEmployeeRequest {
   lastName: string;
   username: string;
   password: string;
+  role: Role;
+  hireDate: string;
+  birthDate: string;
+}
+
+export interface UpdateEmployeeRequest {
+  firstName: string;
+  lastName: string;
+  username: string;
+  password?: string;
+  role: Role;
+  hireDate: string;
+  birthDate: string;
 }
 
 export interface RefreshTokenRequest {
@@ -38,4 +60,8 @@ export interface AuthContextType {
   isLoading: boolean;
   justLoggedIn: boolean;
   clearJustLoggedIn: () => void;
+  isManager: () => boolean;
+  isManagerOrShiftLeider: () => boolean;
+  hasAccess: (requiredRole: Role) => boolean;
+  getRoleName: (role: Role) => string;
 }

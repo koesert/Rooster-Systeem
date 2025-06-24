@@ -63,6 +63,9 @@ public class AuthService : IAuthService
                     LastName = employee.LastName,
                     Username = employee.Username,
                     FullName = employee.FullName,
+                    Role = employee.Role,
+                    HireDate = employee.HireDate,
+                    BirthDate = employee.BirthDate,
                     CreatedAt = employee.CreatedAt,
                     UpdatedAt = employee.UpdatedAt
                 },
@@ -137,6 +140,9 @@ public class AuthService : IAuthService
                     LastName = token.Employee.LastName,
                     Username = token.Employee.Username,
                     FullName = token.Employee.FullName,
+                    Role = token.Employee.Role,
+                    HireDate = token.Employee.HireDate,
+                    BirthDate = token.Employee.BirthDate,
                     CreatedAt = token.Employee.CreatedAt,
                     UpdatedAt = token.Employee.UpdatedAt
                 },
@@ -152,7 +158,7 @@ public class AuthService : IAuthService
 
     /// <summary>
     /// Generates a short-lived JWT access token (30 minutes)
-    /// Contains user identity claims for API authorization
+    /// Contains user identity claims for API authorization including role information
     /// </summary>
     public string GenerateAccessToken(Employee employee)
     {
@@ -165,6 +171,7 @@ public class AuthService : IAuthService
             new Claim(ClaimTypes.NameIdentifier, employee.Id.ToString()),
             new Claim(ClaimTypes.Name, employee.Username),
             new Claim("FullName", employee.FullName),
+            new Claim("Role", employee.Role.ToString()), // Add role claim for authorization
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64)
         };
