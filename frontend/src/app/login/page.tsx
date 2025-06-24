@@ -81,8 +81,14 @@ export default function LoginPage() {
                   Gebruikersnaam
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 transition-colors duration-200" style={{ color: '#67697c' }} />
+                  <div
+                    className="absolute inset-y-0 left-0 flex items-center justify-center pointer-events-none z-10"
+                    style={{ width: '48px' }}
+                  >
+                    <User
+                      className="h-5 w-5 transition-colors duration-200"
+                      style={{ color: '#67697c' }}
+                    />
                   </div>
                   <input
                     id="username"
@@ -91,7 +97,7 @@ export default function LoginPage() {
                     required
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    className="appearance-none relative block w-full px-4 py-3 pl-12 border border-gray-200 text-gray-900 rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-gray-50/50 hover:bg-white/80 focus:shadow-lg"
+                    className="appearance-none relative block w-full pl-12 pr-4 py-3 border border-gray-200 text-gray-900 rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-gray-50/50 hover:bg-white/80 focus:shadow-lg"
                     style={{
                       color: '#120309'
                     }}
@@ -117,8 +123,14 @@ export default function LoginPage() {
                   Wachtwoord
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 transition-colors duration-200" style={{ color: '#67697c' }} />
+                  <div
+                    className="absolute inset-y-0 left-0 flex items-center justify-center pointer-events-none z-10"
+                    style={{ width: '48px' }}
+                  >
+                    <Lock
+                      className="h-5 w-5 transition-colors duration-200"
+                      style={{ color: '#67697c' }}
+                    />
                   </div>
                   <input
                     id="password"
@@ -127,7 +139,7 @@ export default function LoginPage() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="appearance-none relative block w-full px-4 py-3 pl-12 pr-12 border border-gray-200 text-gray-900 rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-gray-50/50 hover:bg-white/80 focus:shadow-lg"
+                    className="appearance-none relative block w-full pl-12 pr-12 py-3 border border-gray-200 text-gray-900 rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-gray-50/50 hover:bg-white/80 focus:shadow-lg"
                     style={{ color: '#120309' }}
                     placeholder="Voer je wachtwoord in"
                     disabled={isSubmitting}
@@ -145,8 +157,9 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-4 flex items-center cursor-pointer"
+                    className="absolute inset-y-0 right-0 flex items-center justify-center cursor-pointer z-10"
                     disabled={isSubmitting}
+                    style={{ width: '48px' }}
                   >
                     {showPassword ? (
                       <EyeOff className="h-5 w-5 hover:opacity-70 transition-opacity duration-200" style={{ color: '#67697c' }} />
@@ -173,7 +186,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="group relative w-full flex justify-center py-3.5 px-4 border border-transparent text-sm font-semibold rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:-translate-y-0.5 cursor-pointer"
+                className="group relative w-full flex items-center justify-center py-3.5 px-4 border border-transparent text-sm font-semibold rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:-translate-y-0.5 cursor-pointer"
                 style={{
                   background: 'linear-gradient(135deg, #d5896f, #d5896f90)',
                   boxShadow: '0 10px 25px rgba(213, 137, 111, 0.25)'
@@ -193,13 +206,21 @@ export default function LoginPage() {
                   }
                 }}
               >
-                <span className="absolute left-0 inset-y-0 flex items-center pl-4">
+                <div
+                  className="absolute left-0 inset-y-0 flex items-center justify-center pointer-events-none"
+                  style={{
+                    width: '48px',
+                    background: 'transparent',
+                    border: 'none',
+                    outline: 'none'
+                  }}
+                >
                   {isSubmitting ? (
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                   ) : (
                     <LogIn className="h-5 w-5 text-white/80 group-hover:text-white transition-colors duration-200" />
                   )}
-                </span>
+                </div>
                 {isSubmitting ? 'Bezig met inloggen...' : 'Inloggen'}
               </button>
             </div>
