@@ -1,6 +1,6 @@
 'use client';
 
-import { Users, LogOut, Home, Shield, User } from 'lucide-react';
+import { Users, LogOut, Home, Shield, User, Calendar } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
 
@@ -28,6 +28,13 @@ export default function Sidebar() {
       path: '/profile',
       onClick: () => router.push('/profile'),
       allowedRoles: ['all'] // All users can access their profile
+    },
+    {
+      name: 'Rooster',
+      icon: Calendar,
+      path: '/schedule',
+      onClick: () => router.push('/schedule'),
+      allowedRoles: ['all'] // All users can view the schedule
     }
   ];
 

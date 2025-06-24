@@ -1,4 +1,5 @@
 import { LoginRequest, LoginResponse, Employee, CreateEmployeeRequest, UpdateEmployeeRequest } from '@/types/auth';
+import { Shift, CreateShiftRequest, UpdateShiftRequest, ShiftFilter, WeekSchedule, MonthSchedule } from '@/types/shift';
 
 const API_BASE_URL = 'http://localhost:5000/api';
 
@@ -163,6 +164,94 @@ export const refreshAccessToken = async (): Promise<boolean> => {
   setAccessToken(null);
   setRefreshToken(null);
   return false;
+};
+
+// Shift API functions
+export const getAllShifts = async (filter?: ShiftFilter): Promise<Shift[]> => {
+  const params = new URLSearchParams();
+
+  if (filter) {
+    if (filter.startDate) params.append('startDate', filter.startDate);
+    if (filter.endDate) params.append('endDate', filter.endDate);
+    if (filter.employeeId !== undefined) params.append('employeeId', filter.employeeId.toString());
+    if (filter.shiftType !== undefined) params.append('shiftType', filter.shiftType.toString());
+    if (filter.isOpenEnded !== undefined) params.append('isOpenEnded', filter.isOpenEnded.toString());
+  }
+
+  const queryString = params.toString();
+  const url = `/shift${queryString ? `?${queryString}` : ''}`;
+
+  return apiRequest(url);
+};
+
+export const getShiftById = async (id: number): Promise<Shift> => {
+  return apiRequest(`/shift/${id}`);
+};
+
+export const getShiftsByEmployee = async (employeeId: number, startDate?: string, endDate?: string): Promise<Shift[]> => {
+  const params = new URLSearchParams();
+  if (startDate) params.append('startDate', startDate);
+  if (endDate) params.append('endDate', endDate);
+
+  const queryString = params.toString();
+  const url = `/shift/employee/${employeeId}${queryString ? `?${queryString}` : ''}`;
+
+  return apiRequest(url);
+};
+
+export const getMyShifts = async (startDate?: string, endDate?: string): Promise<Shift[]> => {
+  const params = new URLSearchParams();
+  if (startDate) params.append('startDate', startDate);
+  if (endDate) params.append('endDate', endDate);
+
+  const queryString = params.toString();
+  const url = `/shift/my-shifts${queryString ? `?${queryString}` : ''}`;
+
+  return apiRequest(url);
+};
+
+export const getWeekSchedule = async (weekNumber: string): Promise<WeekSchedule> => {
+  return apiRequest(`/shift/schedule/week/${weekNumber}`);
+};
+
+export const getMonthSchedule = async (monthYear: string): Promise<MonthSchedule> => {
+  return apiRequest(`/shift/schedule/month/${monthYear}`);
+};
+
+export const getAvailableEmployees = async (date: string, startTime: string, endTime?: string): Promise<Employee[]> => {
+  const params = new URLSearchParams();
+  params.append('date', date);
+  params.append('startTime', startTime);
+  if (endTime) params.append('endTime', endTime);
+
+  return apiRequest(`/shift/available-employees?${params.toString()}`);
+};
+
+export const createShift = async (shiftData: CreateShiftRequest): Promise<Shift> => {
+  return apiRequest('/shift', {
+    method: 'POST',
+    body: JSON.stringify(shiftData),
+  });
+};
+
+export const updateShift = async (id: number, shiftData: UpdateShiftRequest): Promise<Shift> => {
+  return apiRequest(`/shift/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(shiftData),
+  });
+};
+
+export const deleteShift = async (id: number): Promise<void> => {
+  return apiRequest(`/shift/${id}`, {
+    method: 'DELETE',
+  });
+};
+
+export const checkShiftOverlap = async (shiftData: CreateShiftRequest): Promise<{ hasOverlap: boolean }> => {
+  return apiRequest('/shift/check-overlap', {
+    method: 'POST',
+    body: JSON.stringify(shiftData),
+  });
 };
 
 // Employee API functions
