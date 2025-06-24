@@ -42,7 +42,7 @@ export default function CreateEmployeePage() {
 
   // Set page title
   useEffect(() => {
-    document.title = 'Jill Dashboard - Nieuwe Medewerker';
+    document.title = 'Jill Dashboard - Nieuwe medewerker';
   }, []);
 
   const validateForm = (): boolean => {
@@ -211,7 +211,7 @@ export default function CreateEmployeePage() {
                     </div>
                     <div>
                       <h1 className="text-4xl font-bold" style={{ background: 'linear-gradient(135deg, #120309, #67697c)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                        Nieuwe Medewerker
+                        Nieuwe medewerker
                       </h1>
                       <p className="text-lg mt-1" style={{ color: '#67697c' }}>
                         Voeg een nieuwe medewerker toe aan het systeem
@@ -236,7 +236,7 @@ export default function CreateEmployeePage() {
               {/* Personal Information */}
               <div>
                 <h3 className="text-xl font-semibold mb-6" style={{ color: '#120309' }}>
-                  Persoonlijke Informatie
+                  Persoonlijke informatie
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* First Name */}
@@ -324,7 +324,7 @@ export default function CreateEmployeePage() {
               {/* Account Information */}
               <div>
                 <h3 className="text-xl font-semibold mb-6" style={{ color: '#120309' }}>
-                  Account Informatie
+                  Account informatie
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Username */}
@@ -429,7 +429,7 @@ export default function CreateEmployeePage() {
               {/* Role and Dates Information */}
               <div>
                 <h3 className="text-xl font-semibold mb-6" style={{ color: '#120309' }}>
-                  Functie & Gegevens
+                  Functie & gegevens
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {/* Role */}
@@ -581,7 +581,7 @@ export default function CreateEmployeePage() {
                     </>
                   ) : (
                     <>
-                      <span>Medewerker Aanmaken</span>
+                      <span>Medewerker aanmaken</span>
                     </>
                   )}
                 </button>

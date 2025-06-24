@@ -117,7 +117,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       case Role.Manager:
         return 'Manager';
       case Role.ShiftLeider:
-        return 'Shift Leider';
+        return 'Shift leider';
       case Role.Werknemer:
         return 'Werknemer';
       default:

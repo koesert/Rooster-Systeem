@@ -208,10 +208,10 @@ export default function EmployeesPage() {
                     </div>
                     <div>
                       <h1 className="text-4xl font-bold" style={{ background: 'linear-gradient(135deg, #120309, #67697c)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                        Medewerkers Beheren
+                        Medewerkers beheren
                       </h1>
                       <p className="text-lg mt-1" style={{ color: '#67697c' }}>
-                        Beheer je team en hun toegangsrechten
+                        Beheer je team
                       </p>
                     </div>
                   </div>
@@ -233,7 +233,7 @@ export default function EmployeesPage() {
                     style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}
                   >
                     <UserPlus className="h-5 w-5" />
-                    <span>Nieuwe Medewerker</span>
+                    <span>Nieuwe medewerker</span>
                   </button>
                 </div>
 
@@ -289,7 +289,7 @@ export default function EmployeesPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-xl font-semibold" style={{ color: '#120309' }}>
-                    Medewerkers Overzicht
+                    Medewerkers overzicht
                   </h3>
                   <p className="text-sm mt-1" style={{ color: '#67697c' }}>
                     {filteredEmployees.length} van {employees.length} medewerkers
@@ -319,16 +319,14 @@ export default function EmployeesPage() {
                       <th className="px-6 py-4 text-left text-sm font-semibold" style={{ color: '#120309' }}>Naam</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold" style={{ color: '#120309' }}>Gebruikersnaam</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold" style={{ color: '#120309' }}>Functie</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold" style={{ color: '#120309' }}>In Dienst Sinds</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold" style={{ color: '#120309' }}>Aangemaakt</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold" style={{ color: '#120309' }}>Laatste Update</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold" style={{ color: '#120309' }}>In dienst sinds</th>
                       <th className="px-6 py-4 text-center text-sm font-semibold" style={{ color: '#120309' }}>Acties</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredEmployees.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="px-6 py-12 text-center">
+                        <td colSpan={5} className="px-6 py-12 text-center">
                           <div className="flex flex-col items-center space-y-3">
                             <Users className="h-12 w-12" style={{ color: '#67697c' }} />
                             <p className="font-medium" style={{ color: '#67697c' }}>
@@ -394,24 +392,6 @@ export default function EmployeesPage() {
                           <td className="px-6 py-4">
                             <span style={{ color: '#67697c' }}>
                               {new Date(employee.hireDate).toLocaleDateString('nl-NL', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric'
-                              })}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span style={{ color: '#67697c' }}>
-                              {new Date(employee.createdAt).toLocaleDateString('nl-NL', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric'
-                              })}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span style={{ color: '#67697c' }}>
-                              {new Date(employee.updatedAt).toLocaleDateString('nl-NL', {
                                 day: '2-digit',
                                 month: '2-digit',
                                 year: 'numeric'
