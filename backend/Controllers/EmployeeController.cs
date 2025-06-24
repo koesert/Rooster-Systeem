@@ -3,12 +3,12 @@ using Microsoft.AspNetCore.Authorization;
 using backend.Models;
 using backend.Services;
 using backend.DTOs;
+using System.Security.Claims;
 
 namespace backend.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Policy = "ManagerOnly")] // Only Managers can access employee management
 public class EmployeeController : ControllerBase
 {
     private readonly IEmployeeService _employeeService;
@@ -21,6 +21,7 @@ public class EmployeeController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Policy = "ManagerOnly")]
     public async Task<ActionResult<IEnumerable<EmployeeResponseDto>>> GetAllEmployees()
     {
         try
@@ -51,6 +52,7 @@ public class EmployeeController : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [Authorize(Policy = "ManagerOnly")]
     public async Task<ActionResult<EmployeeResponseDto>> GetEmployee(int id)
     {
         try
@@ -86,6 +88,7 @@ public class EmployeeController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = "ManagerOnly")]
     public async Task<ActionResult<EmployeeResponseDto>> CreateEmployee([FromBody] CreateEmployeeDto request)
     {
         try
@@ -135,6 +138,7 @@ public class EmployeeController : ControllerBase
     }
 
     [HttpPut("{id}")]
+    [Authorize(Policy = "ManagerOnly")]
     public async Task<IActionResult> UpdateEmployee(int id, [FromBody] UpdateEmployeeDto request)
     {
         try
@@ -190,6 +194,7 @@ public class EmployeeController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [Authorize(Policy = "ManagerOnly")]
     public async Task<IActionResult> DeleteEmployee(int id)
     {
         try
@@ -215,6 +220,7 @@ public class EmployeeController : ControllerBase
     /// Useful for password verification scenarios.
     /// </summary>
     [HttpPost("validate")]
+    [AllowAnonymous] // Allow anonymous access for login validation
     public async Task<ActionResult<bool>> ValidateEmployee([FromBody] LoginDto request)
     {
         try
@@ -231,6 +237,153 @@ public class EmployeeController : ControllerBase
         {
             _logger.LogError(ex, "Error occurred while validating employee credentials");
             return StatusCode(500, "An error occurred while validating credentials");
+        }
+    }
+
+    /// <summary>
+    /// Gets the current user's profile data
+    /// </summary>
+    [HttpGet("profile")]
+    [Authorize(Policy = "AllRoles")] // Any authenticated user can access their own profile
+    public async Task<ActionResult<EmployeeResponseDto>> GetProfile()
+    {
+        try
+        {
+            // Get the current user's ID from the JWT token
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int currentUserId))
+            {
+                return Unauthorized("Invalid user token");
+            }
+
+            var employee = await _employeeService.GetEmployeeByIdAsync(currentUserId);
+
+            if (employee == null)
+            {
+                return NotFound("Employee not found");
+            }
+
+            var employeeResponse = new EmployeeResponseDto
+            {
+                Id = employee.Id,
+                FirstName = employee.FirstName,
+                LastName = employee.LastName,
+                Username = employee.Username,
+                FullName = employee.FullName,
+                Role = employee.Role,
+                HireDate = employee.HireDate,
+                BirthDate = employee.BirthDate,
+                CreatedAt = employee.CreatedAt,
+                UpdatedAt = employee.UpdatedAt
+            };
+
+            return Ok(employeeResponse);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving profile for user {UserId}", User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+            return StatusCode(500, "An error occurred while retrieving the profile");
+        }
+    }
+
+    /// <summary>
+    /// Allows employees to update their own profile (username and password only)
+    /// Managers can update everything about their own profile
+    /// </summary>
+    [HttpPut("profile")]
+    [Authorize(Policy = "AllRoles")] // Any authenticated user can access this
+    public async Task<IActionResult> UpdateProfile([FromBody] UpdateEmployeeDto request)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            // Get the current user's ID from the JWT token
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int currentUserId))
+            {
+                return Unauthorized("Invalid user token");
+            }
+
+            // Get the current user's role
+            var userRoleClaim = User.FindFirst("Role");
+            if (userRoleClaim == null || !Enum.TryParse<Role>(userRoleClaim.Value, out Role currentUserRole))
+            {
+                return Unauthorized("Invalid user role");
+            }
+
+            // Get the current employee data
+            var currentEmployee = await _employeeService.GetEmployeeByIdAsync(currentUserId);
+            if (currentEmployee == null)
+            {
+                return NotFound("Employee not found");
+            }
+
+            Employee employeeToUpdate;
+
+            if (currentUserRole == Role.Manager)
+            {
+                // Managers can update everything about their own profile
+                employeeToUpdate = new Employee
+                {
+                    FirstName = request.FirstName,
+                    LastName = request.LastName,
+                    Username = request.Username,
+                    Role = request.Role,
+                    HireDate = request.HireDate,
+                    BirthDate = request.BirthDate,
+                    PasswordHash = request.Password ?? string.Empty
+                };
+            }
+            else
+            {
+                // Non-managers can only update username and password
+                employeeToUpdate = new Employee
+                {
+                    FirstName = currentEmployee.FirstName, // Keep existing
+                    LastName = currentEmployee.LastName,   // Keep existing
+                    Username = request.Username,           // Allow update
+                    Role = currentEmployee.Role,           // Keep existing
+                    HireDate = currentEmployee.HireDate,   // Keep existing
+                    BirthDate = currentEmployee.BirthDate, // Keep existing
+                    PasswordHash = request.Password ?? string.Empty // Allow update
+                };
+            }
+
+            var updatedEmployee = await _employeeService.UpdateEmployeeAsync(currentUserId, employeeToUpdate);
+
+            if (updatedEmployee == null)
+            {
+                return NotFound("Employee not found");
+            }
+
+            var employeeResponse = new EmployeeResponseDto
+            {
+                Id = updatedEmployee.Id,
+                FirstName = updatedEmployee.FirstName,
+                LastName = updatedEmployee.LastName,
+                Username = updatedEmployee.Username,
+                FullName = updatedEmployee.FullName,
+                Role = updatedEmployee.Role,
+                HireDate = updatedEmployee.HireDate,
+                BirthDate = updatedEmployee.BirthDate,
+                CreatedAt = updatedEmployee.CreatedAt,
+                UpdatedAt = updatedEmployee.UpdatedAt
+            };
+
+            return Ok(employeeResponse);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while updating profile for user {UserId}", User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+            return StatusCode(500, "An error occurred while updating the profile");
         }
     }
 }

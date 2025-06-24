@@ -193,3 +193,14 @@ export const deleteEmployee = async (id: number): Promise<void> => {
     method: 'DELETE',
   });
 };
+
+export const updateProfile = async (profileData: UpdateEmployeeRequest): Promise<Employee> => {
+  return apiRequest('/employee/profile', {
+    method: 'PUT',
+    body: JSON.stringify(profileData),
+  });
+};
+
+export const getCurrentProfile = async (): Promise<Employee> => {
+  return apiRequest('/employee/profile');
+};

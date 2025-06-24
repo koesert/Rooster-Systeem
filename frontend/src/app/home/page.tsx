@@ -34,6 +34,16 @@ export default function HomePage() {
     }
   }, [justLoggedIn, user, clearJustLoggedIn]);
 
+  // Clear justLoggedIn when component unmounts or user navigates away
+  useEffect(() => {
+    return () => {
+      // Clear the notification state when leaving the dashboard
+      if (justLoggedIn) {
+        clearJustLoggedIn();
+      }
+    };
+  }, [justLoggedIn, clearJustLoggedIn]);
+
   // Show loading screen while checking authentication
   if (isLoading) {
     return <LoadingScreen message="Dashboard laden" />;

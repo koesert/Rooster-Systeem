@@ -60,6 +60,7 @@ export interface AuthContextType {
   isLoading: boolean;
   justLoggedIn: boolean;
   clearJustLoggedIn: () => void;
+  refreshUserData: () => Promise<boolean>;
   isManager: () => boolean;
   isManagerOrShiftLeider: () => boolean;
   hasAccess: (requiredRole: Role) => boolean;

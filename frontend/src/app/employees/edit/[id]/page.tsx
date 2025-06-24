@@ -196,7 +196,7 @@ export default function EditEmployeePage() {
     setError(null);
 
     try {
-      // Create update payload based on user role
+      // Create update payload based on user role and whether editing self
       let updateData: UpdateEmployeeRequest;
 
       if (isManager()) {
@@ -218,7 +218,13 @@ export default function EditEmployeePage() {
         };
       }
 
-      await api.updateEmployee(employeeId, updateData);
+      if (isEditingSelf) {
+        // Use profile endpoint for self-updates (available to all authenticated users)
+        await api.updateProfile(updateData);
+      } else {
+        // Use employee endpoint for managing other employees (managers only)
+        await api.updateEmployee(employeeId, updateData);
+      }
 
       // Go back to employees list after successful update
       router.push('/employees');
@@ -273,7 +279,7 @@ export default function EditEmployeePage() {
               <div className="absolute bottom-0 left-0 w-24 h-24 rounded-full blur-2xl opacity-15" style={{ background: 'linear-gradient(45deg, #d5896f, #67697c)' }}></div>
 
               <div className="relative z-10">
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
                     <button
                       onClick={() => router.back()}
@@ -331,10 +337,10 @@ export default function EditEmployeePage() {
                         onChange={(e) => handleInputChange('firstName', e.target.value)}
                         disabled={!canEditField('firstName') || isSubmitting}
                         className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none transition-all duration-300 ${!canEditField('firstName')
-                            ? 'bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200'
-                            : fieldErrors.firstName
-                              ? 'border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
-                              : 'border-gray-200 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
+                          ? 'bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200'
+                          : fieldErrors.firstName
+                            ? 'border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
+                            : 'border-gray-200 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
                           }`}
                         style={{ color: canEditField('firstName') ? '#120309' : '#9ca3af' }}
                         placeholder="Voornaam"
@@ -365,10 +371,10 @@ export default function EditEmployeePage() {
                         onChange={(e) => handleInputChange('lastName', e.target.value)}
                         disabled={!canEditField('lastName') || isSubmitting}
                         className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none transition-all duration-300 ${!canEditField('lastName')
-                            ? 'bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200'
-                            : fieldErrors.lastName
-                              ? 'border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
-                              : 'border-gray-200 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
+                          ? 'bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200'
+                          : fieldErrors.lastName
+                            ? 'border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
+                            : 'border-gray-200 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
                           }`}
                         style={{ color: canEditField('lastName') ? '#120309' : '#9ca3af' }}
                         placeholder="Achternaam"
@@ -451,7 +457,7 @@ export default function EditEmployeePage() {
                         className={`w-full pl-12 pr-12 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.password ? 'border-red-300' : 'border-gray-200'
                           }`}
                         style={{ color: '#120309' }}
-                        placeholder="Laat leeg om huidige wachtwoord te behouden"
+                        placeholder="Laat leeg voor geen wijzigingen"
                         onFocus={(e) => {
                           if (!fieldErrors.password) {
                             const target = e.target as HTMLInputElement;
@@ -545,109 +551,111 @@ export default function EditEmployeePage() {
                 )}
               </div>
 
-              {/* Role and Dates Information */}
-              <div>
-                <h3 className="text-xl font-semibold mb-6" style={{ color: '#120309' }}>
-                  Functie & gegevens
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {/* Role */}
-                  <div>
-                    <label htmlFor="role" className="block text-sm font-semibold mb-2" style={{ color: '#120309' }}>
-                      Rol <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Shield className="h-5 w-5" style={{ color: canEditField('role') ? '#67697c' : '#9ca3af' }} />
-                      </div>
-                      <select
-                        id="role"
-                        value={formData.role}
-                        onChange={(e) => handleInputChange('role', parseInt(e.target.value) as Role)}
-                        disabled={!canEditField('role') || isSubmitting}
-                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none transition-all duration-300 ${!canEditField('role')
+              {/* Role and Dates Information - Only show for managers */}
+              {isManager() && (
+                <div>
+                  <h3 className="text-xl font-semibold mb-6" style={{ color: '#120309' }}>
+                    Functie & gegevens
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Role */}
+                    <div>
+                      <label htmlFor="role" className="block text-sm font-semibold mb-2" style={{ color: '#120309' }}>
+                        Rol <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                          <Shield className="h-5 w-5" style={{ color: canEditField('role') ? '#67697c' : '#9ca3af' }} />
+                        </div>
+                        <select
+                          id="role"
+                          value={formData.role}
+                          onChange={(e) => handleInputChange('role', parseInt(e.target.value) as Role)}
+                          disabled={!canEditField('role') || isSubmitting}
+                          className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none transition-all duration-300 ${!canEditField('role')
                             ? 'bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200'
                             : 'border-gray-200 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
-                          }`}
-                        style={{ color: canEditField('role') ? '#120309' : '#9ca3af' }}
-                      >
-                        <option value={Role.Werknemer}>{getRoleName(Role.Werknemer)}</option>
-                        <option value={Role.ShiftLeider}>{getRoleName(Role.ShiftLeider)}</option>
-                        <option value={Role.Manager}>{getRoleName(Role.Manager)}</option>
-                      </select>
-                    </div>
-                    {!canEditField('role') && (
-                      <p className="mt-2 text-xs text-gray-500">Dit veld kan niet worden bewerkt</p>
-                    )}
-                  </div>
-
-                  {/* Hire Date */}
-                  <div>
-                    <label htmlFor="hireDate" className="block text-sm font-semibold mb-2" style={{ color: '#120309' }}>
-                      In dienst sinds <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Calendar className="h-5 w-5" style={{ color: canEditField('hireDate') ? '#67697c' : '#9ca3af' }} />
+                            }`}
+                          style={{ color: canEditField('role') ? '#120309' : '#9ca3af' }}
+                        >
+                          <option value={Role.Werknemer}>{getRoleName(Role.Werknemer)}</option>
+                          <option value={Role.ShiftLeider}>{getRoleName(Role.ShiftLeider)}</option>
+                          <option value={Role.Manager}>{getRoleName(Role.Manager)}</option>
+                        </select>
                       </div>
-                      <input
-                        id="hireDate"
-                        type="date"
-                        value={formData.hireDate}
-                        onChange={(e) => handleInputChange('hireDate', e.target.value)}
-                        disabled={!canEditField('hireDate') || isSubmitting}
-                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none transition-all duration-300 ${!canEditField('hireDate')
+                      {!canEditField('role') && (
+                        <p className="mt-2 text-xs text-gray-500">Dit veld kan niet worden bewerkt</p>
+                      )}
+                    </div>
+
+                    {/* Hire Date */}
+                    <div>
+                      <label htmlFor="hireDate" className="block text-sm font-semibold mb-2" style={{ color: '#120309' }}>
+                        In dienst sinds <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                          <Calendar className="h-5 w-5" style={{ color: canEditField('hireDate') ? '#67697c' : '#9ca3af' }} />
+                        </div>
+                        <input
+                          id="hireDate"
+                          type="date"
+                          value={formData.hireDate}
+                          onChange={(e) => handleInputChange('hireDate', e.target.value)}
+                          disabled={!canEditField('hireDate') || isSubmitting}
+                          className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none transition-all duration-300 ${!canEditField('hireDate')
                             ? 'bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200'
                             : fieldErrors.hireDate
                               ? 'border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
                               : 'border-gray-200 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
-                          }`}
-                        style={{ color: canEditField('hireDate') ? '#120309' : '#9ca3af' }}
-                        max={new Date().toISOString().split('T')[0]}
-                      />
-                    </div>
-                    {fieldErrors.hireDate && (
-                      <p className="mt-2 text-sm text-red-600">{fieldErrors.hireDate}</p>
-                    )}
-                    {!canEditField('hireDate') && (
-                      <p className="mt-2 text-xs text-gray-500">Dit veld kan niet worden bewerkt</p>
-                    )}
-                  </div>
-
-                  {/* Birth Date */}
-                  <div>
-                    <label htmlFor="birthDate" className="block text-sm font-semibold mb-2" style={{ color: '#120309' }}>
-                      Geboortedatum <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Calendar className="h-5 w-5" style={{ color: canEditField('birthDate') ? '#67697c' : '#9ca3af' }} />
+                            }`}
+                          style={{ color: canEditField('hireDate') ? '#120309' : '#9ca3af' }}
+                          max={new Date().toISOString().split('T')[0]}
+                        />
                       </div>
-                      <input
-                        id="birthDate"
-                        type="date"
-                        value={formData.birthDate}
-                        onChange={(e) => handleInputChange('birthDate', e.target.value)}
-                        disabled={!canEditField('birthDate') || isSubmitting}
-                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none transition-all duration-300 ${!canEditField('birthDate')
+                      {fieldErrors.hireDate && (
+                        <p className="mt-2 text-sm text-red-600">{fieldErrors.hireDate}</p>
+                      )}
+                      {!canEditField('hireDate') && (
+                        <p className="mt-2 text-xs text-gray-500">Dit veld kan niet worden bewerkt</p>
+                      )}
+                    </div>
+
+                    {/* Birth Date */}
+                    <div>
+                      <label htmlFor="birthDate" className="block text-sm font-semibold mb-2" style={{ color: '#120309' }}>
+                        Geboortedatum <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                          <Calendar className="h-5 w-5" style={{ color: canEditField('birthDate') ? '#67697c' : '#9ca3af' }} />
+                        </div>
+                        <input
+                          id="birthDate"
+                          type="date"
+                          value={formData.birthDate}
+                          onChange={(e) => handleInputChange('birthDate', e.target.value)}
+                          disabled={!canEditField('birthDate') || isSubmitting}
+                          className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none transition-all duration-300 ${!canEditField('birthDate')
                             ? 'bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200'
                             : fieldErrors.birthDate
                               ? 'border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
                               : 'border-gray-200 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
-                          }`}
-                        style={{ color: canEditField('birthDate') ? '#120309' : '#9ca3af' }}
-                        max={new Date().toISOString().split('T')[0]}
-                      />
+                            }`}
+                          style={{ color: canEditField('birthDate') ? '#120309' : '#9ca3af' }}
+                          max={new Date().toISOString().split('T')[0]}
+                        />
+                      </div>
+                      {fieldErrors.birthDate && (
+                        <p className="mt-2 text-sm text-red-600">{fieldErrors.birthDate}</p>
+                      )}
+                      {!canEditField('birthDate') && (
+                        <p className="mt-2 text-xs text-gray-500">Dit veld kan niet worden bewerkt</p>
+                      )}
                     </div>
-                    {fieldErrors.birthDate && (
-                      <p className="mt-2 text-sm text-red-600">{fieldErrors.birthDate}</p>
-                    )}
-                    {!canEditField('birthDate') && (
-                      <p className="mt-2 text-xs text-gray-500">Dit veld kan niet worden bewerkt</p>
-                    )}
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Form Actions */}
               <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200/50">
@@ -663,7 +671,6 @@ export default function EditEmployeePage() {
 
                 <button
                   type="submit"
-                  onClick={() => router.push('/employees')}
                   disabled={isSubmitting}
                   className="flex items-center space-x-2 px-6 py-3 rounded-xl text-white font-semibold transition-all duration-300 hover:shadow-lg hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}

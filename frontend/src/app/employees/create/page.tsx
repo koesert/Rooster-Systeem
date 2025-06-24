@@ -193,7 +193,7 @@ export default function CreateEmployeePage() {
               <div className="absolute bottom-0 left-0 w-24 h-24 rounded-full blur-2xl opacity-15" style={{ background: 'linear-gradient(45deg, #d5896f, #67697c)' }}></div>
 
               <div className="relative z-10">
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
                     <button
                       onClick={() => router.push('/employees')}
@@ -431,7 +431,7 @@ export default function CreateEmployeePage() {
                   {/* Role */}
                   <div>
                     <label htmlFor="role" className="block text-sm font-semibold mb-2" style={{ color: '#120309' }}>
-                      Rol <span className="text-red-500">*</span>
+                      Functie <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">

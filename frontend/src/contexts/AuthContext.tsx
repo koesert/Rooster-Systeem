@@ -34,6 +34,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (userData) {
               setUser(JSON.parse(userData));
             }
+
+            // Check if user just logged in (only show notification once)
+            const justLoggedInFlag = localStorage.getItem('justLoggedIn');
+            if (justLoggedInFlag === 'true') {
+              setJustLoggedIn(true);
+              // Remove the flag immediately so it doesn't show again
+              localStorage.removeItem('justLoggedIn');
+            }
+
             setIsLoading(false);
             return;
           }
@@ -57,6 +66,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Store user data for session persistence
       localStorage.setItem('userData', JSON.stringify(response.user));
+      // Store justLoggedIn state to show notification only once
+      localStorage.setItem('justLoggedIn', 'true');
 
       return { success: true };
     } catch (error: any) {
@@ -85,13 +96,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(null);
       setJustLoggedIn(false);
       localStorage.removeItem('userData');
+      localStorage.removeItem('justLoggedIn');
       // Redirect to login page
       window.location.href = '/login';
     }
   };
 
+  // New method to refresh user data afrelater profile updates
+  const refreshUserData = async (): Promise<boolean> => {
+    if (!user) return false;
+
+    try {
+      const updatedUser = await api.getCurrentProfile();
+      setUser(updatedUser);
+
+      // Update stored user data
+      localStorage.setItem('userData', JSON.stringify(updatedUser));
+
+      return true;
+    } catch (error) {
+      console.error('Error refreshing user data:', error);
+      return false;
+    }
+  };
+
   const clearJustLoggedIn = () => {
     setJustLoggedIn(false);
+    // Also clear from localStorage to prevent it from reappearing
+    localStorage.removeItem('justLoggedIn');
   };
 
   // Role-based helper methods
@@ -132,6 +164,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isLoading,
     justLoggedIn,
     clearJustLoggedIn,
+    refreshUserData,
     isManager,
     isManagerOrShiftLeider,
     hasAccess,
