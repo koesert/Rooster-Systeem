@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
+import { formatDate } from '@/utils/dateUtils';
 import { User, Edit, Calendar, Shield, Clock } from 'lucide-react';
 
 export default function ProfilePage() {
@@ -104,11 +105,7 @@ export default function ProfilePage() {
                     <p className="text-sm font-medium" style={{ color: '#67697c' }}>Geboortedatum</p>
                   </div>
                   <p className="text-lg font-semibold" style={{ color: '#120309' }}>
-                    {new Date(user.birthDate).toLocaleDateString('nl-NL', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric'
-                    })}
+                    {formatDate(user.birthDate)}
                   </p>
                 </div>
               </div>

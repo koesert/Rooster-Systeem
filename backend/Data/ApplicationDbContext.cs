@@ -11,6 +11,7 @@ public class ApplicationDbContext : DbContext
 
 	public DbSet<Employee> Employees { get; set; }
 	public DbSet<RefreshToken> RefreshTokens { get; set; }
+	public DbSet<Shift> Shifts { get; set; }
 
 	protected override void OnModelCreating(ModelBuilder modelBuilder)
 	{
@@ -86,6 +87,66 @@ public class ApplicationDbContext : DbContext
 
 			entity.HasIndex(rt => rt.EmployeeId)
 				  .HasDatabaseName("IX_RefreshTokens_EmployeeId");
+		});
+
+		// Configure Shift entity
+		modelBuilder.Entity<Shift>(entity =>
+		{
+			entity.Property(s => s.EmployeeId)
+				  .IsRequired();
+
+			entity.Property(s => s.Date)
+				  .IsRequired()
+				  .HasColumnType("DATE"); // Store only date part
+
+			entity.Property(s => s.StartTime)
+				  .IsRequired()
+				  .HasColumnType("TIME");
+
+			entity.Property(s => s.EndTime)
+				  .HasColumnType("TIME"); // Nullable for open-ended shifts
+
+			// Configure ShiftType enum
+			entity.Property(s => s.ShiftType)
+				  .IsRequired()
+				  .HasConversion<int>();
+
+			entity.Property(s => s.IsOpenEnded)
+				  .IsRequired()
+				  .HasDefaultValue(false);
+
+			entity.Property(s => s.Notes)
+				  .HasMaxLength(500);
+
+			// Auto-populate timestamps
+			entity.Property(s => s.CreatedAt)
+				  .HasDefaultValueSql("datetime('now')");
+
+			entity.Property(s => s.UpdatedAt)
+				  .HasDefaultValueSql("datetime('now')");
+
+			// Set up foreign key relationship with Employee
+			entity.HasOne(s => s.Employee)
+				  .WithMany() // Employee can have many shifts
+				  .HasForeignKey(s => s.EmployeeId)
+				  .OnDelete(DeleteBehavior.Cascade); // Delete shifts when employee is deleted
+
+			// Indexes for efficient querying
+			entity.HasIndex(s => s.EmployeeId)
+				  .HasDatabaseName("IX_Shifts_EmployeeId");
+
+			entity.HasIndex(s => s.Date)
+				  .HasDatabaseName("IX_Shifts_Date");
+
+			entity.HasIndex(s => new { s.EmployeeId, s.Date })
+				  .HasDatabaseName("IX_Shifts_EmployeeId_Date");
+
+			entity.HasIndex(s => s.ShiftType)
+				  .HasDatabaseName("IX_Shifts_ShiftType");
+
+			// Composite index for efficient date range queries
+			entity.HasIndex(s => new { s.Date, s.StartTime })
+				  .HasDatabaseName("IX_Shifts_Date_StartTime");
 		});
 
 		// Seed default admin user for initial system access

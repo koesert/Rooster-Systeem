@@ -9,6 +9,7 @@ import LoadingScreen from '@/components/LoadingScreen';
 import { Edit, User, Lock, Eye, EyeOff, ArrowLeft, Save, X, Shield, Calendar } from 'lucide-react';
 import { UpdateEmployeeRequest, Role } from '@/types/auth';
 import * as api from '@/lib/api';
+import { toInputDateFormat, formatDate, fromInputDateFormat } from '@/utils/dateUtils';
 
 export default function ProfileEditPage() {
   usePageTitle('Dashboard - Profiel bewerken');
@@ -53,8 +54,8 @@ export default function ProfileEditPage() {
         username: user.username,
         password: '', // Always empty for security
         role: user.role,
-        hireDate: user.hireDate.split('T')[0], // Convert to YYYY-MM-DD
-        birthDate: user.birthDate.split('T')[0]
+        hireDate: toInputDateFormat(user.hireDate), // Convert to YYYY-MM-DD for input
+        birthDate: toInputDateFormat(user.birthDate)
       });
     }
   }, [user]);
@@ -139,7 +140,14 @@ export default function ProfileEditPage() {
   };
 
   const handleInputChange = (field: keyof UpdateEmployeeRequest, value: string | Role) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    let processedValue = value;
+
+    // Convert date fields from HTML input format (YYYY-MM-DD) to DD-MM-YYYY
+    if ((field === 'hireDate' || field === 'birthDate') && typeof value === 'string' && value) {
+      processedValue = fromInputDateFormat(value);
+    }
+
+    setFormData(prev => ({ ...prev, [field]: processedValue }));
 
     // Clear field error when user starts typing
     if (fieldErrors[field]) {
@@ -270,6 +278,12 @@ export default function ProfileEditPage() {
           {/* Form Section */}
           <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8">
             <form onSubmit={handleSubmit} autoComplete="off" className="space-y-8">
+              {/* Hidden honeypot fields to confuse autocomplete */}
+              <div style={{ display: 'none' }}>
+                <input type="text" name="username" autoComplete="username" tabIndex={-1} />
+                <input type="password" name="password" autoComplete="current-password" tabIndex={-1} />
+              </div>
+
               {/* General Error */}
               {error && (
                 <div className="p-4 bg-red-50/80 backdrop-blur-sm border border-red-200/50 rounded-xl text-red-700 text-center font-medium">
@@ -304,10 +318,10 @@ export default function ProfileEditPage() {
                         onChange={(e) => handleInputChange('firstName', e.target.value)}
                         disabled={!isManager() || isSubmitting}
                         className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none transition-all duration-300 ${!isManager()
-                            ? 'bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200'
-                            : fieldErrors.firstName
-                              ? 'border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
-                              : 'border-gray-200 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
+                          ? 'bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200'
+                          : fieldErrors.firstName
+                            ? 'border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
+                            : 'border-gray-200 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
                           }`}
                         style={{ color: isManager() ? '#120309' : '#9ca3af' }}
                         placeholder="Voornaam"
@@ -352,10 +366,10 @@ export default function ProfileEditPage() {
                         onChange={(e) => handleInputChange('lastName', e.target.value)}
                         disabled={!isManager() || isSubmitting}
                         className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none transition-all duration-300 ${!isManager()
-                            ? 'bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200'
-                            : fieldErrors.lastName
-                              ? 'border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
-                              : 'border-gray-200 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
+                          ? 'bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200'
+                          : fieldErrors.lastName
+                            ? 'border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
+                            : 'border-gray-200 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
                           }`}
                         style={{ color: isManager() ? '#120309' : '#9ca3af' }}
                         placeholder="Achternaam"
@@ -404,10 +418,15 @@ export default function ProfileEditPage() {
                       </div>
                       <input
                         id="username"
+                        name="username"
                         type="text"
                         value={formData.username}
                         onChange={(e) => handleInputChange('username', e.target.value.toLowerCase())}
                         disabled={isSubmitting}
+                        autoComplete="nope"
+                        autoCorrect="off"
+                        autoCapitalize="off"
+                        spellCheck="false"
                         className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.username ? 'border-red-300' : 'border-gray-200'
                           }`}
                         style={{ color: '#120309' }}
@@ -446,10 +465,15 @@ export default function ProfileEditPage() {
                       </div>
                       <input
                         id="password"
+                        name="new-password"
                         type={showPassword ? 'text' : 'password'}
                         value={formData.password}
                         onChange={(e) => handleInputChange('password', e.target.value)}
                         disabled={isSubmitting}
+                        autoComplete="new-password"
+                        autoCorrect="off"
+                        autoCapitalize="off"
+                        spellCheck="false"
                         className={`w-full pl-12 pr-12 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.password ? 'border-red-300' : 'border-gray-200'
                           }`}
                         style={{ color: '#120309' }}
@@ -607,7 +631,7 @@ export default function ProfileEditPage() {
                         <input
                           id="hireDate"
                           type="date"
-                          value={formData.hireDate}
+                          value={toInputDateFormat(formData.hireDate)}
                           onChange={(e) => handleInputChange('hireDate', e.target.value)}
                           disabled={isSubmitting}
                           className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.hireDate ? 'border-red-300' : 'border-gray-200'
@@ -630,7 +654,7 @@ export default function ProfileEditPage() {
                       ) : (
                         <input
                           type="text"
-                          value={new Date(formData.hireDate).toLocaleDateString('nl-NL')}
+                          value={formatDate(formData.hireDate)}
                           disabled
                           className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-500 cursor-not-allowed"
                         />
@@ -657,7 +681,7 @@ export default function ProfileEditPage() {
                         <input
                           id="birthDate"
                           type="date"
-                          value={formData.birthDate}
+                          value={toInputDateFormat(formData.birthDate)}
                           onChange={(e) => handleInputChange('birthDate', e.target.value)}
                           disabled={isSubmitting}
                           className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.birthDate ? 'border-red-300' : 'border-gray-200'
@@ -680,7 +704,7 @@ export default function ProfileEditPage() {
                       ) : (
                         <input
                           type="text"
-                          value={new Date(formData.birthDate).toLocaleDateString('nl-NL')}
+                          value={formatDate(formData.birthDate)}
                           disabled
                           className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-500 cursor-not-allowed"
                         />

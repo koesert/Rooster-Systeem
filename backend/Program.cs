@@ -5,11 +5,19 @@ using Microsoft.OpenApi.Models;
 using System.Text;
 using backend.Data;
 using backend.Services;
+using backend.Converters;
+using Swashbuckle.AspNetCore.Annotations;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Configure custom date formatting
+        options.JsonSerializerOptions.Converters.Add(new DateTimeConverter());
+        options.JsonSerializerOptions.Converters.Add(new NullableDateTimeConverter());
+    });
 
 // Configure Entity Framework with SQLite database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -19,6 +27,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // Register custom services with dependency injection
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IShiftService, ShiftService>();
 
 // Configure JWT settings programmatically
 // In production, these should be stored in secure configuration
@@ -68,11 +77,11 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo 
-    { 
-        Title = "Restaurant Roster API", 
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "Restaurant Roster API",
         Version = "v1",
-        Description = "API for managing restaurant employees with role-based access control"
+        Description = "API voor het beheren van restaurant medewerkers en roosters met role-based access control"
     });
 
     // Add JWT authentication to Swagger
@@ -99,6 +108,9 @@ builder.Services.AddSwaggerGen(c =>
             new string[] {}
         }
     });
+
+    // Add XML comments for better API documentation
+    c.EnableAnnotations();
 });
 
 // Configure CORS for frontend communication (Next.js on port 3000)
@@ -123,12 +135,15 @@ using (var scope = app.Services.CreateScope())
     var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     try
     {
-        context.Database.EnsureCreated();
-        Console.WriteLine("Database created successfully");
+        // Only create database if it doesn't exist (preserves existing data)
+        await context.Database.EnsureCreatedAsync();
+
+        Console.WriteLine("Database initialized successfully");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error creating database: {ex.Message}");
+        Console.WriteLine($"Error initializing database: {ex.Message}");
+        throw; // Re-throw to prevent app from starting with broken database
     }
 }
 

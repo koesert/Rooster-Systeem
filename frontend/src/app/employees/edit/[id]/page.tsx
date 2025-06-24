@@ -308,6 +308,12 @@ export default function EditEmployeePage() {
           {/* Form Section */}
           <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8">
             <form onSubmit={handleSubmit} autoComplete="off" className="space-y-8">
+              {/* Hidden honeypot fields to confuse autocomplete */}
+              <div style={{ display: 'none' }}>
+                <input type="text" name="username" autoComplete="username" tabIndex={-1} />
+                <input type="password" name="password" autoComplete="current-password" tabIndex={-1} />
+              </div>
+
               {/* General Error */}
               {error && (
                 <div className="p-4 bg-red-50/80 backdrop-blur-sm border border-red-200/50 rounded-xl text-red-700 text-center font-medium">
@@ -332,10 +338,15 @@ export default function EditEmployeePage() {
                       </div>
                       <input
                         id="firstName"
+                        name="first-name"
                         type="text"
                         value={formData.firstName}
                         onChange={(e) => handleInputChange('firstName', e.target.value)}
                         disabled={!canEditField('firstName') || isSubmitting}
+                        autoComplete="nope"
+                        autoCorrect="off"
+                        autoCapitalize="words"
+                        spellCheck="false"
                         className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none transition-all duration-300 ${!canEditField('firstName')
                           ? 'bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200'
                           : fieldErrors.firstName
@@ -366,10 +377,15 @@ export default function EditEmployeePage() {
                       </div>
                       <input
                         id="lastName"
+                        name="last-name"
                         type="text"
                         value={formData.lastName}
                         onChange={(e) => handleInputChange('lastName', e.target.value)}
                         disabled={!canEditField('lastName') || isSubmitting}
+                        autoComplete="nope"
+                        autoCorrect="off"
+                        autoCapitalize="words"
+                        spellCheck="false"
                         className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none transition-all duration-300 ${!canEditField('lastName')
                           ? 'bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200'
                           : fieldErrors.lastName
@@ -408,10 +424,15 @@ export default function EditEmployeePage() {
                       </div>
                       <input
                         id="username"
+                        name="user-name"
                         type="text"
                         value={formData.username}
                         onChange={(e) => handleInputChange('username', e.target.value.toLowerCase())}
                         disabled={isSubmitting}
+                        autoComplete="nope"
+                        autoCorrect="off"
+                        autoCapitalize="off"
+                        spellCheck="false"
                         className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.username ? 'border-red-300' : 'border-gray-200'
                           }`}
                         style={{ color: '#120309' }}
@@ -450,10 +471,15 @@ export default function EditEmployeePage() {
                       </div>
                       <input
                         id="password"
+                        name="new-password"
                         type={showPassword ? 'text' : 'password'}
                         value={formData.password}
                         onChange={(e) => handleInputChange('password', e.target.value)}
                         disabled={isSubmitting}
+                        autoComplete="new-password"
+                        autoCorrect="off"
+                        autoCapitalize="off"
+                        spellCheck="false"
                         className={`w-full pl-12 pr-12 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.password ? 'border-red-300' : 'border-gray-200'
                           }`}
                         style={{ color: '#120309' }}
@@ -506,6 +532,7 @@ export default function EditEmployeePage() {
                       <input
                         id="confirmPassword"
                         type={showConfirmPassword ? 'text' : 'password'}
+                        autoComplete="off"
                         value={confirmPassword}
                         onChange={(e) => {
                           setConfirmPassword(e.target.value);

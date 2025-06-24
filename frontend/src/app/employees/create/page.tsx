@@ -9,6 +9,7 @@ import LoadingScreen from '@/components/LoadingScreen';
 import { UserPlus, User, Lock, Eye, EyeOff, ArrowLeft, Save, X, Shield, Calendar } from 'lucide-react';
 import { CreateEmployeeRequest, Role } from '@/types/auth';
 import * as api from '@/lib/api';
+import { getCurrentDate, toInputDateFormat, fromInputDateFormat } from '@/utils/dateUtils';
 
 export default function CreateEmployeePage() {
   usePageTitle('Dashboard - Nieuwe medewerker');
@@ -23,7 +24,7 @@ export default function CreateEmployeePage() {
     username: '',
     password: '',
     role: Role.Werknemer,
-    hireDate: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD format
+    hireDate: getCurrentDate(), // Today's date in DD-MM-YYYY format
     birthDate: ''
   });
 
@@ -121,7 +122,14 @@ export default function CreateEmployeePage() {
   };
 
   const handleInputChange = (field: keyof CreateEmployeeRequest, value: string | Role) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    let processedValue = value;
+
+    // Convert date fields from HTML input format (YYYY-MM-DD) to DD-MM-YYYY
+    if ((field === 'hireDate' || field === 'birthDate') && typeof value === 'string' && value) {
+      processedValue = fromInputDateFormat(value);
+    }
+
+    setFormData(prev => ({ ...prev, [field]: processedValue }));
 
     // Clear field error when user starts typing
     if (fieldErrors[field]) {
@@ -487,7 +495,7 @@ export default function CreateEmployeePage() {
                         id="hireDate"
                         name="hire-date"
                         type="date"
-                        value={formData.hireDate}
+                        value={toInputDateFormat(formData.hireDate)}
                         onChange={(e) => handleInputChange('hireDate', e.target.value)}
                         className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.hireDate ? 'border-red-300' : 'border-gray-200'}`}
                         style={{ color: '#120309' }}
@@ -525,7 +533,7 @@ export default function CreateEmployeePage() {
                         id="birthDate"
                         name="birth-date"
                         type="date"
-                        value={formData.birthDate}
+                        value={toInputDateFormat(formData.birthDate)}
                         onChange={(e) => handleInputChange('birthDate', e.target.value)}
                         className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.birthDate ? 'border-red-300' : 'border-gray-200'}`}
                         style={{ color: '#120309' }}
