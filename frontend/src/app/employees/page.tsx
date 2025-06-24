@@ -7,6 +7,7 @@ import { useModal } from '@/contexts/ModalContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
+import { formatDate } from '@/utils/dateUtils';
 import { Users, Search, Edit, Trash2, Eye, UserPlus, AlertTriangle, CheckCircle, Info, RefreshCcw, Shield } from 'lucide-react';
 import { Employee, Role } from '@/types/auth';
 import * as api from '@/lib/api';
@@ -115,10 +116,10 @@ export default function EmployeesPage() {
         Gebruikersnaam: ${employee.username}
         Functie: ${getRoleName(employee.role)}
         ID: ${employee.id}
-        In dienst sinds: ${new Date(employee.hireDate).toLocaleDateString('nl-NL')}
-        Geboortedatum: ${new Date(employee.birthDate).toLocaleDateString('nl-NL')}
-        Aangemaakt: ${new Date(employee.createdAt).toLocaleDateString('nl-NL')}
-        Laatste update: ${new Date(employee.updatedAt).toLocaleDateString('nl-NL')}
+        In dienst sinds: ${formatDate(employee.hireDate)}
+        Geboortedatum: ${formatDate(employee.birthDate)}
+        Aangemaakt: ${formatDate(employee.createdAt)}
+        Laatste update: ${formatDate(employee.updatedAt)}
       `,
       confirmText: 'Sluiten',
       icon: <Info className="h-6 w-6 text-blue-600" />
@@ -349,10 +350,10 @@ export default function EmployeesPage() {
                           <td className="px-6 py-4">
                             <span
                               className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${employee.role === Role.Manager
-                                  ? 'bg-purple-100 text-purple-800'
-                                  : employee.role === Role.ShiftLeider
-                                    ? 'bg-blue-100 text-blue-800'
-                                    : 'bg-gray-100 text-gray-800'
+                                ? 'bg-purple-100 text-purple-800'
+                                : employee.role === Role.ShiftLeider
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-gray-100 text-gray-800'
                                 }`}
                             >
                               <Shield className="h-3 w-3 mr-1" />
@@ -361,11 +362,7 @@ export default function EmployeesPage() {
                           </td>
                           <td className="px-6 py-4">
                             <span style={{ color: '#67697c' }}>
-                              {new Date(employee.hireDate).toLocaleDateString('nl-NL', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric'
-                              })}
+                              {formatDate(employee.hireDate)}
                             </span>
                           </td>
                           <td className="px-6 py-4">
