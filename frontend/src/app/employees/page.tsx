@@ -182,7 +182,7 @@ export default function EmployeesPage() {
                         Medewerkers beheren
                       </h1>
                       <p className="text-lg mt-1" style={{ color: '#67697c' }}>
-                        Beheer je team
+                        Bekijk en beheer alle medewerkers in het systeem
                       </p>
                     </div>
                   </div>
