@@ -3,10 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import LoadingScreen from '@/components/LoadingScreen';
 import { User, Lock, LogIn, Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
+  usePageTitle('Dashboard - Inloggen');
+
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -22,11 +25,6 @@ export default function LoginPage() {
       router.push('/home');
     }
   }, [user, isLoading, router]);
-
-  // Set page title
-  useEffect(() => {
-    document.title = 'Jill Dashboard - Inloggen';
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

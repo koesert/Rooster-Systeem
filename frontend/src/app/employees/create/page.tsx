@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
 import { UserPlus, User, Lock, Eye, EyeOff, ArrowLeft, Save, X, Shield, Calendar } from 'lucide-react';
@@ -10,6 +11,8 @@ import { CreateEmployeeRequest, Role } from '@/types/auth';
 import * as api from '@/lib/api';
 
 export default function CreateEmployeePage() {
+  usePageTitle('Dashboard - Nieuwe medewerker');
+
   const { user, isLoading, hasAccess, isManager, getRoleName } = useAuth();
   const router = useRouter();
 
@@ -39,11 +42,6 @@ export default function CreateEmployeePage() {
       router.push('/employees');
     }
   }, [user, isLoading, router, isManager]);
-
-  // Set page title
-  useEffect(() => {
-    document.title = 'Jill Dashboard - Nieuwe medewerker';
-  }, []);
 
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
@@ -94,7 +92,7 @@ export default function CreateEmployeePage() {
       const hireDate = new Date(formData.hireDate);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
       if (hireDate > today) {
         errors.hireDate = 'Datum in dienst kan niet in de toekomst liggen';
       }
@@ -108,11 +106,11 @@ export default function CreateEmployeePage() {
       const today = new Date();
       let age = today.getFullYear() - birthDate.getFullYear();
       const monthDiff = today.getMonth() - birthDate.getMonth();
-      
+
       if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
         age--;
       }
-      
+
       if (age < 16) {
         errors.birthDate = 'Medewerker moet minimaal 16 jaar oud zijn';
       } else if (age > 100) {

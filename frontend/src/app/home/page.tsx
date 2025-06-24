@@ -3,11 +3,14 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
 import { Users, Calendar, BarChart3, Settings, Clock, TrendingUp, CheckCircle, X } from 'lucide-react';
 
 export default function HomePage() {
+  usePageTitle('Dashboard - Home');
+
   const { user, isLoading, justLoggedIn, clearJustLoggedIn } = useAuth();
   const router = useRouter();
   const [showWelcomeNotification, setShowWelcomeNotification] = useState(false);
@@ -30,11 +33,6 @@ export default function HomePage() {
       return () => clearTimeout(timer);
     }
   }, [justLoggedIn, user, clearJustLoggedIn]);
-
-    // Set page title
-  useEffect(() => {
-    document.title = 'Jill Dashboard - Home';
-  }, []);
 
   // Show loading screen while checking authentication
   if (isLoading) {

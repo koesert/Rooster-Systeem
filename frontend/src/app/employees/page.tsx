@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useModal } from '@/contexts/ModalContext';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
 import { Users, Search, Edit, Trash2, Eye, UserPlus, AlertTriangle, CheckCircle, Info, RefreshCcw, Shield } from 'lucide-react';
@@ -11,6 +12,8 @@ import { Employee, Role } from '@/types/auth';
 import * as api from '@/lib/api';
 
 export default function EmployeesPage() {
+  usePageTitle('Dashboard - Medewerkers');
+
   const { user, isLoading, hasAccess, isManager, getRoleName } = useAuth();
   const { showConfirm, showAlert } = useModal();
   const router = useRouter();
@@ -28,11 +31,6 @@ export default function EmployeesPage() {
       router.push('/home');
     }
   }, [user, isLoading, router, isManager]);
-
-  // Set page title
-  useEffect(() => {
-    document.title = 'Jill Dashboard - Medewerkers';
-  }, []);
 
   // Load employees data
   useEffect(() => {
@@ -131,43 +129,6 @@ export default function EmployeesPage() {
     showAlert({
       title: 'Functie nog niet beschikbaar',
       message: `Bewerken van "${employee.fullName}" komt binnenkort beschikbaar.`,
-      confirmText: 'OK',
-      icon: <Info className="h-6 w-6 text-blue-600" />
-    });
-  };
-
-  const handleBulkActions = () => {
-    showAlert({
-      title: 'Bulk acties',
-      message: 'Bulk bewerkingen voor medewerkers komen binnenkort beschikbaar.',
-      confirmText: 'OK',
-      icon: <Info className="h-6 w-6 text-blue-600" />
-    });
-  };
-
-  const handleExport = () => {
-    showConfirm({
-      title: 'Medewerkers exporteren',
-      message: 'Wil je alle medewerkergegevens exporteren naar een CSV-bestand?',
-      confirmText: 'Exporteren',
-      cancelText: 'Annuleren',
-      variant: 'success',
-      icon: <Info className="h-6 w-6 text-green-600" />,
-      onConfirm: async () => {
-        showAlert({
-          title: 'Export gestart',
-          message: 'Je export wordt voorbereid. Dit kan een paar minuten duren.',
-          confirmText: 'OK',
-          icon: <CheckCircle className="h-6 w-6 text-green-600" />
-        });
-      }
-    });
-  };
-
-  const handleImport = () => {
-    showAlert({
-      title: 'Import functie',
-      message: 'Import functionaliteit voor medewerkers komt binnenkort beschikbaar.',
       confirmText: 'OK',
       icon: <Info className="h-6 w-6 text-blue-600" />
     });
@@ -377,13 +338,12 @@ export default function EmployeesPage() {
                           </td>
                           <td className="px-6 py-4">
                             <span
-                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                employee.role === Role.Manager
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${employee.role === Role.Manager
                                   ? 'bg-purple-100 text-purple-800'
                                   : employee.role === Role.ShiftLeider
-                                  ? 'bg-blue-100 text-blue-800'
-                                  : 'bg-gray-100 text-gray-800'
-                              }`}
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : 'bg-gray-100 text-gray-800'
+                                }`}
                             >
                               <Shield className="h-3 w-3 mr-1" />
                               {getRoleName(employee.role)}
