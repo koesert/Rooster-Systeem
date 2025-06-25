@@ -30,7 +30,7 @@ export default function Sidebar() {
       allowedRoles: ['all'] // All users can access their profile
     },
     {
-      name: 'Rooster',
+      name: 'Mijn rooster',
       icon: Calendar,
       path: '/schedule',
       onClick: () => router.push('/schedule'),

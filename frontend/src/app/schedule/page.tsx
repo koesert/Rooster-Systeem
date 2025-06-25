@@ -12,7 +12,7 @@ import { formatDate } from '@/utils/dateUtils';
 import { Shift, ShiftType } from '@/types/shift';
 import * as api from '@/lib/api';
 
-type ViewType = 'week' | 'month';
+type ViewType = 'week' | 'month' | 'day';
 
 // Shift type colors
 const getShiftColor = (shiftType: ShiftType): { bg: string; border: string; text: string } => {
@@ -74,7 +74,7 @@ const calculateShiftWidth = (startTime: string, endTime: string | null, isOpenEn
 };
 
 export default function SchedulePage() {
-  usePageTitle('Dashboard - Rooster');
+  usePageTitle('Dashboard - Mijn rooster');
 
   const { user, isLoading, isManager } = useAuth();
   const { showModal, showAlert } = useModal();
@@ -101,29 +101,6 @@ export default function SchedulePage() {
     }
   }, [user, currentDate, viewType]);
 
-  // Refresh shifts when window regains focus (when user returns from create page)
-  useEffect(() => {
-    const handleFocus = () => {
-      if (user && document.visibilityState === 'visible') {
-        loadShifts();
-      }
-    };
-
-    const handleVisibilityChange = () => {
-      if (user && document.visibilityState === 'visible') {
-        loadShifts();
-      }
-    };
-
-    window.addEventListener('focus', handleFocus);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [user]);
-
   // Load shifts from API
   const loadShifts = async () => {
     setIsLoadingShifts(true);
@@ -135,10 +112,14 @@ export default function SchedulePage() {
         const weekDates = getWeekDates(currentDate);
         startDate = weekDates[0];
         endDate = weekDates[6];
-      } else {
+      } else if (viewType === 'month') {
         const monthDays = getDaysInMonth(currentDate);
         startDate = monthDays[0];
         endDate = monthDays[monthDays.length - 1];
+      } else {
+        // Day view - load just that day
+        startDate = new Date(currentDate);
+        endDate = new Date(currentDate);
       }
 
       // Format dates for API (YYYY-MM-DD) using local time to avoid timezone issues
@@ -215,8 +196,10 @@ export default function SchedulePage() {
     const newDate = new Date(currentDate);
     if (viewType === 'week') {
       newDate.setDate(newDate.getDate() - 7);
-    } else {
+    } else if (viewType === 'month') {
       newDate.setMonth(newDate.getMonth() - 1);
+    } else if (viewType === 'day') {
+      newDate.setDate(newDate.getDate() - 1);
     }
     setCurrentDate(newDate);
   };
@@ -225,18 +208,63 @@ export default function SchedulePage() {
     const newDate = new Date(currentDate);
     if (viewType === 'week') {
       newDate.setDate(newDate.getDate() + 7);
-    } else {
+    } else if (viewType === 'month') {
       newDate.setMonth(newDate.getMonth() + 1);
+    } else if (viewType === 'day') {
+      newDate.setDate(newDate.getDate() + 1);
     }
     setCurrentDate(newDate);
+  };
+
+  // Navigate to day view for a specific date
+  const navigateToDay = (date: Date) => {
+    setCurrentDate(new Date(date));
+    setViewType('day');
   };
 
   const navigateToToday = () => {
     setCurrentDate(new Date());
   };
 
-  // Get shifts for a specific date
+  // Get shifts for a specific date with filtering based on view type
   const getShiftsForDate = (date: Date): Shift[] => {
+    // Use local date formatting to avoid timezone issues
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`; // YYYY-MM-DD format
+
+    const dayShifts = shifts.filter(shift => {
+      // Handle different possible date formats from backend
+      let shiftDateStr = shift.date;
+
+      // If shift.date is in DD-MM-YYYY format, convert to YYYY-MM-DD
+      if (shiftDateStr.includes('-') && shiftDateStr.length === 10) {
+        const parts = shiftDateStr.split('-');
+        if (parts.length === 3 && parts[0].length === 2) {
+          // DD-MM-YYYY format, convert to YYYY-MM-DD
+          shiftDateStr = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+      }
+
+      // If shift.date includes time (ISO format), extract just the date part
+      if (shiftDateStr.includes('T')) {
+        shiftDateStr = shiftDateStr.split('T')[0];
+      }
+
+      return shiftDateStr === dateStr;
+    });
+
+    // In day view, show all shifts. In week/month view, show only user's own shifts
+    if (viewType === 'day') {
+      return dayShifts.sort((a, b) => a.startTime.localeCompare(b.startTime));
+    } else {
+      return dayShifts.filter(shift => shift.employeeId === user?.id);
+    }
+  };
+
+  // Get all shifts for the current date (used in day view)
+  const getAllShiftsForDate = (date: Date): Shift[] => {
     // Use local date formatting to avoid timezone issues
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -262,7 +290,7 @@ export default function SchedulePage() {
       }
 
       return shiftDateStr === dateStr;
-    });
+    }).sort((a, b) => a.startTime.localeCompare(b.startTime));
   };
 
   // Calculate shift lanes for overlapping shifts (horizontal positioning)
@@ -405,6 +433,9 @@ export default function SchedulePage() {
 
       const isHovered = hoveredShiftId === shift.id;
 
+      // In week/month view, show shift type instead of "Mijn shift"
+      const displayName = viewType === 'day' ? shift.employeeName : shift.shiftTypeName;
+
       return (
         <div
           key={shift.id}
@@ -429,19 +460,23 @@ export default function SchedulePage() {
           <div
             className="font-medium"
             style={{
-              fontSize: shift.totalLanes > 3 ? '9px' : '11px',
+              fontSize: viewType === 'day'
+                ? (shift.totalLanes > 6 ? '14px' : '16px')
+                : (shift.totalLanes > 3 ? '13px' : '15px'),
               lineHeight: '1.2',
               wordBreak: 'break-word',
               overflowWrap: 'break-word',
               whiteSpace: 'normal'
             }}
           >
-            {shift.employeeName}
+            {displayName}
           </div>
           <div
             className="text-xs opacity-80 mt-1"
             style={{
-              fontSize: shift.totalLanes > 3 ? '8px' : '9px',
+              fontSize: viewType === 'day'
+                ? (shift.totalLanes > 6 ? '14px' : '16px')
+                : (shift.totalLanes > 3 ? '13px' : '15px'),
               lineHeight: '1.1',
               wordBreak: 'break-word',
               overflowWrap: 'break-word',
@@ -449,18 +484,11 @@ export default function SchedulePage() {
             }}
           >
             {formatTime(shift.startTime)} - {shift.isOpenEnded ? 'einde' : formatTime(shift.endTime!)}
-          </div>
-          <div
-            className="text-xs opacity-70 mt-1"
-            style={{
-              fontSize: shift.totalLanes > 3 ? '7px' : '8px',
-              lineHeight: '1.1',
-              wordBreak: 'break-word',
-              overflowWrap: 'break-word',
-              whiteSpace: 'normal'
-            }}
-          >
-            {shift.shiftTypeName}
+            {viewType === 'day' && (
+              <div className="mt-0.5 text-xs opacity-70">
+                {shift.shiftTypeName}
+              </div>
+            )}
           </div>
         </div>
       );
@@ -487,9 +515,17 @@ export default function SchedulePage() {
       } else {
         return `${startDate.getDate()} ${startMonth} - ${endDate.getDate()} ${endMonth} ${year}`;
       }
-    } else {
+    } else if (viewType === 'month') {
       return currentDate.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' });
+    } else if (viewType === 'day') {
+      return currentDate.toLocaleDateString('nl-NL', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
     }
+    return '';
   };
 
   // Shift click handler
@@ -599,10 +635,10 @@ export default function SchedulePage() {
                     </div>
                     <div>
                       <h1 className="text-4xl font-bold" style={{ background: 'linear-gradient(135deg, #120309, #67697c)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                        Rooster
+                        Mijn rooster
                       </h1>
                       <p className="text-lg mt-1" style={{ color: '#67697c' }}>
-                        Bekijk het werkrooster van alle medewerkers
+                        {viewType === 'day' ? 'Bekijk het rooster voor deze dag' : 'Bekijk je rooster voor de week of maand'}
                       </p>
                     </div>
                   </div>
@@ -626,6 +662,15 @@ export default function SchedulePage() {
           <div className="mb-6 flex items-center justify-between">
             {/* View Type Tabs */}
             <div className="bg-white/80 backdrop-blur-lg rounded-xl shadow-lg border border-white/20 p-1 flex">
+              <button
+                onClick={() => setViewType('day')}
+                className={`px-6 py-2 rounded-lg font-medium transition-all duration-200 ${viewType === 'day'
+                  ? 'bg-gradient-to-r from-[#d5896f] to-[#d5896f90] text-white shadow-md'
+                  : 'text-gray-600 hover:text-gray-900'
+                  }`}
+              >
+                Dag
+              </button>
               <button
                 onClick={() => setViewType('week')}
                 className={`px-6 py-2 rounded-lg font-medium transition-all duration-200 ${viewType === 'week'
@@ -685,6 +730,49 @@ export default function SchedulePage() {
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: '#d5896f' }}></div>
                 <p className="mt-4 font-medium" style={{ color: '#67697c' }}>Shifts laden...</p>
               </div>
+            ) : viewType === 'day' ? (
+              // Day View - Same grid layout as week view but with custom column widths (1/8 for time, 7/8 for day)
+              <div className="p-6">
+                <div className="grid gap-px bg-gray-200" style={{ gridTemplateColumns: '1fr 7fr' }}>
+                  {/* Time column header */}
+                  <div className="bg-white p-4">
+                    <p className="text-sm font-medium text-gray-600">Tijd</p>
+                  </div>
+
+                  {/* Day header */}
+                  <div className="bg-white p-4 text-center">
+                    <p className="text-lg font-medium text-gray-600 capitalize">
+                      {currentDate.toLocaleDateString('nl-NL', { weekday: 'long' })}
+                    </p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {currentDate.getDate()}
+                    </p>
+                  </div>
+
+                  {/* Time slots and shifts */}
+                  {timeSlots.map((time, timeIndex) => (
+                    <React.Fragment key={`time-row-${timeIndex}`}>
+                      {/* Time label */}
+                      <div className="bg-white p-2 flex items-start" style={{ minHeight: '50px', zIndex: 5 }}>
+                        <p className="text-sm text-gray-600 font-medium">{time}</p>
+                      </div>
+
+                      {/* Day cell */}
+                      <div
+                        className="bg-white p-0 relative"
+                        style={{ minHeight: '50px' }}
+                      >
+                        {/* Render all shifts for this day only once at the first time slot */}
+                        {timeIndex === 0 && (
+                          <div className="absolute inset-0" style={{ zIndex: 10 }}>
+                            {renderShiftBlocksForDay(getAllShiftsForDate(currentDate), timeSlots)}
+                          </div>
+                        )}
+                      </div>
+                    </React.Fragment>
+                  ))}
+                </div>
+              </div>
             ) : viewType === 'week' ? (
               // Week View
               <div className="p-6">
@@ -697,15 +785,18 @@ export default function SchedulePage() {
                   {/* Day headers */}
                   {getWeekDates(currentDate).map((date, index) => {
                     const isToday = date.toDateString() === new Date().toDateString();
-                    const dayName = date.toLocaleDateString('nl-NL', { weekday: 'short' });
+                    const dayName = date.toLocaleDateString('nl-NL', { weekday: 'long' });
                     const dayNumber = date.getDate();
+                    const hasShifts = getShiftsForDate(date).length > 0;
 
                     return (
                       <div
                         key={index}
-                        className={`bg-white p-4 text-center ${isToday ? 'bg-orange-50' : ''}`}
+                        onClick={() => navigateToDay(date)}
+                        className={`bg-white p-4 text-center cursor-pointer hover:bg-gray-50 transition-colors ${isToday ? 'bg-orange-50' : ''}`}
+                        title="Klik om dag weergave te openen"
                       >
-                        <p className="text-sm font-medium text-gray-600 capitalize">{dayName}</p>
+                        <p className="text-lg font-medium text-gray-600 capitalize">{dayName}</p>
                         <p className={`text-2xl font-bold ${isToday ? 'text-orange-600' : 'text-gray-900'}`}>
                           {dayNumber}
                         </p>
@@ -747,11 +838,11 @@ export default function SchedulePage() {
             ) : (
               // Month View
               <div className="p-6">
-                <div className="grid grid-cols-7 gap-px bg-gray-200">
+                <div className="grid grid-cols-7 gap-px bg-gray-200 border border-gray-200">
                   {/* Day headers */}
-                  {['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'].map((day) => (
+                  {['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag'].map((day) => (
                     <div key={day} className="bg-gray-50 p-4 text-center">
-                      <p className="text-sm font-medium text-gray-700 uppercase">{day}</p>
+                      <p className="text-lg font-medium text-gray-700 capitalize">{day}</p>
                     </div>
                   ))}
 
@@ -768,26 +859,32 @@ export default function SchedulePage() {
 
                       const isToday = date.toDateString() === new Date().toDateString();
                       const dayNumber = date.getDate();
+                      const dayShifts = getShiftsForDate(date);
 
                       return (
                         <div
                           key={index}
-                          className={`bg-white p-4 min-h-[120px] ${isToday ? 'bg-orange-50 ring-2 ring-orange-400' : ''
+                          onClick={() => navigateToDay(date)}
+                          className={`bg-white p-4 min-h-[120px] cursor-pointer hover:bg-gray-50 transition-colors ${isToday ? 'bg-orange-50 ring-2 ring-orange-400' : ''
                             }`}
+                          title="Klik om dag weergave te openen"
                         >
                           <p className={`text-sm font-medium mb-2 ${isToday ? 'text-orange-600' : 'text-gray-900'
                             }`}>
                             {dayNumber}
                           </p>
 
-                          {/* Shift summary */}
+                          {/* Shift summary - only user's own shifts */}
                           <div className="space-y-1">
-                            {getShiftsForDate(date).slice(0, 2).map(shift => {
+                            {dayShifts.slice(0, 2).map(shift => {
                               const colors = getShiftColor(shift.shiftType);
                               return (
                                 <div
                                   key={shift.id}
-                                  onClick={() => handleShiftClick(shift)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleShiftClick(shift);
+                                  }}
                                   className={`text-xs p-1 rounded cursor-pointer hover:opacity-80 transition-opacity ${colors.bg} ${colors.text}`}
                                 >
                                   <div
@@ -799,19 +896,14 @@ export default function SchedulePage() {
                                       whiteSpace: 'normal'
                                     }}
                                   >
-                                    {formatTime(shift.startTime)} {shift.employeeName.split(' ')[0]}
+                                    {formatTime(shift.startTime)} {shift.shiftTypeName}
                                   </div>
                                 </div>
                               );
                             })}
-                            {getShiftsForDate(date).length > 2 && (
+                            {dayShifts.length > 2 && (
                               <div className="text-xs text-center p-1 rounded bg-gray-100 text-gray-600 font-medium">
-                                +{getShiftsForDate(date).length - 2} meer
-                              </div>
-                            )}
-                            {getShiftsForDate(date).length === 0 && (
-                              <div className="text-xs text-gray-400 text-center py-2">
-                                Geen shifts
+                                +{dayShifts.length - 2} meer
                               </div>
                             )}
                           </div>

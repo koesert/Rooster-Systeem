@@ -267,14 +267,6 @@ export default function EmployeesPage() {
                     {filteredEmployees.length} van {employees.length} medewerkers
                   </p>
                 </div>
-                <button
-                  onClick={loadEmployees}
-                  className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200 cursor-pointer"
-                  style={{ color: '#67697c' }}
-                >
-                  <RefreshCcw className="h-4 w-4" />
-                  <span>Vernieuwen</span>
-                </button>
               </div>
             </div>
 
