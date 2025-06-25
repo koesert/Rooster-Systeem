@@ -7,7 +7,7 @@ import { useModal } from '@/contexts/ModalContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
-import { Calendar, Clock, Plus, ChevronLeft, ChevronRight, Eye, Edit, Trash2, Users, AlertTriangle } from 'lucide-react';
+import { Calendar, Clock, Plus, ChevronLeft, ChevronRight, Eye, Edit, Trash2, Users, AlertTriangle, RefreshCw } from 'lucide-react';
 import { formatDate } from '@/utils/dateUtils';
 import { Shift, ShiftType } from '@/types/shift';
 import * as api from '@/lib/api';
@@ -30,7 +30,8 @@ const getShiftColor = (shiftType: ShiftType): { bg: string; border: string; text
 
 // Time helpers
 const SCHEDULE_START_HOUR = 12; // 12:00
-const SCHEDULE_END_HOUR = 24; // 00:00 (midnight)
+const SCHEDULE_END_HOUR = 24; // 24:00 (midnight) - full schedule display
+const OPEN_END_HOUR = 22; // 22:00 (10 PM) - end time for open shifts visually
 const HOURS_IN_SCHEDULE = SCHEDULE_END_HOUR - SCHEDULE_START_HOUR;
 
 const formatTime = (time: string): string => {
@@ -40,7 +41,13 @@ const formatTime = (time: string): string => {
 
 const timeToPosition = (time: string): number => {
   const [hours, minutes] = time.split(':').map(Number);
-  const totalMinutes = hours * 60 + minutes;
+  let totalMinutes = hours * 60 + minutes;
+
+  // Handle midnight case (00:00 should be treated as 24:00 for positioning)
+  if (hours === 0) {
+    totalMinutes = 24 * 60 + minutes;
+  }
+
   const scheduleStartMinutes = SCHEDULE_START_HOUR * 60;
   const minutesFromStart = totalMinutes - scheduleStartMinutes;
   return (minutesFromStart / (HOURS_IN_SCHEDULE * 60)) * 100;
@@ -48,19 +55,22 @@ const timeToPosition = (time: string): number => {
 
 const calculateShiftWidth = (startTime: string, endTime: string | null, isOpenEnded: boolean): number => {
   if (isOpenEnded || !endTime) {
-    // Open ended shifts go until midnight
-    return 100 - timeToPosition(startTime);
+    // Open ended shifts go until 22:00 (10 PM)
+    const startPos = timeToPosition(startTime);
+    const endPos = timeToPosition('22:00:00');
+    return Math.max(endPos - startPos, 5); // Minimum 5% width
   }
 
   const startPos = timeToPosition(startTime);
   const endPos = timeToPosition(endTime);
 
-  // Handle shifts that cross midnight
-  if (endPos < startPos) {
-    return 100 - startPos; // Just go to the end of the day
+  // Handle shifts that cross midnight or go beyond our schedule
+  if (endPos <= startPos) {
+    // If end time is before start time or at start time, extend to end of schedule
+    return Math.max(timeToPosition('22:00:00') - startPos, 5); // Minimum 5% width
   }
 
-  return endPos - startPos;
+  return Math.max(endPos - startPos, 5); // Minimum 5% width for visibility
 };
 
 export default function SchedulePage() {
@@ -75,6 +85,7 @@ export default function SchedulePage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [isLoadingShifts, setIsLoadingShifts] = useState(false);
+  const [hoveredShiftId, setHoveredShiftId] = useState<number | null>(null);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -89,6 +100,29 @@ export default function SchedulePage() {
       loadShifts();
     }
   }, [user, currentDate, viewType]);
+
+  // Refresh shifts when window regains focus (when user returns from create page)
+  useEffect(() => {
+    const handleFocus = () => {
+      if (user && document.visibilityState === 'visible') {
+        loadShifts();
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (user && document.visibilityState === 'visible') {
+        loadShifts();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [user]);
 
   // Load shifts from API
   const loadShifts = async () => {
@@ -131,11 +165,13 @@ export default function SchedulePage() {
   };
 
   // Generate time slots for the schedule
-  const timeSlots = [];
-  for (let hour = SCHEDULE_START_HOUR; hour <= SCHEDULE_END_HOUR; hour++) {
+  const timeSlots: string[] = [];
+  for (let hour = SCHEDULE_START_HOUR; hour < SCHEDULE_END_HOUR; hour++) {
     const displayHour = hour === 24 ? 0 : hour; // Convert 24 to 0 for display
     timeSlots.push(`${displayHour.toString().padStart(2, '0')}:00`);
   }
+  // Add the final hour (00:00)
+  timeSlots.push('00:00');
 
   // Get week dates
   const getWeekDates = (date: Date): Date[] => {
@@ -194,33 +230,238 @@ export default function SchedulePage() {
 
   // Get shifts for a specific date
   const getShiftsForDate = (date: Date): Shift[] => {
-    const dateStr = date.toISOString().split('T')[0];
-    return shifts.filter(shift => shift.date.startsWith(dateStr));
+    const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+
+    return shifts.filter(shift => {
+      // Handle different possible date formats from backend
+      let shiftDateStr = shift.date;
+
+      // If shift.date is in DD-MM-YYYY format, convert to YYYY-MM-DD
+      if (shiftDateStr.includes('-') && shiftDateStr.length === 10) {
+        const parts = shiftDateStr.split('-');
+        if (parts.length === 3 && parts[0].length === 2) {
+          // DD-MM-YYYY format, convert to YYYY-MM-DD
+          shiftDateStr = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+      }
+
+      // If shift.date includes time (ISO format), extract just the date part
+      if (shiftDateStr.includes('T')) {
+        shiftDateStr = shiftDateStr.split('T')[0];
+      }
+
+      return shiftDateStr === dateStr;
+    });
   };
 
-  // Render shift block for week view
-  const renderShiftBlock = (shift: Shift) => {
-    const colors = getShiftColor(shift.shiftType);
-    const startPos = timeToPosition(shift.startTime);
-    const width = calculateShiftWidth(shift.startTime, shift.endTime, shift.isOpenEnded);
+  // Calculate shift lanes for overlapping shifts (horizontal positioning)
+  const calculateShiftLanes = (shifts: Shift[]): Array<Shift & { lane: number; totalLanes: number }> => {
+    if (shifts.length === 0) return [];
 
-    return (
-      <div
-        key={shift.id}
-        onClick={() => handleShiftClick(shift)}
-        className={`absolute cursor-pointer rounded p-1 text-xs ${colors.bg} ${colors.border} ${colors.text} border hover:shadow-md transition-shadow`}
-        style={{
-          left: `${startPos}%`,
-          width: `${width}%`,
-          top: '2px',
-          bottom: '2px'
-        }}
-      >
-        <div className="font-medium truncate">{shift.employeeName}</div>
-        <div className="text-xs opacity-80">{formatTime(shift.startTime)} - {shift.isOpenEnded ? 'einde' : formatTime(shift.endTime!)}</div>
-      </div>
-    );
+    // Sort shifts by start time
+    const sortedShifts = [...shifts].sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+    const lanesData: Array<Shift & { lane: number; totalLanes: number }> = [];
+    const lanes: Array<{ endTime: string; isOpenEnded: boolean; shiftId: number }> = [];
+
+    sortedShifts.forEach(shift => {
+      // Find the first available lane (check for time overlap)
+      let assignedLane = -1;
+
+      for (let i = 0; i < lanes.length; i++) {
+        const lane = lanes[i];
+
+        // Check if this lane is available (previous shift has ended or doesn't overlap)
+        if (!lane.isOpenEnded && lane.endTime <= shift.startTime) {
+          assignedLane = i;
+          break;
+        }
+      }
+
+      // If no lane is available, create a new one
+      if (assignedLane === -1) {
+        assignedLane = lanes.length;
+        lanes.push({ endTime: '', isOpenEnded: false, shiftId: -1 });
+      }
+
+      // Update the lane with current shift info
+      const endTime = shift.isOpenEnded ? '22:00:00' : (shift.endTime || '22:00:00');
+      lanes[assignedLane] = {
+        endTime: endTime,
+        isOpenEnded: shift.isOpenEnded,
+        shiftId: shift.id
+      };
+
+      lanesData.push({
+        ...shift,
+        lane: assignedLane,
+        totalLanes: lanes.length
+      });
+    });
+
+    // Update all shifts with the final total lanes count
+    const maxLanes = lanes.length;
+    return lanesData.map(shift => ({ ...shift, totalLanes: maxLanes }));
   };
+
+  // Check if a shift should be rendered in a specific time slot (for continuing shifts)
+  const shouldRenderShiftInTimeSlot = (shift: Shift, timeSlot: string): boolean => {
+    const [timeHour, timeMinute] = timeSlot.split(':').map(Number);
+    let timeSlotMinutes = timeHour * 60 + timeMinute;
+
+    // Handle midnight (00:00) as 24:00 for comparison
+    if (timeHour === 0) {
+      timeSlotMinutes = 24 * 60;
+    }
+
+    const [startHour, startMinute] = shift.startTime.split(':').map(Number);
+    let startMinutes = startHour * 60 + startMinute;
+
+    // Handle midnight in start time
+    if (startHour === 0) {
+      startMinutes = 24 * 60 + startMinute;
+    }
+
+    let endMinutes: number;
+    if (shift.isOpenEnded) {
+      // Open ended shifts go until 22:00
+      endMinutes = 22 * 60;
+    } else if (shift.endTime) {
+      const [endHour, endMin] = shift.endTime.split(':').map(Number);
+      endMinutes = endHour * 60 + endMin;
+
+      // Handle midnight in end time
+      if (endHour === 0) {
+        endMinutes = 24 * 60 + endMin;
+      }
+    } else {
+      endMinutes = 22 * 60; // Default to 22:00 if no end time
+    }
+
+    // Check if this time slot is within the shift duration
+    return timeSlotMinutes >= startMinutes && timeSlotMinutes < endMinutes;
+  };
+
+  // Calculate how many time slots a shift spans
+  const calculateShiftDurationInSlots = (shift: Shift): number => {
+    const [startHour, startMinute] = shift.startTime.split(':').map(Number);
+    let startMinutes = startHour * 60 + startMinute;
+
+    // Handle midnight in start time
+    if (startHour === 0) {
+      startMinutes = 24 * 60 + startMinute;
+    }
+
+    let endMinutes: number;
+    if (shift.isOpenEnded) {
+      // Open ended shifts go until 22:00
+      endMinutes = 22 * 60;
+    } else if (shift.endTime) {
+      const [endHour, endMin] = shift.endTime.split(':').map(Number);
+      endMinutes = endHour * 60 + endMin;
+
+      // Handle midnight in end time
+      if (endHour === 0) {
+        endMinutes = 24 * 60 + endMin;
+      }
+    } else {
+      endMinutes = 22 * 60; // Default to 22:00 if no end time
+    }
+
+    const durationInMinutes = endMinutes - startMinutes;
+    return Math.ceil(durationInMinutes / 60); // Convert to hours and round up
+  };
+
+  // Render shift blocks for a specific day in week view
+  const renderShiftBlocksForDay = (dayShifts: Shift[], timeSlots: string[]) => {
+    if (dayShifts.length === 0) return null;
+
+    const shiftsWithLanes = calculateShiftLanes(dayShifts);
+
+    return shiftsWithLanes.map(shift => {
+      const colors = getShiftColor(shift.shiftType);
+      const shiftDurationInSlots = calculateShiftDurationInSlots(shift);
+
+      // Find the starting time slot index
+      const shiftStartHour = shift.startTime.substring(0, 5); // Get HH:MM format
+      const startTimeIndex = timeSlots.findIndex(slot => slot === shiftStartHour);
+
+      if (startTimeIndex === -1) return null;
+
+      // Calculate height and position based on lanes
+      const laneWidth = 100 / shift.totalLanes;
+      const leftPosition = (shift.lane * laneWidth);
+
+      const isHovered = hoveredShiftId === shift.id;
+
+      return (
+        <div
+          key={shift.id}
+          onClick={() => handleShiftClick(shift)}
+          onMouseEnter={() => setHoveredShiftId(shift.id)}
+          onMouseLeave={() => setHoveredShiftId(null)}
+          className={`absolute cursor-pointer rounded p-2 text-xs ${colors.bg} ${colors.border} ${colors.text} border transition-all duration-200`}
+          style={{
+            left: `${leftPosition}%`,
+            width: `${laneWidth - 1}%`, // Small gap between lanes
+            top: `${startTimeIndex * 50 + startTimeIndex + 1}px`, // 50px per time slot + 1px border per slot + 1px padding
+            height: `${shiftDurationInSlots * 50 + (shiftDurationInSlots - 1) - 3}px`, // 50px per slot + borders between slots - 3px padding
+            minHeight: '36px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'flex-start',
+            zIndex: isHovered ? 30 : 15,
+            transform: isHovered ? 'scale(1.05)' : 'scale(1)',
+            boxShadow: isHovered ? '0 10px 25px rgba(0, 0, 0, 0.2)' : '0 1px 3px rgba(0, 0, 0, 0.1)'
+          }}
+        >
+          <div
+            className="font-medium"
+            style={{
+              fontSize: shift.totalLanes > 3 ? '9px' : '11px',
+              lineHeight: '1.2',
+              wordBreak: 'break-word',
+              overflowWrap: 'break-word',
+              whiteSpace: 'normal'
+            }}
+          >
+            {shift.employeeName}
+          </div>
+          <div
+            className="text-xs opacity-80 mt-1"
+            style={{
+              fontSize: shift.totalLanes > 3 ? '8px' : '9px',
+              lineHeight: '1.1',
+              wordBreak: 'break-word',
+              overflowWrap: 'break-word',
+              whiteSpace: 'normal'
+            }}
+          >
+            {formatTime(shift.startTime)} - {shift.isOpenEnded ? 'einde' : formatTime(shift.endTime!)}
+          </div>
+          <div
+            className="text-xs opacity-70 mt-1"
+            style={{
+              fontSize: shift.totalLanes > 3 ? '7px' : '8px',
+              lineHeight: '1.1',
+              wordBreak: 'break-word',
+              overflowWrap: 'break-word',
+              whiteSpace: 'normal'
+            }}
+          >
+            {shift.shiftTypeName}
+          </div>
+        </div>
+      );
+    });
+  };
+
+  // Check if a time slot has shifts for hiding borders
+  const hasShiftsInTimeSlot = (date: Date, timeSlot: string): boolean => {
+    const dayShifts = getShiftsForDate(date);
+    return dayShifts.some(shift => shouldRenderShiftInTimeSlot(shift, timeSlot));
+  };
+
   const getNavigationTitle = (): string => {
     if (viewType === 'week') {
       const weekDates = getWeekDates(currentDate);
@@ -316,12 +557,7 @@ export default function SchedulePage() {
   const handleAddShift = () => {
     if (!isManager()) return;
 
-    showAlert({
-      title: 'Nieuwe shift toevoegen',
-      message: 'Deze functie wordt binnenkort toegevoegd!',
-      confirmText: 'OK',
-      icon: <AlertTriangle className="h-6 w-6 text-orange-600" />
-    });
+    router.push('/schedule/create');
   };
 
   if (isLoading) {
@@ -355,7 +591,7 @@ export default function SchedulePage() {
                         Rooster
                       </h1>
                       <p className="text-lg mt-1" style={{ color: '#67697c' }}>
-                        Bekijk het werkrooster van alle medewerkers
+                        Bekijk het werkrooster van alle medewerkers ({shifts.length} shifts geladen)
                       </p>
                     </div>
                   </div>
@@ -406,6 +642,17 @@ export default function SchedulePage() {
                 className="px-4 py-2 bg-white/80 backdrop-blur-lg rounded-lg shadow-lg border border-white/20 text-gray-700 font-medium hover:bg-white transition-colors"
               >
                 Vandaag
+              </button>
+
+              <button
+                onClick={() => {
+                  loadShifts();
+                }}
+                disabled={isLoadingShifts}
+                className="p-2 bg-white/80 backdrop-blur-lg rounded-lg shadow-lg border border-white/20 text-gray-700 hover:bg-white transition-colors disabled:opacity-50"
+                title="Ververs shifts"
+              >
+                <RefreshCw className={`h-5 w-5 ${isLoadingShifts ? 'animate-spin' : ''}`} />
               </button>
 
               <div className="flex items-center bg-white/80 backdrop-blur-lg rounded-lg shadow-lg border border-white/20">
@@ -470,24 +717,26 @@ export default function SchedulePage() {
                   {timeSlots.map((time, timeIndex) => (
                     <React.Fragment key={`time-row-${timeIndex}`}>
                       {/* Time label */}
-                      <div className="bg-white p-4 border-t border-gray-100">
-                        <p className="text-sm text-gray-600">{time}</p>
+                      <div className="bg-white p-2 flex items-start" style={{ minHeight: '50px', zIndex: 5 }}>
+                        <p className="text-sm text-gray-600 font-medium">{time}</p>
                       </div>
 
                       {/* Day cells */}
                       {getWeekDates(currentDate).map((date, dayIndex) => {
                         const isToday = date.toDateString() === new Date().toDateString();
-                        const dayShifts = getShiftsForDate(date);
 
                         return (
                           <div
                             key={`cell-${timeIndex}-${dayIndex}`}
-                            className={`bg-white p-1 border-t border-gray-100 relative ${isToday ? 'bg-orange-50/50' : ''
-                              }`}
-                            style={{ minHeight: '60px' }}
+                            className={`bg-white p-0 relative ${isToday ? 'bg-orange-50/50' : ''}`}
+                            style={{ minHeight: '50px' }}
                           >
-                            {/* Render shifts only in the first time slot row for each day */}
-                            {timeIndex === 0 && dayShifts.map(shift => renderShiftBlock(shift))}
+                            {/* Render all shifts for this day only once at the first time slot */}
+                            {timeIndex === 0 && (
+                              <div className="absolute inset-0" style={{ zIndex: 10 }}>
+                                {renderShiftBlocksForDay(getShiftsForDate(date), timeSlots)}
+                              </div>
+                            )}
                           </div>
                         );
                       })}
@@ -523,7 +772,7 @@ export default function SchedulePage() {
                       return (
                         <div
                           key={index}
-                          className={`bg-white p-4 min-h-[100px] ${isToday ? 'bg-orange-50 ring-2 ring-orange-400' : ''
+                          className={`bg-white p-4 min-h-[120px] ${isToday ? 'bg-orange-50 ring-2 ring-orange-400' : ''
                             }`}
                         >
                           <p className={`text-sm font-medium mb-2 ${isToday ? 'text-orange-600' : 'text-gray-900'
@@ -533,23 +782,36 @@ export default function SchedulePage() {
 
                           {/* Shift summary */}
                           <div className="space-y-1">
-                            {getShiftsForDate(date).slice(0, 3).map(shift => {
+                            {getShiftsForDate(date).slice(0, 2).map(shift => {
                               const colors = getShiftColor(shift.shiftType);
                               return (
                                 <div
                                   key={shift.id}
                                   onClick={() => handleShiftClick(shift)}
-                                  className={`text-xs p-1 rounded cursor-pointer hover:opacity-80 ${colors.bg} ${colors.text}`}
+                                  className={`text-xs p-1 rounded cursor-pointer hover:opacity-80 transition-opacity ${colors.bg} ${colors.text}`}
                                 >
-                                  <div className="truncate">
-                                    {formatTime(shift.startTime)} {shift.employeeName}
+                                  <div
+                                    className="font-medium"
+                                    style={{
+                                      lineHeight: '1.2',
+                                      wordBreak: 'break-word',
+                                      overflowWrap: 'break-word',
+                                      whiteSpace: 'normal'
+                                    }}
+                                  >
+                                    {formatTime(shift.startTime)} {shift.employeeName.split(' ')[0]}
                                   </div>
                                 </div>
                               );
                             })}
-                            {getShiftsForDate(date).length > 3 && (
-                              <div className="text-xs text-gray-500 text-center">
-                                +{getShiftsForDate(date).length - 3} meer
+                            {getShiftsForDate(date).length > 2 && (
+                              <div className="text-xs text-center p-1 rounded bg-gray-100 text-gray-600 font-medium">
+                                +{getShiftsForDate(date).length - 2} meer
+                              </div>
+                            )}
+                            {getShiftsForDate(date).length === 0 && (
+                              <div className="text-xs text-gray-400 text-center py-2">
+                                Geen shifts
                               </div>
                             )}
                           </div>
