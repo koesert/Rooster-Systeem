@@ -141,9 +141,16 @@ export default function SchedulePage() {
         endDate = monthDays[monthDays.length - 1];
       }
 
-      // Format dates for API (YYYY-MM-DD)
-      const formattedStartDate = startDate.toISOString().split('T')[0];
-      const formattedEndDate = endDate.toISOString().split('T')[0];
+      // Format dates for API (YYYY-MM-DD) using local time to avoid timezone issues
+      const formatDateForAPI = (date: Date): string => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
+      const formattedStartDate = formatDateForAPI(startDate);
+      const formattedEndDate = formatDateForAPI(endDate);
 
       const shiftsData = await api.getAllShifts({
         startDate: formattedStartDate,
@@ -230,7 +237,11 @@ export default function SchedulePage() {
 
   // Get shifts for a specific date
   const getShiftsForDate = (date: Date): Shift[] => {
-    const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+    // Use local date formatting to avoid timezone issues
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`; // YYYY-MM-DD format
 
     return shifts.filter(shift => {
       // Handle different possible date formats from backend
@@ -505,17 +516,17 @@ export default function SchedulePage() {
           <div className="grid grid-cols-1 gap-3">
             <div>
               <p className="text-sm font-medium text-gray-600">Medewerker</p>
-              <p className="text-lg">{shift.employeeName}</p>
+              <p className="text-lg text-gray-600">{shift.employeeName}</p>
             </div>
 
             <div>
               <p className="text-sm font-medium text-gray-600">Datum</p>
-              <p className="text-lg">{formatDate(shift.date)}</p>
+              <p className="text-lg text-gray-600">{formatDate(shift.date)}</p>
             </div>
 
             <div>
               <p className="text-sm font-medium text-gray-600">Tijd</p>
-              <p className="text-lg">{shift.timeRange}</p>
+              <p className="text-lg text-gray-600">{shift.timeRange}</p>
               {shift.durationInHours && (
                 <p className="text-sm text-gray-600">{shift.durationInHours} uur</p>
               )}
@@ -524,7 +535,7 @@ export default function SchedulePage() {
             {shift.notes && (
               <div>
                 <p className="text-sm font-medium text-gray-600">Notities</p>
-                <p className="text-base">{shift.notes}</p>
+                <p className="text-base text-gray-600">{shift.notes}</p>
               </div>
             )}
           </div>
@@ -591,7 +602,7 @@ export default function SchedulePage() {
                         Rooster
                       </h1>
                       <p className="text-lg mt-1" style={{ color: '#67697c' }}>
-                        Bekijk het werkrooster van alle medewerkers ({shifts.length} shifts geladen)
+                        Bekijk het werkrooster van alle medewerkers
                       </p>
                     </div>
                   </div>
@@ -642,17 +653,6 @@ export default function SchedulePage() {
                 className="px-4 py-2 bg-white/80 backdrop-blur-lg rounded-lg shadow-lg border border-white/20 text-gray-700 font-medium hover:bg-white transition-colors"
               >
                 Vandaag
-              </button>
-
-              <button
-                onClick={() => {
-                  loadShifts();
-                }}
-                disabled={isLoadingShifts}
-                className="p-2 bg-white/80 backdrop-blur-lg rounded-lg shadow-lg border border-white/20 text-gray-700 hover:bg-white transition-colors disabled:opacity-50"
-                title="Ververs shifts"
-              >
-                <RefreshCw className={`h-5 w-5 ${isLoadingShifts ? 'animate-spin' : ''}`} />
               </button>
 
               <div className="flex items-center bg-white/80 backdrop-blur-lg rounded-lg shadow-lg border border-white/20">
