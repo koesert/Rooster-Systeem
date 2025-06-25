@@ -7,7 +7,7 @@ import { useModal } from '@/contexts/ModalContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
-import { Calendar, Clock, Plus, ChevronLeft, ChevronRight, Eye, Edit, Trash2, Users, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Calendar, Clock, Plus, ChevronLeft, ChevronRight, Eye, Edit, Trash2, Users, AlertTriangle, RefreshCw, CheckCircle } from 'lucide-react';
 import { formatDate } from '@/utils/dateUtils';
 import { Shift, ShiftType } from '@/types/shift';
 import * as api from '@/lib/api';
@@ -77,7 +77,7 @@ export default function SchedulePage() {
   usePageTitle('Dashboard - Mijn rooster');
 
   const { user, isLoading, isManager } = useAuth();
-  const { showModal, showAlert } = useModal();
+  const { showModal, showAlert, showConfirm, hideModal } = useModal();
   const router = useRouter();
 
   // State
@@ -528,6 +528,60 @@ export default function SchedulePage() {
     return '';
   };
 
+  // Delete shift handler (managers only)
+  const handleDeleteShift = (shift: Shift) => {
+    if (!isManager()) {
+      showAlert({
+        title: 'Onvoldoende rechten',
+        message: 'Alleen managers kunnen shifts verwijderen.',
+        confirmText: 'OK',
+        icon: <AlertTriangle className="h-6 w-6 text-red-600" />
+      });
+      return;
+    }
+
+    showConfirm({
+      title: 'Shift verwijderen',
+      message: `Weet je zeker dat je de shift van ${shift.employeeName} op ${formatDate(shift.date)} van ${formatTime(shift.startTime)} tot ${shift.isOpenEnded ? 'einde' : formatTime(shift.endTime!)} wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.`,
+      confirmText: 'Ja, verwijderen',
+      cancelText: 'Annuleren',
+      variant: 'danger',
+      icon: <AlertTriangle className="h-6 w-6 text-red-600" />,
+      onConfirm: async () => {
+        try {
+          await api.deleteShift(shift.id);
+
+          // Refresh shifts list
+          await loadShifts();
+
+          // Show success message
+          showAlert({
+            title: 'Shift verwijderd',
+            message: `De shift van ${shift.employeeName} is succesvol verwijderd.`,
+            confirmText: 'OK',
+            icon: <CheckCircle className="h-6 w-6 text-green-600" />
+          });
+        } catch (error: any) {
+          console.error('Error deleting shift:', error);
+
+          let errorMessage = 'Er is een fout opgetreden bij het verwijderen van de shift.';
+          if (error.status === 403) {
+            errorMessage = 'Je hebt geen rechten om deze shift te verwijderen.';
+          } else if (error.status === 404) {
+            errorMessage = 'De shift is niet gevonden of al verwijderd.';
+          }
+
+          showAlert({
+            title: 'Fout bij verwijderen',
+            message: errorMessage,
+            confirmText: 'OK',
+            icon: <AlertTriangle className="h-6 w-6 text-red-600" />
+          });
+        }
+      }
+    });
+  };
+
   // Shift click handler
   const handleShiftClick = (shift: Shift) => {
     const colors = getShiftColor(shift.shiftType);
@@ -586,7 +640,11 @@ export default function SchedulePage() {
                 <span>Bewerken</span>
               </button>
               <button
-                onClick={() => console.log('Delete shift:', shift.id)}
+                onClick={() => {
+                  // Close the modal first, then show delete confirmation
+                  hideModal();
+                  setTimeout(() => handleDeleteShift(shift), 150);
+                }}
                 className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
               >
                 <Trash2 className="h-4 w-4" />
