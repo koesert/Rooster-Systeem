@@ -7,9 +7,10 @@ import { useModal } from '@/contexts/ModalContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
-import { Calendar, Clock, Plus, ChevronLeft, ChevronRight, Eye, Edit, Trash2, Users, AlertTriangle, RefreshCw, CheckCircle } from 'lucide-react';
+import { Calendar, Clock, Plus, ChevronLeft, ChevronRight, Eye, Edit, Trash2, Users, AlertTriangle, RefreshCw, CheckCircle, User } from 'lucide-react';
 import { formatDate } from '@/utils/dateUtils';
 import { Shift, ShiftType } from '@/types/shift';
+import { Employee } from '@/types/auth';
 import * as api from '@/lib/api';
 
 type ViewType = 'week' | 'month' | 'day';
@@ -87,6 +88,12 @@ export default function SchedulePage() {
   const [isLoadingShifts, setIsLoadingShifts] = useState(false);
   const [hoveredShiftId, setHoveredShiftId] = useState<number | null>(null);
 
+  // Employee selection state (for managers)
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [isLoadingEmployees, setIsLoadingEmployees] = useState(false);
+
   // Redirect if not authenticated
   useEffect(() => {
     if (!isLoading && !user) {
@@ -94,12 +101,52 @@ export default function SchedulePage() {
     }
   }, [user, isLoading, router]);
 
-  // Load shifts when date or view type changes
+  // Load employees for managers
+  useEffect(() => {
+    if (user && isManager()) {
+      loadEmployees();
+    }
+  }, [user, isManager]);
+
+  // Load shifts when date, view type, or selected employee changes
   useEffect(() => {
     if (user) {
       loadShifts();
     }
-  }, [user, currentDate, viewType]);
+  }, [user, currentDate, viewType, selectedEmployeeId]);
+
+  // Load employees list (managers only)
+  const loadEmployees = async () => {
+    setIsLoadingEmployees(true);
+    try {
+      const employeesData = await api.getAllEmployees();
+      setEmployees(employeesData);
+    } catch (error) {
+      console.error('Error loading employees:', error);
+      showAlert({
+        title: 'Fout bij laden',
+        message: 'Er is een fout opgetreden bij het laden van de medewerkers.',
+        confirmText: 'OK',
+        icon: <AlertTriangle className="h-6 w-6 text-red-600" />
+      });
+    } finally {
+      setIsLoadingEmployees(false);
+    }
+  };
+
+  // Handle employee selection
+  const handleEmployeeSelection = (employeeId: string) => {
+    if (employeeId === 'own') {
+      // Reset to own schedule
+      setSelectedEmployeeId(null);
+      setSelectedEmployee(null);
+    } else {
+      const empId = parseInt(employeeId);
+      const employee = employees.find(emp => emp.id === empId);
+      setSelectedEmployeeId(empId);
+      setSelectedEmployee(employee || null);
+    }
+  };
 
   // Load shifts from API
   const loadShifts = async () => {
@@ -226,7 +273,7 @@ export default function SchedulePage() {
     setCurrentDate(new Date());
   };
 
-  // Get shifts for a specific date with filtering based on view type
+  // Get shifts for a specific date with filtering based on selected employee
   const getShiftsForDate = (date: Date): Shift[] => {
     // Use local date formatting to avoid timezone issues
     const year = date.getFullYear();
@@ -255,15 +302,26 @@ export default function SchedulePage() {
       return shiftDateStr === dateStr;
     });
 
-    // In day view, show all shifts. In week/month view, show only user's own shifts
+    // Filter based on selected employee or current user
+    const targetEmployeeId = selectedEmployeeId || user?.id;
+
     if (viewType === 'day') {
-      return dayShifts.sort((a, b) => a.startTime.localeCompare(b.startTime));
+      // In day view, show all shifts if manager viewing all, or specific employee's shifts
+      if (isManager() && selectedEmployeeId === null) {
+        // Manager viewing all employees
+        return dayShifts.sort((a, b) => a.startTime.localeCompare(b.startTime));
+      } else {
+        // Viewing specific employee or user viewing their own
+        return dayShifts.filter(shift => shift.employeeId === targetEmployeeId)
+          .sort((a, b) => a.startTime.localeCompare(b.startTime));
+      }
     } else {
-      return dayShifts.filter(shift => shift.employeeId === user?.id);
+      // In week/month view, always show only the target employee's shifts
+      return dayShifts.filter(shift => shift.employeeId === targetEmployeeId);
     }
   };
 
-  // Get all shifts for the current date (used in day view)
+  // Get all shifts for the current date (used in day view when showing all employees)
   const getAllShiftsForDate = (date: Date): Shift[] => {
     // Use local date formatting to avoid timezone issues
     const year = date.getFullYear();
@@ -271,7 +329,7 @@ export default function SchedulePage() {
     const day = String(date.getDate()).padStart(2, '0');
     const dateStr = `${year}-${month}-${day}`; // YYYY-MM-DD format
 
-    return shifts.filter(shift => {
+    const dayShifts = shifts.filter(shift => {
       // Handle different possible date formats from backend
       let shiftDateStr = shift.date;
 
@@ -290,7 +348,16 @@ export default function SchedulePage() {
       }
 
       return shiftDateStr === dateStr;
-    }).sort((a, b) => a.startTime.localeCompare(b.startTime));
+    });
+
+    // If viewing specific employee, filter to only their shifts
+    if (selectedEmployeeId) {
+      return dayShifts.filter(shift => shift.employeeId === selectedEmployeeId)
+        .sort((a, b) => a.startTime.localeCompare(b.startTime));
+    }
+
+    // Otherwise return all shifts for the date
+    return dayShifts.sort((a, b) => a.startTime.localeCompare(b.startTime));
   };
 
   // Calculate shift lanes for overlapping shifts (horizontal positioning)
@@ -436,8 +503,8 @@ export default function SchedulePage() {
 
       const isHovered = hoveredShiftId === shift.id;
 
-      // In week/month view, show shift type instead of "Mijn shift"
-      const displayName = viewType === 'day' ? shift.employeeName : shift.shiftTypeName;
+      // Display name based on whether we're viewing a specific employee or all employees
+      const displayName = (viewType === 'day' && !selectedEmployeeId) ? shift.employeeName : shift.shiftTypeName;
 
       return (
         <div
@@ -487,9 +554,9 @@ export default function SchedulePage() {
             }}
           >
             {formatTime(shift.startTime)} - {shift.isOpenEnded ? 'einde' : formatTime(shift.endTime!)}
-            {viewType === 'day' && (
+            {((viewType === 'day' && !selectedEmployeeId) || selectedEmployeeId) && (
               <div className="mt-0.5 text-xs opacity-70">
-                {shift.shiftTypeName}
+                {(viewType === 'day' && !selectedEmployeeId) ? shift.shiftTypeName : shift.employeeName}
               </div>
             )}
           </div>
@@ -668,6 +735,25 @@ export default function SchedulePage() {
     router.push('/schedule/create');
   };
 
+  // Get page title based on selected employee
+  const getPageTitle = (): string => {
+    if (selectedEmployee) {
+      return `Rooster van ${selectedEmployee.fullName}`;
+    }
+    return 'Mijn rooster';
+  };
+
+  // Get page description based on selected employee
+  const getPageDescription = (): string => {
+    if (selectedEmployee) {
+      return `Bekijk het rooster van ${selectedEmployee.fullName}`;
+    }
+    if (viewType === 'day') {
+      return 'Bekijk het rooster voor deze dag';
+    }
+    return 'Bekijk je rooster voor de week of maand';
+  };
+
   if (isLoading) {
     return <LoadingScreen message="Rooster laden" />;
   }
@@ -696,10 +782,10 @@ export default function SchedulePage() {
                     </div>
                     <div>
                       <h1 className="text-4xl font-bold" style={{ background: 'linear-gradient(135deg, #120309, #67697c)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                        Mijn rooster
+                        {getPageTitle()}
                       </h1>
                       <p className="text-lg mt-1" style={{ color: '#67697c' }}>
-                        {viewType === 'day' ? 'Bekijk het rooster voor deze dag' : 'Bekijk je rooster voor de week of maand'}
+                        {getPageDescription()}
                       </p>
                     </div>
                   </div>
@@ -715,6 +801,51 @@ export default function SchedulePage() {
                     </button>
                   )}
                 </div>
+
+                {/* Employee selection dropdown for managers */}
+                {isManager() && (
+                  <div className="mt-6 pt-6 border-t border-gray-200/50">
+                    <div className="flex items-center space-x-4">
+                      <div className="flex items-center space-x-3">
+                        <User className="h-5 w-5" style={{ color: '#67697c' }} />
+                        <label className="text-sm font-medium" style={{ color: '#120309' }}>
+                          Bekijk rooster van:
+                        </label>
+                      </div>
+                      <div className="relative">
+                        <select
+                          value={selectedEmployeeId || 'own'}
+                          onChange={(e) => handleEmployeeSelection(e.target.value)}
+                          disabled={isLoadingEmployees}
+                          className="pl-4 pr-10 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg min-w-[200px]"
+                          style={{ color: '#120309' }}
+                          onFocus={(e) => {
+                            const target = e.target as HTMLSelectElement;
+                            target.style.boxShadow = '0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)';
+                            target.style.borderColor = '#d5896f';
+                          }}
+                          onBlur={(e) => {
+                            const target = e.target as HTMLSelectElement;
+                            target.style.boxShadow = '';
+                            target.style.borderColor = '#d1d5db';
+                          }}
+                        >
+                          <option value="own">Mijn eigen rooster</option>
+                          {employees.map((employee) => (
+                            <option key={employee.id} value={employee.id}>
+                              {employee.fullName}
+                            </option>
+                          ))}
+                        </select>
+                        {isLoadingEmployees && (
+                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2" style={{ borderColor: '#d5896f' }}></div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -727,7 +858,7 @@ export default function SchedulePage() {
                 onClick={() => setViewType('day')}
                 className={`px-6 py-2 rounded-lg font-medium transition-all duration-200 ${viewType === 'day'
                   ? 'bg-gradient-to-r from-[#d5896f] to-[#d5896f90] text-white shadow-md'
-                  : 'text-gray-600 hover:text-gray-900'
+                  : 'text-gray-600 hover:text-gray-900 cursor-pointer'
                   }`}
               >
                 Dag
@@ -736,7 +867,7 @@ export default function SchedulePage() {
                 onClick={() => setViewType('week')}
                 className={`px-6 py-2 rounded-lg font-medium transition-all duration-200 ${viewType === 'week'
                   ? 'bg-gradient-to-r from-[#d5896f] to-[#d5896f90] text-white shadow-md'
-                  : 'text-gray-600 hover:text-gray-900'
+                  : 'text-gray-600 hover:text-gray-900 cursor-pointer'
                   }`}
               >
                 Week
@@ -745,7 +876,7 @@ export default function SchedulePage() {
                 onClick={() => setViewType('month')}
                 className={`px-6 py-2 rounded-lg font-medium transition-all duration-200 ${viewType === 'month'
                   ? 'bg-gradient-to-r from-[#d5896f] to-[#d5896f90] text-white shadow-md'
-                  : 'text-gray-600 hover:text-gray-900'
+                  : 'text-gray-600 hover:text-gray-900 cursor-pointer'
                   }`}
               >
                 Maand
@@ -756,7 +887,7 @@ export default function SchedulePage() {
             <div className="flex items-center space-x-4">
               <button
                 onClick={navigateToToday}
-                className="px-4 py-2 bg-white/80 backdrop-blur-lg rounded-lg shadow-lg border border-white/20 text-gray-700 font-medium hover:bg-white transition-colors"
+                className="px-4 py-2 bg-white/80 backdrop-blur-lg rounded-lg shadow-lg border border-white/20 text-gray-700 font-medium hover:bg-white transition-colors cursor-pointer"
               >
                 Vandaag
               </button>
@@ -764,7 +895,7 @@ export default function SchedulePage() {
               <div className="flex items-center bg-white/80 backdrop-blur-lg rounded-lg shadow-lg border border-white/20">
                 <button
                   onClick={navigatePrevious}
-                  className="p-2 hover:bg-gray-100 rounded-l-lg transition-colors"
+                  className="p-2 hover:bg-gray-100 rounded-l-lg transition-colors cursor-pointer"
                 >
                   <ChevronLeft className="h-5 w-5 text-gray-600" />
                 </button>
@@ -775,7 +906,7 @@ export default function SchedulePage() {
 
                 <button
                   onClick={navigateNext}
-                  className="p-2 hover:bg-gray-100 rounded-r-lg transition-colors"
+                  className="p-2 hover:bg-gray-100 rounded-r-lg transition-colors cursor-pointer"
                 >
                   <ChevronRight className="h-5 w-5 text-gray-600" />
                 </button>
@@ -935,7 +1066,7 @@ export default function SchedulePage() {
                             {dayNumber}
                           </p>
 
-                          {/* Shift summary - only user's own shifts */}
+                          {/* Shift summary */}
                           <div className="space-y-1">
                             {dayShifts.slice(0, 2).map(shift => {
                               const colors = getShiftColor(shift.shiftType);
@@ -957,7 +1088,7 @@ export default function SchedulePage() {
                                       whiteSpace: 'normal'
                                     }}
                                   >
-                                    {formatTime(shift.startTime)} {shift.shiftTypeName}
+                                    {formatTime(shift.startTime)} {selectedEmployee ? shift.shiftTypeName : shift.employeeName}
                                   </div>
                                 </div>
                               );
