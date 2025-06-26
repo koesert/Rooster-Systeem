@@ -926,7 +926,7 @@ export default function SchedulePage() {
                         <div
                           key={index}
                           onClick={() => navigateToDay(date)}
-                          className={`bg-white p-4 min-h-[120px] cursor-pointer hover:bg-gray-50 transition-colors ${isToday ? 'bg-orange-50 ring-2 ring-orange-400' : ''
+                          className={`bg-white p-4 min-h-[120px] cursor-pointer hover:bg-gray-50 transition-colors ${isToday ? 'bg-orange-50 border-2 border-orange-400' : ''
                             }`}
                           title="Klik om dag weergave te openen"
                         >
