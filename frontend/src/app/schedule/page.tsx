@@ -660,6 +660,22 @@ export default function SchedulePage() {
     });
   };
 
+  // Edit shift handler (managers only)
+  const handleEditShift = (shift: Shift) => {
+    if (!isManager()) {
+      showAlert({
+        title: 'Onvoldoende rechten',
+        message: 'Alleen managers kunnen shifts bewerken.',
+        confirmText: 'OK',
+        icon: <AlertTriangle className="h-6 w-6 text-red-600" />
+      });
+      return;
+    }
+
+    // Navigate to edit page
+    router.push(`/schedule/edit/${shift.id}`);
+  };
+
   // Shift click handler
   const handleShiftClick = (shift: Shift) => {
     const colors = getShiftColor(shift.shiftType);
@@ -711,8 +727,12 @@ export default function SchedulePage() {
           {isManager() && (
             <div className="flex space-x-2 pt-4 border-t">
               <button
-                onClick={() => console.log('Edit shift:', shift.id)}
-                className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors"
+                onClick={() => {
+                  // Close the modal first, then navigate to edit page
+                  hideModal();
+                  setTimeout(() => handleEditShift(shift), 150);
+                }}
+                className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors cursor-pointer"
               >
                 <Edit className="h-4 w-4" />
                 <span>Bewerken</span>
@@ -723,7 +743,7 @@ export default function SchedulePage() {
                   hideModal();
                   setTimeout(() => handleDeleteShift(shift), 150);
                 }}
-                className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors cursor-pointer"
               >
                 <Trash2 className="h-4 w-4" />
                 <span>Verwijderen</span>
