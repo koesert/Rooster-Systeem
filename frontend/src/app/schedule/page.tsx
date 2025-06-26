@@ -68,7 +68,7 @@ const calculateShiftWidth = (startTime: string, endTime: string | null, isOpenEn
   // Handle shifts that cross midnight or go beyond our schedule
   if (endPos <= startPos) {
     // If end time is before start time or at start time, extend to end of schedule
-    return Math.max(timeToPosition('22:00:00') - startPos, 5); // Minimum 5% width
+    return Math.max(timeToPosition('22:00:00') - startPos, 5); // Minimum 5% width for visibility
   }
 
   return Math.max(endPos - startPos, 5); // Minimum 5% width for visibility
@@ -107,6 +107,14 @@ export default function SchedulePage() {
       loadEmployees();
     }
   }, [user, isManager]);
+
+  // Reset employee selection when switching to day view
+  useEffect(() => {
+    if (viewType === 'day' && selectedEmployeeId !== null) {
+      setSelectedEmployeeId(null);
+      setSelectedEmployee(null);
+    }
+  }, [viewType, selectedEmployeeId]);
 
   // Load shifts when date, view type, or selected employee changes
   useEffect(() => {
@@ -801,51 +809,6 @@ export default function SchedulePage() {
                     </button>
                   )}
                 </div>
-
-                {/* Employee selection dropdown for managers */}
-                {isManager() && (
-                  <div className="mt-6 pt-6 border-t border-gray-200/50">
-                    <div className="flex items-center space-x-4">
-                      <div className="flex items-center space-x-3">
-                        <User className="h-5 w-5" style={{ color: '#67697c' }} />
-                        <label className="text-sm font-medium" style={{ color: '#120309' }}>
-                          Bekijk rooster van:
-                        </label>
-                      </div>
-                      <div className="relative">
-                        <select
-                          value={selectedEmployeeId || 'own'}
-                          onChange={(e) => handleEmployeeSelection(e.target.value)}
-                          disabled={isLoadingEmployees}
-                          className="pl-4 pr-10 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg min-w-[200px]"
-                          style={{ color: '#120309' }}
-                          onFocus={(e) => {
-                            const target = e.target as HTMLSelectElement;
-                            target.style.boxShadow = '0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)';
-                            target.style.borderColor = '#d5896f';
-                          }}
-                          onBlur={(e) => {
-                            const target = e.target as HTMLSelectElement;
-                            target.style.boxShadow = '';
-                            target.style.borderColor = '#d1d5db';
-                          }}
-                        >
-                          <option value="own">Mijn eigen rooster</option>
-                          {employees.map((employee) => (
-                            <option key={employee.id} value={employee.id}>
-                              {employee.fullName}
-                            </option>
-                          ))}
-                        </select>
-                        {isLoadingEmployees && (
-                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2" style={{ borderColor: '#d5896f' }}></div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -882,6 +845,47 @@ export default function SchedulePage() {
                 Maand
               </button>
             </div>
+
+            {/* Employee selection dropdown for managers (hidden in day view since it shows all shifts) */}
+            {isManager() && viewType !== 'day' && (
+              <div className="flex items-center space-x-3 bg-white/80 backdrop-blur-lg rounded-xl shadow-lg border border-white/20 px-4 py-2">
+                <User className="h-5 w-5" style={{ color: '#67697c' }} />
+                <label className="text-sm font-medium" style={{ color: '#120309' }}>
+                  Bekijk rooster van:
+                </label>
+                <div className="relative">
+                  <select
+                    value={selectedEmployeeId || 'own'}
+                    onChange={(e) => handleEmployeeSelection(e.target.value)}
+                    disabled={isLoadingEmployees}
+                    className="pl-3 pr-8 py-1 border border-gray-200 rounded-lg focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg min-w-[180px]"
+                    style={{ color: '#120309' }}
+                    onFocus={(e) => {
+                      const target = e.target as HTMLSelectElement;
+                      target.style.boxShadow = '0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)';
+                      target.style.borderColor = '#d5896f';
+                    }}
+                    onBlur={(e) => {
+                      const target = e.target as HTMLSelectElement;
+                      target.style.boxShadow = '';
+                      target.style.borderColor = '#d1d5db';
+                    }}
+                  >
+                    <option value="own">Mijn eigen rooster</option>
+                    {employees.map((employee) => (
+                      <option key={employee.id} value={employee.id}>
+                        {employee.fullName}
+                      </option>
+                    ))}
+                  </select>
+                  {isLoadingEmployees && (
+                    <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2" style={{ borderColor: '#d5896f' }}></div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Navigation */}
             <div className="flex items-center space-x-4">
