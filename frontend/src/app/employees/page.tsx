@@ -112,7 +112,6 @@ export default function EmployeesPage() {
       message: `
         Gebruikersnaam: ${employee.username}
         Functie: ${getRoleName(employee.role)}
-        ID: ${employee.id}
         In dienst sinds: ${formatDate(employee.hireDate)}
         Geboortedatum: ${formatDate(employee.birthDate)}
         Aangemaakt: ${formatDate(employee.createdAt)}
@@ -322,7 +321,6 @@ export default function EmployeesPage() {
                               </div>
                               <div>
                                 <p className="font-semibold" style={{ color: '#120309' }}>{employee.fullName}</p>
-                                <p className="text-sm" style={{ color: '#67697c' }}>ID: {employee.id}</p>
                               </div>
                             </div>
                           </td>
