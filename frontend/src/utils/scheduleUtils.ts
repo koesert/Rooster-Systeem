@@ -228,6 +228,71 @@ export const calculateShiftDurationInSlots = (shift: Shift): number => {
 };
 
 /**
+ * Calculate exact pixel position for shift start time within the schedule grid
+ * @param startTime - Time in HH:MM:SS format
+ * @param timeSlots - Array of time slots (e.g., ['12:00', '13:00', ...])
+ * @returns Pixel position from top of the grid
+ */
+export const calculateShiftTopPosition = (startTime: string, timeSlots: string[]): number => {
+  const [startHour, startMinute] = startTime.split(':').map(Number);
+
+  // Find the time slot that contains this shift's start hour
+  const shiftHourFormatted = `${startHour.toString().padStart(2, '0')}:00`;
+  const startTimeIndex = timeSlots.findIndex(slot => slot === shiftHourFormatted);
+
+  if (startTimeIndex === -1) return 0;
+
+  // Calculate position: 50px per time slot + 1px border + exact minute position within the hour
+  const basePosition = startTimeIndex * 51; // 50px + 1px border
+  const minuteOffset = (startMinute / 60) * 50; // Position within the hour based on minutes
+
+  return basePosition + minuteOffset + 1; // +1 for initial border
+};
+
+/**
+ * Calculate exact pixel height for shift duration
+ * @param shift - Shift object with start and end times
+ * @returns Pixel height for the shift block
+ */
+export const calculateShiftHeight = (shift: Shift): number => {
+  const [startHour, startMinute] = shift.startTime.split(':').map(Number);
+  let startMinutes = startHour * 60 + startMinute;
+
+  // Handle midnight in start time
+  if (startHour === 0) {
+    startMinutes = 24 * 60 + startMinute;
+  }
+
+  let endMinutes: number;
+  if (shift.isOpenEnded) {
+    // Open ended shifts go until 22:00
+    endMinutes = 22 * 60;
+  } else if (shift.endTime) {
+    const [endHour, endMin] = shift.endTime.split(':').map(Number);
+    endMinutes = endHour * 60 + endMin;
+
+    // Handle midnight in end time
+    if (endHour === 0) {
+      endMinutes = 24 * 60 + endMin;
+    }
+  } else {
+    endMinutes = 22 * 60; // Default to 22:00 if no end time
+  }
+
+  const durationInMinutes = endMinutes - startMinutes;
+
+  // Convert duration to pixels: 50px per hour + proportional borders
+  const durationInHours = durationInMinutes / 60;
+  const pixelHeight = durationInHours * 50; // 50px per hour
+
+  // Add borders proportionally (each hour slot has 1px border)
+  const borderHeight = Math.floor(durationInHours) * 1;
+
+  // Minimum height for visibility
+  return Math.max(pixelHeight + borderHeight - 3, 36); // -3px for padding, minimum 36px
+};
+
+/**
  * Generate time slots array for schedule display
  */
 export const generateTimeSlots = (): string[] => {

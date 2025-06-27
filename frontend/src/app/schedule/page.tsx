@@ -16,7 +16,8 @@ import {
   getShiftColor,
   formatTime,
   calculateShiftLanes,
-  calculateShiftDurationInSlots,
+  calculateShiftTopPosition,
+  calculateShiftHeight,
   getWeekDates,
   getDaysInMonth,
   generateTimeSlots,
@@ -291,18 +292,12 @@ export default function SchedulePage() {
 
     return shiftsWithLanes.map(shift => {
       const colors = getShiftColor(shift.shiftType);
-      const shiftDurationInSlots = calculateShiftDurationInSlots(shift);
 
-      // Find the starting time slot index
-      const [shiftHour, shiftMinute] = shift.startTime.split(':').map(Number);
+      // Use exact positioning functions
+      const topPosition = calculateShiftTopPosition(shift.startTime, timeSlots);
+      const height = calculateShiftHeight(shift);
 
-      // Find the time slot that contains this shift's start hour
-      const shiftHourFormatted = `${shiftHour.toString().padStart(2, '0')}:00`;
-      const startTimeIndex = timeSlots.findIndex(slot => slot === shiftHourFormatted);
-
-      if (startTimeIndex === -1) return null;
-
-      // Calculate height and position based on lanes
+      // Calculate horizontal positioning based on lanes
       const laneWidth = 100 / shift.totalLanes;
       const leftPosition = (shift.lane * laneWidth);
 
@@ -321,8 +316,8 @@ export default function SchedulePage() {
           style={{
             left: `${leftPosition}%`,
             width: `${laneWidth - 1}%`, // Small gap between lanes
-            top: `${startTimeIndex * 50 + startTimeIndex + 1 + (shiftMinute / 60) * 50}px`, // Position within the hour slot based on minutes
-            height: `${shiftDurationInSlots * 50 + (shiftDurationInSlots - 1) - 3}px`, // 50px per slot + borders between slots - 3px padding
+            top: `${topPosition}px`, // Exact position based on start time
+            height: `${height}px`, // Exact height based on duration
             minHeight: '36px',
             display: 'flex',
             flexDirection: 'column',
