@@ -124,37 +124,7 @@ export default function HomePage() {
 
           {/* Main Content Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Quick Actions */}
-            <div className="lg:col-span-2">
-              <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-6">
-                <h3 className="text-xl font-semibold mb-6" style={{ color: '#120309' }}>
-                  Snelle acties
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {quickActions.map((action, index) => (
-                    <button
-                      key={index}
-                      onClick={action.onClick}
-                      className="group p-6 bg-white/60 backdrop-blur-sm rounded-xl border border-white/30 hover:bg-white/80 transition-all duration-300 hover:shadow-lg hover:scale-105 text-left cursor-pointer"
-                    >
-                      <div className="flex items-start space-x-4">
-                        <div className="p-3 rounded-xl" style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}>
-                          <action.icon className="h-6 w-6 text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="font-semibold mb-2 group-hover:text-opacity-80 transition-all duration-200" style={{ color: '#120309' }}>
-                            {action.title}
-                          </h4>
-                          <p className="text-sm" style={{ color: '#67697c' }}>
-                            {action.description}
-                          </p>
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
+
           </div>
         </div>
       </main>

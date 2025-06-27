@@ -10,6 +10,19 @@ class ApiError extends Error {
   }
 }
 
+// Error handler reference - will be set by ErrorProvider
+let globalErrorHandler: ((error: any, customMessage?: string) => void) | null = null;
+
+export const setGlobalErrorHandler = (handler: (error: any, customMessage?: string) => void) => {
+  globalErrorHandler = handler;
+};
+
+// Options for API calls
+interface ApiCallOptions {
+  showErrors?: boolean;
+  customErrorMessage?: string;
+}
+
 // Token management
 let accessToken: string | null = null;
 
@@ -36,8 +49,8 @@ export const setRefreshToken = (token: string | null) => {
   }
 };
 
-// API request wrapper with automatic token refresh
-const apiRequest = async (url: string, options: RequestInit = {}): Promise<any> => {
+// API request wrapper with automatic token refresh and error handling
+const apiRequest = async (url: string, options: RequestInit = {}, apiOptions: ApiCallOptions = {}): Promise<any> => {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...options.headers as Record<string, string>,
@@ -85,7 +98,14 @@ const apiRequest = async (url: string, options: RequestInit = {}): Promise<any> 
       errorMessage = 'Je sessie is verlopen. Log opnieuw in.';
     }
 
-    throw new ApiError(response.status, errorMessage);
+    const apiError = new ApiError(response.status, errorMessage);
+
+    // Show error automatically if requested
+    if (apiOptions.showErrors && globalErrorHandler) {
+      globalErrorHandler(apiError, apiOptions.customErrorMessage);
+    }
+
+    throw apiError;
   }
 
   const contentType = response.headers.get('content-type');
@@ -97,11 +117,11 @@ const apiRequest = async (url: string, options: RequestInit = {}): Promise<any> 
 };
 
 // Auth API functions
-export const login = async (credentials: LoginRequest): Promise<LoginResponse> => {
+export const login = async (credentials: LoginRequest, options: ApiCallOptions = {}): Promise<LoginResponse> => {
   const response = await apiRequest('/auth/login', {
     method: 'POST',
     body: JSON.stringify(credentials),
-  });
+  }, options);
 
   // Store tokens
   setAccessToken(response.accessToken);
@@ -110,7 +130,7 @@ export const login = async (credentials: LoginRequest): Promise<LoginResponse> =
   return response;
 };
 
-export const logout = async (): Promise<void> => {
+export const logout = async (options: ApiCallOptions = {}): Promise<void> => {
   const refreshToken = getRefreshToken();
 
   if (refreshToken) {
@@ -118,7 +138,7 @@ export const logout = async (): Promise<void> => {
       await apiRequest('/auth/logout', {
         method: 'POST',
         body: JSON.stringify({ refreshToken }),
-      });
+      }, options);
     } catch (error) {
       // Continue with logout even if API call fails
       console.error('Logout API call failed:', error);
@@ -167,7 +187,7 @@ export const refreshAccessToken = async (): Promise<boolean> => {
 };
 
 // Shift API functions
-export const getAllShifts = async (filter?: ShiftFilter): Promise<Shift[]> => {
+export const getAllShifts = async (filter?: ShiftFilter, options: ApiCallOptions = {}): Promise<Shift[]> => {
   const params = new URLSearchParams();
 
   if (filter) {
@@ -181,14 +201,14 @@ export const getAllShifts = async (filter?: ShiftFilter): Promise<Shift[]> => {
   const queryString = params.toString();
   const url = `/shift${queryString ? `?${queryString}` : ''}`;
 
-  return apiRequest(url);
+  return apiRequest(url, {}, options);
 };
 
-export const getShiftById = async (id: number): Promise<Shift> => {
-  return apiRequest(`/shift/${id}`);
+export const getShiftById = async (id: number, options: ApiCallOptions = {}): Promise<Shift> => {
+  return apiRequest(`/shift/${id}`, {}, options);
 };
 
-export const getShiftsByEmployee = async (employeeId: number, startDate?: string, endDate?: string): Promise<Shift[]> => {
+export const getShiftsByEmployee = async (employeeId: number, startDate?: string, endDate?: string, options: ApiCallOptions = {}): Promise<Shift[]> => {
   const params = new URLSearchParams();
   if (startDate) params.append('startDate', startDate);
   if (endDate) params.append('endDate', endDate);
@@ -196,10 +216,10 @@ export const getShiftsByEmployee = async (employeeId: number, startDate?: string
   const queryString = params.toString();
   const url = `/shift/employee/${employeeId}${queryString ? `?${queryString}` : ''}`;
 
-  return apiRequest(url);
+  return apiRequest(url, {}, options);
 };
 
-export const getMyShifts = async (startDate?: string, endDate?: string): Promise<Shift[]> => {
+export const getMyShifts = async (startDate?: string, endDate?: string, options: ApiCallOptions = {}): Promise<Shift[]> => {
   const params = new URLSearchParams();
   if (startDate) params.append('startDate', startDate);
   if (endDate) params.append('endDate', endDate);
@@ -207,89 +227,89 @@ export const getMyShifts = async (startDate?: string, endDate?: string): Promise
   const queryString = params.toString();
   const url = `/shift/my-shifts${queryString ? `?${queryString}` : ''}`;
 
-  return apiRequest(url);
+  return apiRequest(url, {}, options);
 };
 
-export const getWeekSchedule = async (weekNumber: string): Promise<WeekSchedule> => {
-  return apiRequest(`/shift/schedule/week/${weekNumber}`);
+export const getWeekSchedule = async (weekNumber: string, options: ApiCallOptions = {}): Promise<WeekSchedule> => {
+  return apiRequest(`/shift/schedule/week/${weekNumber}`, {}, options);
 };
 
-export const getMonthSchedule = async (monthYear: string): Promise<MonthSchedule> => {
-  return apiRequest(`/shift/schedule/month/${monthYear}`);
+export const getMonthSchedule = async (monthYear: string, options: ApiCallOptions = {}): Promise<MonthSchedule> => {
+  return apiRequest(`/shift/schedule/month/${monthYear}`, {}, options);
 };
 
-export const getAvailableEmployees = async (date: string, startTime: string, endTime?: string): Promise<Employee[]> => {
+export const getAvailableEmployees = async (date: string, startTime: string, endTime?: string, options: ApiCallOptions = {}): Promise<Employee[]> => {
   const params = new URLSearchParams();
   params.append('date', date);
   params.append('startTime', startTime);
   if (endTime) params.append('endTime', endTime);
 
-  return apiRequest(`/shift/available-employees?${params.toString()}`);
+  return apiRequest(`/shift/available-employees?${params.toString()}`, {}, options);
 };
 
-export const createShift = async (shiftData: CreateShiftRequest): Promise<Shift> => {
+export const createShift = async (shiftData: CreateShiftRequest, options: ApiCallOptions = {}): Promise<Shift> => {
   return apiRequest('/shift', {
     method: 'POST',
     body: JSON.stringify(shiftData),
-  });
+  }, options);
 };
 
-export const updateShift = async (id: number, shiftData: UpdateShiftRequest): Promise<Shift> => {
+export const updateShift = async (id: number, shiftData: UpdateShiftRequest, options: ApiCallOptions = {}): Promise<Shift> => {
   return apiRequest(`/shift/${id}`, {
     method: 'PUT',
     body: JSON.stringify(shiftData),
-  });
+  }, options);
 };
 
-export const deleteShift = async (id: number): Promise<void> => {
+export const deleteShift = async (id: number, options: ApiCallOptions = {}): Promise<void> => {
   return apiRequest(`/shift/${id}`, {
     method: 'DELETE',
-  });
+  }, options);
 };
 
-export const checkShiftOverlap = async (shiftData: CreateShiftRequest): Promise<{ hasOverlap: boolean }> => {
+export const checkShiftOverlap = async (shiftData: CreateShiftRequest, options: ApiCallOptions = {}): Promise<{ hasOverlap: boolean }> => {
   return apiRequest('/shift/check-overlap', {
     method: 'POST',
     body: JSON.stringify(shiftData),
-  });
+  }, options);
 };
 
 // Employee API functions
-export const getAllEmployees = async (): Promise<Employee[]> => {
-  return apiRequest('/employee');
+export const getAllEmployees = async (options: ApiCallOptions = {}): Promise<Employee[]> => {
+  return apiRequest('/employee', {}, options);
 };
 
-export const createEmployee = async (employeeData: CreateEmployeeRequest): Promise<Employee> => {
+export const createEmployee = async (employeeData: CreateEmployeeRequest, options: ApiCallOptions = {}): Promise<Employee> => {
   return apiRequest('/employee', {
     method: 'POST',
     body: JSON.stringify(employeeData),
-  });
+  }, options);
 };
 
-export const getEmployeeById = async (id: number): Promise<Employee> => {
-  return apiRequest(`/employee/${id}`);
+export const getEmployeeById = async (id: number, options: ApiCallOptions = {}): Promise<Employee> => {
+  return apiRequest(`/employee/${id}`, {}, options);
 };
 
-export const updateEmployee = async (id: number, employeeData: UpdateEmployeeRequest): Promise<Employee> => {
+export const updateEmployee = async (id: number, employeeData: UpdateEmployeeRequest, options: ApiCallOptions = {}): Promise<Employee> => {
   return apiRequest(`/employee/${id}`, {
     method: 'PUT',
     body: JSON.stringify(employeeData),
-  });
+  }, options);
 };
 
-export const deleteEmployee = async (id: number): Promise<void> => {
+export const deleteEmployee = async (id: number, options: ApiCallOptions = {}): Promise<void> => {
   return apiRequest(`/employee/${id}`, {
     method: 'DELETE',
-  });
+  }, options);
 };
 
-export const updateProfile = async (profileData: UpdateEmployeeRequest): Promise<Employee> => {
+export const updateProfile = async (profileData: UpdateEmployeeRequest, options: ApiCallOptions = {}): Promise<Employee> => {
   return apiRequest('/employee/profile', {
     method: 'PUT',
     body: JSON.stringify(profileData),
-  });
+  }, options);
 };
 
-export const getCurrentProfile = async (): Promise<Employee> => {
-  return apiRequest('/employee/profile');
+export const getCurrentProfile = async (options: ApiCallOptions = {}): Promise<Employee> => {
+  return apiRequest('/employee/profile', {}, options);
 };

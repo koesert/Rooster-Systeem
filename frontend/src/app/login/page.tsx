@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useError } from '@/contexts/ErrorContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import LoadingScreen from '@/components/LoadingScreen';
 import { User, Lock, LogIn, Eye, EyeOff } from 'lucide-react';
@@ -12,11 +13,11 @@ export default function LoginPage() {
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const { login, user, isLoading } = useAuth();
+  const { showApiError } = useError();
   const router = useRouter();
 
   // Redirect if already logged in
@@ -28,18 +29,23 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setIsSubmitting(true);
 
-    const result = await login(username, password);
+    try {
+      const result = await login(username, password);
 
-    if (result.success) {
-      router.push('/home');
-    } else {
-      setError(result.error || 'Inloggen mislukt');
+      if (result.success) {
+        router.push('/home');
+      } else {
+        // Show error using the new error system
+        showApiError(result.error || 'Inloggen mislukt');
+      }
+    } catch (error: any) {
+      // This catches any unexpected errors
+      showApiError(error, 'Er is een onverwachte fout opgetreden tijdens het inloggen');
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setIsSubmitting(false);
   };
 
   if (isLoading) {
@@ -168,16 +174,6 @@ export default function LoginPage() {
                 </div>
               </div>
             </div>
-
-            {/* Error Message */}
-            {error && (
-              <div className="relative">
-                <div className="absolute inset-0 bg-red-500/10 rounded-xl blur-sm"></div>
-                <div className="relative text-red-700 text-sm text-center bg-red-50/80 backdrop-blur-sm border border-red-200/50 rounded-xl p-4 font-medium">
-                  {error}
-                </div>
-              </div>
-            )}
 
             {/* Submit Button */}
             <div>

@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ModalProvider } from '@/contexts/ModalContext';
+import { ErrorProvider } from '@/contexts/ErrorContext';
 import Modal from '@/components/Modal';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -32,8 +33,10 @@ export default function RootLayout({
       <body className={inter.className}>
         <AuthProvider>
           <ModalProvider>
-            {children}
-            <Modal />
+            <ErrorProvider>
+              {children}
+              <Modal />
+            </ErrorProvider>
           </ModalProvider>
         </AuthProvider>
       </body>

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useModal } from '@/contexts/ModalContext';
+import { useError } from '@/contexts/ErrorContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
@@ -17,11 +18,11 @@ export default function EmployeesPage() {
 
   const { user, isLoading, hasAccess, isManager, getRoleName } = useAuth();
   const { showConfirm, showAlert } = useModal();
+  const { showApiError } = useError();
   const router = useRouter();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   // Redirect to login if not authenticated or no access
   useEffect(() => {
@@ -42,13 +43,13 @@ export default function EmployeesPage() {
 
   const loadEmployees = async () => {
     setIsLoadingEmployees(true);
-    setError(null);
     try {
-      const employeesData = await api.getAllEmployees();
+      // Use automatic error handling - errors will be shown in modal automatically
+      const employeesData = await api.getAllEmployees({ showErrors: true });
       setEmployees(employeesData);
-    } catch (error: any) {
+    } catch (error) {
+      // Error is already handled by the error system, no need for manual handling
       console.error('Error loading employees:', error);
-      setError('Fout bij het laden van medewerkers. Probeer het opnieuw.');
     } finally {
       setIsLoadingEmployees(false);
     }
@@ -86,7 +87,8 @@ export default function EmployeesPage() {
       icon: <AlertTriangle className="h-6 w-6 text-red-600" />,
       onConfirm: async () => {
         try {
-          await api.deleteEmployee(employee.id);
+          // Use automatic error handling for API call
+          await api.deleteEmployee(employee.id, { showErrors: true });
           await loadEmployees();
 
           // Show success message
@@ -96,14 +98,9 @@ export default function EmployeesPage() {
             confirmText: 'OK',
             icon: <CheckCircle className="h-6 w-6 text-green-600" />
           });
-        } catch (error: any) {
+        } catch (error) {
+          // Error is already handled by the error system
           console.error('Error deleting employee:', error);
-          showAlert({
-            title: 'Fout bij verwijderen',
-            message: 'Er is een fout opgetreden bij het verwijderen van de medewerker. Probeer het opnieuw.',
-            confirmText: 'OK',
-            icon: <AlertTriangle className="h-6 w-6 text-red-600" />
-          });
         }
       }
     });
@@ -143,6 +140,23 @@ export default function EmployeesPage() {
       }
       router.push(`/employees/edit/${employee.id}`);
     }
+  };
+
+  const handleAddEmployee = () => {
+    if (!isManager()) {
+      showAlert({
+        title: 'Onvoldoende rechten',
+        message: 'Je hebt geen rechten om nieuwe medewerkers toe te voegen.',
+        confirmText: 'OK',
+        icon: <AlertTriangle className="h-6 w-6 text-red-600" />
+      });
+      return;
+    }
+    router.push('/employees/create');
+  };
+
+  const handleRetryLoad = () => {
+    loadEmployees();
   };
 
   if (isLoading) {
@@ -189,18 +203,7 @@ export default function EmployeesPage() {
                   </div>
 
                   <button
-                    onClick={() => {
-                      if (!isManager()) {
-                        showAlert({
-                          title: 'Onvoldoende rechten',
-                          message: 'Je hebt geen rechten om nieuwe medewerkers toe te voegen.',
-                          confirmText: 'OK',
-                          icon: <AlertTriangle className="h-6 w-6 text-red-600" />
-                        });
-                        return;
-                      }
-                      router.push('/employees/create');
-                    }}
+                    onClick={handleAddEmployee}
                     className="flex items-center space-x-2 px-6 py-3 rounded-xl text-white font-semibold transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer"
                     style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}
                   >
@@ -241,19 +244,6 @@ export default function EmployeesPage() {
               </div>
             </div>
           </div>
-
-          {/* Error Message */}
-          {error && (
-            <div className="mb-6 p-4 bg-red-50/80 backdrop-blur-sm border border-red-200/50 rounded-xl text-red-700 text-center">
-              {error}
-              <button
-                onClick={loadEmployees}
-                className="ml-4 text-red-600 underline hover:text-red-800 cursor-pointer"
-              >
-                Opnieuw proberen
-              </button>
-            </div>
-          )}
 
           {/* Employees Table */}
           <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 overflow-hidden">
@@ -307,7 +297,7 @@ export default function EmployeesPage() {
                             ) : (
                               isManager() && (
                                 <button
-                                  onClick={() => router.push('/employees/create')}
+                                  onClick={handleAddEmployee}
                                   className="flex items-center space-x-2 px-4 py-2 rounded-lg text-white font-medium transition-all duration-200 hover:scale-105 cursor-pointer"
                                   style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}
                                 >

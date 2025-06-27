@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useError } from '@/contexts/ErrorContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
@@ -17,6 +18,7 @@ export default function EditEmployeePage() {
   usePageTitle('Dashboard - Medewerker bewerken');
 
   const { user, isLoading, isManager, getRoleName } = useAuth();
+  const { showApiError } = useError();
   const router = useRouter();
 
   // State for employee data
@@ -41,7 +43,6 @@ export default function EditEmployeePage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // Check if current user is editing their own profile
@@ -66,10 +67,9 @@ export default function EditEmployeePage() {
 
   const loadEmployee = async () => {
     setIsLoadingEmployee(true);
-    setError(null);
 
     try {
-      const employeeData = await api.getEmployeeById(employeeId);
+      const employeeData = await api.getEmployeeById(employeeId, { showErrors: true });
       setEmployee(employeeData);
 
       // Pre-fill form with existing data
@@ -84,7 +84,7 @@ export default function EditEmployeePage() {
       });
     } catch (error: any) {
       console.error('Error loading employee:', error);
-      setError('Fout bij het laden van medewerkersgegevens');
+      // Error is already handled by the error system
     } finally {
       setIsLoadingEmployee(false);
     }
@@ -178,11 +178,6 @@ export default function EditEmployeePage() {
     if (fieldErrors[field]) {
       setFieldErrors(prev => ({ ...prev, [field]: '' }));
     }
-
-    // Clear general error
-    if (error) {
-      setError(null);
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -193,7 +188,6 @@ export default function EditEmployeePage() {
     }
 
     setIsSubmitting(true);
-    setError(null);
 
     try {
       // Create update payload based on user role and whether editing self
@@ -220,10 +214,10 @@ export default function EditEmployeePage() {
 
       if (isEditingSelf) {
         // Use profile endpoint for self-updates (available to all authenticated users)
-        await api.updateProfile(updateData);
+        await api.updateProfile(updateData, { showErrors: true });
       } else {
         // Use employee endpoint for managing other employees (managers only)
-        await api.updateEmployee(employeeId, updateData);
+        await api.updateEmployee(employeeId, updateData, { showErrors: true });
       }
 
       // Go back to employees list after successful update
@@ -231,22 +225,15 @@ export default function EditEmployeePage() {
     } catch (error: any) {
       console.error('Error updating employee:', error);
 
-      let errorMessage = 'Er is een fout opgetreden bij het bijwerken van de medewerker';
-
+      // Handle specific field validation errors
       if (error.status === 400) {
         if (error.message.includes('Username') && error.message.includes('already exists')) {
           setFieldErrors({ username: 'Deze gebruikersnaam bestaat al' });
           return;
-        } else {
-          errorMessage = 'Controleer je invoer en probeer het opnieuw';
         }
-      } else if (error.status === 403) {
-        errorMessage = 'Je hebt geen rechten om deze medewerker te bewerken';
-      } else if (error.status === 500) {
-        errorMessage = 'Server fout. Probeer het later opnieuw';
       }
 
-      setError(errorMessage);
+      // All other errors are handled automatically by the error system
     } finally {
       setIsSubmitting(false);
     }
@@ -313,13 +300,6 @@ export default function EditEmployeePage() {
                 <input type="text" name="username" autoComplete="username" tabIndex={-1} />
                 <input type="password" name="password" autoComplete="current-password" tabIndex={-1} />
               </div>
-
-              {/* General Error */}
-              {error && (
-                <div className="p-4 bg-red-50/80 backdrop-blur-sm border border-red-200/50 rounded-xl text-red-700 text-center font-medium">
-                  {error}
-                </div>
-              )}
 
               {/* Personal Information */}
               <div>
