@@ -140,9 +140,9 @@ export default function ProfilePage() {
                   </div>
                 </button>
 
-                {/* Edit Profile */}
+                {/* View schedule */}
                 <button
-                  onClick={() => router.push('/profile/edit')}
+                  onClick={() => router.push('/schedule')}
                   className="group p-6 bg-white/60 backdrop-blur-sm rounded-xl border border-white/30 hover:bg-white/80 transition-all duration-300 hover:shadow-lg hover:scale-105 text-left cursor-pointer"
                 >
                   <div className="flex items-start space-x-4">
