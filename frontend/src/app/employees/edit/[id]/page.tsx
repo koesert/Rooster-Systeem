@@ -10,6 +10,7 @@ import LoadingScreen from '@/components/LoadingScreen';
 import { Edit, User, Lock, Eye, EyeOff, ArrowLeft, Save, X, Shield, Calendar } from 'lucide-react';
 import { UpdateEmployeeRequest, Role, Employee } from '@/types/auth';
 import * as api from '@/lib/api';
+import { getCurrentDate, toInputDateFormat, fromInputDateFormat } from '@/utils/dateUtils';
 
 export default function EditEmployeePage() {
   const params = useParams();
@@ -69,7 +70,7 @@ export default function EditEmployeePage() {
     setIsLoadingEmployee(true);
 
     try {
-      const employeeData = await api.getEmployeeById(employeeId, { showErrors: true });
+      const employeeData = await api.getEmployeeById(employeeId);
       setEmployee(employeeData);
 
       // Pre-fill form with existing data
@@ -79,12 +80,17 @@ export default function EditEmployeePage() {
         username: employeeData.username,
         password: '', // Always empty for security
         role: employeeData.role,
-        hireDate: employeeData.hireDate.split('T')[0], // Convert to YYYY-MM-DD
-        birthDate: employeeData.birthDate.split('T')[0]
+        hireDate: employeeData.hireDate, // Keep in DD-MM-YYYY format
+        birthDate: employeeData.birthDate // Keep in DD-MM-YYYY format
       });
     } catch (error: any) {
       console.error('Error loading employee:', error);
-      // Error is already handled by the error system
+      
+      // Use centralized error handling
+      showApiError(error, 'Er is een fout opgetreden bij het laden van de medewerkersgegevens');
+      
+      // Redirect back on error
+      router.push('/employees');
     } finally {
       setIsLoadingEmployee(false);
     }
@@ -172,7 +178,14 @@ export default function EditEmployeePage() {
   };
 
   const handleInputChange = (field: keyof UpdateEmployeeRequest, value: string | Role) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    let processedValue = value;
+
+    // Convert date fields from HTML input format (YYYY-MM-DD) to DD-MM-YYYY
+    if ((field === 'hireDate' || field === 'birthDate') && typeof value === 'string' && value) {
+      processedValue = fromInputDateFormat(value);
+    }
+
+    setFormData(prev => ({ ...prev, [field]: processedValue }));
 
     // Clear field error when user starts typing
     if (fieldErrors[field]) {
@@ -214,10 +227,10 @@ export default function EditEmployeePage() {
 
       if (isEditingSelf) {
         // Use profile endpoint for self-updates (available to all authenticated users)
-        await api.updateProfile(updateData, { showErrors: true });
+        await api.updateProfile(updateData);
       } else {
         // Use employee endpoint for managing other employees (managers only)
-        await api.updateEmployee(employeeId, updateData, { showErrors: true });
+        await api.updateEmployee(employeeId, updateData);
       }
 
       // Go back to employees list after successful update
@@ -225,15 +238,16 @@ export default function EditEmployeePage() {
     } catch (error: any) {
       console.error('Error updating employee:', error);
 
-      // Handle specific field validation errors
-      if (error.status === 400) {
-        if (error.message.includes('Username') && error.message.includes('already exists')) {
-          setFieldErrors({ username: 'Deze gebruikersnaam bestaat al' });
-          return;
-        }
+      // Handle specific username conflict error
+      if (error.status === 400 && 
+          error.message && 
+          error.message.includes('Username') && 
+          error.message.includes('already exists')) {
+        setFieldErrors({ username: 'Deze gebruikersnaam bestaat al' });
+      } else {
+        // Use centralized error handling for all other errors
+        showApiError(error, 'Er is een fout opgetreden bij het bijwerken van de medewerker');
       }
-
-      // All other errors are handled automatically by the error system
     } finally {
       setIsSubmitting(false);
     }
@@ -323,11 +337,11 @@ export default function EditEmployeePage() {
                         value={formData.firstName}
                         onChange={(e) => handleInputChange('firstName', e.target.value)}
                         disabled={!canEditField('firstName') || isSubmitting}
-                        autoComplete="nope"
+                        autoComplete="off"
                         autoCorrect="off"
                         autoCapitalize="words"
                         spellCheck="false"
-                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none transition-all duration-300 ${!canEditField('firstName')
+                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 ${!canEditField('firstName')
                           ? 'bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200'
                           : fieldErrors.firstName
                             ? 'border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
@@ -336,6 +350,20 @@ export default function EditEmployeePage() {
                         style={{ color: canEditField('firstName') ? '#120309' : '#9ca3af' }}
                         placeholder="Voornaam"
                         maxLength={50}
+                        onFocus={(e) => {
+                          if (canEditField('firstName') && !fieldErrors.firstName) {
+                            const target = e.target as HTMLInputElement;
+                            target.style.boxShadow = '0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)';
+                            target.style.borderColor = '#d5896f';
+                          }
+                        }}
+                        onBlur={(e) => {
+                          if (canEditField('firstName')) {
+                            const target = e.target as HTMLInputElement;
+                            target.style.boxShadow = '';
+                            target.style.borderColor = fieldErrors.firstName ? '#fca5a5' : '#d1d5db';
+                          }
+                        }}
                       />
                     </div>
                     {fieldErrors.firstName && (
@@ -362,11 +390,11 @@ export default function EditEmployeePage() {
                         value={formData.lastName}
                         onChange={(e) => handleInputChange('lastName', e.target.value)}
                         disabled={!canEditField('lastName') || isSubmitting}
-                        autoComplete="nope"
+                        autoComplete="off"
                         autoCorrect="off"
                         autoCapitalize="words"
                         spellCheck="false"
-                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none transition-all duration-300 ${!canEditField('lastName')
+                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 ${!canEditField('lastName')
                           ? 'bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200'
                           : fieldErrors.lastName
                             ? 'border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
@@ -375,6 +403,20 @@ export default function EditEmployeePage() {
                         style={{ color: canEditField('lastName') ? '#120309' : '#9ca3af' }}
                         placeholder="Achternaam"
                         maxLength={50}
+                        onFocus={(e) => {
+                          if (canEditField('lastName') && !fieldErrors.lastName) {
+                            const target = e.target as HTMLInputElement;
+                            target.style.boxShadow = '0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)';
+                            target.style.borderColor = '#d5896f';
+                          }
+                        }}
+                        onBlur={(e) => {
+                          if (canEditField('lastName')) {
+                            const target = e.target as HTMLInputElement;
+                            target.style.boxShadow = '';
+                            target.style.borderColor = fieldErrors.lastName ? '#fca5a5' : '#d1d5db';
+                          }
+                        }}
                       />
                     </div>
                     {fieldErrors.lastName && (
@@ -409,7 +451,7 @@ export default function EditEmployeePage() {
                         value={formData.username}
                         onChange={(e) => handleInputChange('username', e.target.value.toLowerCase())}
                         disabled={isSubmitting}
-                        autoComplete="nope"
+                        autoComplete="off"
                         autoCorrect="off"
                         autoCapitalize="off"
                         spellCheck="false"
@@ -579,17 +621,35 @@ export default function EditEmployeePage() {
                           value={formData.role}
                           onChange={(e) => handleInputChange('role', parseInt(e.target.value) as Role)}
                           disabled={!canEditField('role') || isSubmitting}
-                          className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none transition-all duration-300 ${!canEditField('role')
+                          className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 ${!canEditField('role')
                             ? 'bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200'
+                            : fieldErrors.role ? 'border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
                             : 'border-gray-200 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
                             }`}
                           style={{ color: canEditField('role') ? '#120309' : '#9ca3af' }}
+                          onFocus={(e) => {
+                            if (canEditField('role') && !fieldErrors.role) {
+                              const target = e.target as HTMLSelectElement;
+                              target.style.boxShadow = '0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)';
+                              target.style.borderColor = '#d5896f';
+                            }
+                          }}
+                          onBlur={(e) => {
+                            if (canEditField('role')) {
+                              const target = e.target as HTMLSelectElement;
+                              target.style.boxShadow = '';
+                              target.style.borderColor = fieldErrors.role ? '#fca5a5' : '#d1d5db';
+                            }
+                          }}
                         >
                           <option value={Role.Werknemer}>{getRoleName(Role.Werknemer)}</option>
                           <option value={Role.ShiftLeider}>{getRoleName(Role.ShiftLeider)}</option>
                           <option value={Role.Manager}>{getRoleName(Role.Manager)}</option>
                         </select>
                       </div>
+                      {fieldErrors.role && (
+                        <p className="mt-2 text-sm text-red-600">{fieldErrors.role}</p>
+                      )}
                       {!canEditField('role') && (
                         <p className="mt-2 text-xs text-gray-500">Dit veld kan niet worden bewerkt</p>
                       )}
@@ -606,11 +666,12 @@ export default function EditEmployeePage() {
                         </div>
                         <input
                           id="hireDate"
+                          name="hire-date"
                           type="date"
-                          value={formData.hireDate}
+                          value={toInputDateFormat(formData.hireDate)}
                           onChange={(e) => handleInputChange('hireDate', e.target.value)}
                           disabled={!canEditField('hireDate') || isSubmitting}
-                          className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none transition-all duration-300 ${!canEditField('hireDate')
+                          className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 ${!canEditField('hireDate')
                             ? 'bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200'
                             : fieldErrors.hireDate
                               ? 'border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
@@ -618,6 +679,20 @@ export default function EditEmployeePage() {
                             }`}
                           style={{ color: canEditField('hireDate') ? '#120309' : '#9ca3af' }}
                           max={new Date().toISOString().split('T')[0]}
+                          onFocus={(e) => {
+                            if (canEditField('hireDate') && !fieldErrors.hireDate) {
+                              const target = e.target as HTMLInputElement;
+                              target.style.boxShadow = '0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)';
+                              target.style.borderColor = '#d5896f';
+                            }
+                          }}
+                          onBlur={(e) => {
+                            if (canEditField('hireDate')) {
+                              const target = e.target as HTMLInputElement;
+                              target.style.boxShadow = '';
+                              target.style.borderColor = fieldErrors.hireDate ? '#fca5a5' : '#d1d5db';
+                            }
+                          }}
                         />
                       </div>
                       {fieldErrors.hireDate && (
@@ -639,11 +714,12 @@ export default function EditEmployeePage() {
                         </div>
                         <input
                           id="birthDate"
+                          name="birth-date"
                           type="date"
-                          value={formData.birthDate}
+                          value={toInputDateFormat(formData.birthDate)}
                           onChange={(e) => handleInputChange('birthDate', e.target.value)}
                           disabled={!canEditField('birthDate') || isSubmitting}
-                          className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none transition-all duration-300 ${!canEditField('birthDate')
+                          className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 ${!canEditField('birthDate')
                             ? 'bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200'
                             : fieldErrors.birthDate
                               ? 'border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
@@ -651,6 +727,20 @@ export default function EditEmployeePage() {
                             }`}
                           style={{ color: canEditField('birthDate') ? '#120309' : '#9ca3af' }}
                           max={new Date().toISOString().split('T')[0]}
+                          onFocus={(e) => {
+                            if (canEditField('birthDate') && !fieldErrors.birthDate) {
+                              const target = e.target as HTMLInputElement;
+                              target.style.boxShadow = '0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)';
+                              target.style.borderColor = '#d5896f';
+                            }
+                          }}
+                          onBlur={(e) => {
+                            if (canEditField('birthDate')) {
+                              const target = e.target as HTMLInputElement;
+                              target.style.boxShadow = '';
+                              target.style.borderColor = fieldErrors.birthDate ? '#fca5a5' : '#d1d5db';
+                            }
+                          }}
                         />
                       </div>
                       {fieldErrors.birthDate && (

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useError } from '@/contexts/ErrorContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
@@ -15,6 +16,7 @@ export default function CreateEmployeePage() {
   usePageTitle('Dashboard - Nieuwe medewerker');
 
   const { user, isLoading, hasAccess, isManager, getRoleName } = useAuth();
+  const { showApiError } = useError();
   const router = useRouter();
 
   // Form state
@@ -31,7 +33,6 @@ export default function CreateEmployeePage() {
   // UI state
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // Redirect to login if not authenticated or no access
@@ -135,11 +136,6 @@ export default function CreateEmployeePage() {
     if (fieldErrors[field]) {
       setFieldErrors(prev => ({ ...prev, [field]: '' }));
     }
-
-    // Clear general error
-    if (error) {
-      setError(null);
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -150,7 +146,6 @@ export default function CreateEmployeePage() {
     }
 
     setIsSubmitting(true);
-    setError(null);
 
     try {
       await api.createEmployee(formData);
@@ -160,20 +155,16 @@ export default function CreateEmployeePage() {
     } catch (error: any) {
       console.error('Error creating employee:', error);
 
-      let errorMessage = 'Er is een fout opgetreden bij het aanmaken van de medewerker';
-
-      if (error.status === 400) {
-        if (error.message.includes('Username') && error.message.includes('already exists')) {
-          setFieldErrors({ username: 'Deze gebruikersnaam bestaat al' });
-          return;
-        } else {
-          errorMessage = 'Controleer je invoer en probeer het opnieuw';
-        }
-      } else if (error.status === 500) {
-        errorMessage = 'Server fout. Probeer het later opnieuw';
+      // Handle specific username conflict error
+      if (error.status === 400 && 
+          error.message && 
+          error.message.includes('Username') && 
+          error.message.includes('already exists')) {
+        setFieldErrors({ username: 'Deze gebruikersnaam bestaat al' });
+      } else {
+        // Use centralized error handling for all other errors
+        showApiError(error, 'Er is een fout opgetreden bij het aanmaken van de medewerker');
       }
-
-      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -230,13 +221,6 @@ export default function CreateEmployeePage() {
           {/* Form Section */}
           <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8">
             <form onSubmit={handleSubmit} autoComplete="off" className="space-y-8">
-              {/* General Error */}
-              {error && (
-                <div className="p-4 bg-red-50/80 backdrop-blur-sm border border-red-200/50 rounded-xl text-red-700 text-center font-medium">
-                  {error}
-                </div>
-              )}
-
               {/* Personal Information */}
               <div>
                 <h3 className="text-xl font-semibold mb-6" style={{ color: '#120309' }}>

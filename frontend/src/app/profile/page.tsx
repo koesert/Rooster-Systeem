@@ -7,7 +7,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
 import { formatDate } from '@/utils/dateUtils';
-import { User, Edit, Calendar, Shield, Clock } from 'lucide-react';
+import { User, Edit, Calendar, Shield, Clock, Home } from 'lucide-react';
 
 export default function ProfilePage() {
   usePageTitle('Dashboard - Mijn profiel');
@@ -134,7 +134,27 @@ export default function ProfilePage() {
                         Profiel bewerken
                       </h4>
                       <p className="text-sm" style={{ color: '#67697c' }}>
-                        Wijzig je gebruikersnaam of wachtwoord
+                        Wijzig je gegevens
+                      </p>
+                    </div>
+                  </div>
+                </button>
+
+                {/* Edit Profile */}
+                <button
+                  onClick={() => router.push('/profile/edit')}
+                  className="group p-6 bg-white/60 backdrop-blur-sm rounded-xl border border-white/30 hover:bg-white/80 transition-all duration-300 hover:shadow-lg hover:scale-105 text-left cursor-pointer"
+                >
+                  <div className="flex items-start space-x-4">
+                    <div className="p-3 rounded-xl" style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}>
+                      <Calendar className="h-6 w-6 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold mb-2 group-hover:text-opacity-80 transition-all duration-200" style={{ color: '#120309' }}>
+                        Rooster bekijken
+                      </h4>
+                      <p className="text-sm" style={{ color: '#67697c' }}>
+                        Bekijk het rooster
                       </p>
                     </div>
                   </div>
@@ -146,15 +166,15 @@ export default function ProfilePage() {
                   className="group p-6 bg-white/60 backdrop-blur-sm rounded-xl border border-white/30 hover:bg-white/80 transition-all duration-300 hover:shadow-lg hover:scale-105 text-left cursor-pointer"
                 >
                   <div className="flex items-start space-x-4">
-                    <div className="p-3 rounded-xl" style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
-                      <User className="h-6 w-6 text-white" />
+                    <div className="p-3 rounded-xl" style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}>
+                      <Home className="h-6 w-6 text-white" />
                     </div>
                     <div className="flex-1">
                       <h4 className="font-semibold mb-2 group-hover:text-opacity-80 transition-all duration-200" style={{ color: '#120309' }}>
-                        Terug naar dashboard
+                        Naar dashboard
                       </h4>
                       <p className="text-sm" style={{ color: '#67697c' }}>
-                        Ga terug naar het hoofddashboard
+                        Terug naar dashboard
                       </p>
                     </div>
                   </div>
