@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useError } from '@/contexts/ErrorContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
@@ -13,6 +14,7 @@ export default function ProfilePage() {
   usePageTitle('Dashboard - Mijn profiel');
 
   const { user, isLoading, getRoleName } = useAuth();
+  const { showApiError } = useError();
   const router = useRouter();
 
   // Redirect to login if not authenticated

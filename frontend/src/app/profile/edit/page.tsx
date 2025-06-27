@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useError } from '@/contexts/ErrorContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
@@ -15,6 +16,7 @@ export default function ProfileEditPage() {
   usePageTitle('Dashboard - Profiel bewerken');
 
   const { user, isLoading, getRoleName, refreshUserData, isManager } = useAuth();
+  const { showApiError } = useError();
   const router = useRouter();
 
   // Form state
@@ -35,7 +37,6 @@ export default function ProfileEditPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // Redirect to login if not authenticated
@@ -153,11 +154,6 @@ export default function ProfileEditPage() {
     if (fieldErrors[field]) {
       setFieldErrors(prev => ({ ...prev, [field]: '' }));
     }
-
-    // Clear general error
-    if (error) {
-      setError(null);
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -168,7 +164,6 @@ export default function ProfileEditPage() {
     }
 
     setIsSubmitting(true);
-    setError(null);
 
     try {
       // Create update payload based on user role
@@ -196,29 +191,28 @@ export default function ProfileEditPage() {
       await api.updateProfile(updateData);
 
       // Refresh user data in context to show changes immediately
-      await refreshUserData();
+      try {
+        await refreshUserData();
+      } catch (refreshError) {
+        console.error('Error refreshing user data:', refreshError);
+        // Don't show error for refresh failure, continue with success flow
+      }
 
       // Success! Go back to profile page
       router.push('/profile');
     } catch (error: any) {
       console.error('Error updating profile:', error);
 
-      let errorMessage = 'Er is een fout opgetreden bij het bijwerken van je profiel';
-
+      // Handle specific field validation errors
       if (error.status === 400) {
         if (error.message.includes('Username') && error.message.includes('already exists')) {
           setFieldErrors({ username: 'Deze gebruikersnaam bestaat al' });
           return;
-        } else {
-          errorMessage = 'Controleer je invoer en probeer het opnieuw';
         }
-      } else if (error.status === 403) {
-        errorMessage = 'Je hebt geen rechten om dit profiel te bewerken';
-      } else if (error.status === 500) {
-        errorMessage = 'Server fout. Probeer het later opnieuw';
       }
 
-      setError(errorMessage);
+      // All other errors are handled automatically by the error system
+      showApiError(error, 'Er is een fout opgetreden bij het bijwerken van je profiel');
     } finally {
       setIsSubmitting(false);
     }
@@ -283,13 +277,6 @@ export default function ProfileEditPage() {
                 <input type="text" name="username" autoComplete="username" tabIndex={-1} />
                 <input type="password" name="password" autoComplete="current-password" tabIndex={-1} />
               </div>
-
-              {/* General Error */}
-              {error && (
-                <div className="p-4 bg-red-50/80 backdrop-blur-sm border border-red-200/50 rounded-xl text-red-700 text-center font-medium">
-                  {error}
-                </div>
-              )}
 
               {/* Personal Information */}
               <div>
