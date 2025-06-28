@@ -7,7 +7,7 @@ import { useError } from '@/contexts/ErrorContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
-import { ChevronLeft, ChevronRight, CheckCircle, XCircle, Minus, CalendarCheck, Plus, User } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CheckCircle, XCircle, Minus, CalendarCheck, User, Edit } from 'lucide-react';
 import { WeekAvailability, DayAvailability } from '@/types/availability';
 import { Employee } from '@/types/auth';
 import * as api from '@/lib/api';
@@ -199,7 +199,7 @@ export default function AvailabilityPage() {
       <Sidebar />
 
       <main className="flex-1 p-8">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="mb-8">
             <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8 relative overflow-hidden">
@@ -229,8 +229,8 @@ export default function AvailabilityPage() {
                       className="flex items-center space-x-2 px-6 py-3 rounded-xl text-white font-semibold transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer"
                       style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}
                     >
-                      <Plus className="h-5 w-5" />
-                      <span>Beschikbaarheid toevoegen</span>
+                      <Edit className="h-5 w-5" />
+                      <span>Beschikbaarheid beheren</span>
                     </button>
                   )}
                 </div>

@@ -8,7 +8,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
 import { formatDate } from '@/utils/dateUtils';
-import { User, Edit, Calendar, Home } from 'lucide-react';
+import { User, Edit, Calendar, Home, CalendarCheck } from 'lucide-react';
 
 export default function ProfilePage() {
   usePageTitle('Dashboard - Mijn profiel');
@@ -37,7 +37,7 @@ export default function ProfilePage() {
       <Sidebar />
 
       <main className="flex-1 p-8">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           {/* Header Section */}
           <div className="mb-8">
             <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8 relative overflow-hidden">
@@ -162,21 +162,21 @@ export default function ProfilePage() {
                   </div>
                 </button>
 
-                {/* Back to Dashboard */}
+                {/* Manage availability */}
                 <button
-                  onClick={() => router.push('/home')}
+                  onClick={() => router.push('/availability')}
                   className="group p-6 bg-white/60 backdrop-blur-sm rounded-xl border border-white/30 hover:bg-white/80 transition-all duration-300 hover:shadow-lg hover:scale-105 text-left cursor-pointer"
                 >
                   <div className="flex items-start space-x-4">
                     <div className="p-3 rounded-xl" style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}>
-                      <Home className="h-6 w-6 text-white" />
+                      <CalendarCheck className="h-6 w-6 text-white" />
                     </div>
                     <div className="flex-1">
                       <h4 className="font-semibold mb-2 group-hover:text-opacity-80 transition-all duration-200" style={{ color: '#120309' }}>
-                        Naar dashboard
+                        Naar beschikbaarheid
                       </h4>
                       <p className="text-sm" style={{ color: '#67697c' }}>
-                        Terug naar dashboard
+                        Beheer je beschikbaarheid
                       </p>
                     </div>
                   </div>

@@ -7,7 +7,7 @@ import { useModal } from '@/contexts/ModalContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
-import { Calendar, Clock, Plus, ChevronLeft, ChevronRight, Edit, Trash2, AlertTriangle, CheckCircle, User, CalendarDays } from 'lucide-react';
+import { Clock, ChevronLeft, ChevronRight, Edit, Trash2, AlertTriangle, CheckCircle, User, CalendarDays, CalendarPlus } from 'lucide-react';
 import { formatDate } from '@/utils/dateUtils';
 import { Shift, ShiftType } from '@/types/shift';
 import { Employee } from '@/types/auth';
@@ -610,7 +610,7 @@ export default function SchedulePage() {
                       className="flex items-center space-x-2 px-6 py-3 rounded-xl text-white font-semibold transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer"
                       style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}
                     >
-                      <Plus className="h-5 w-5" />
+                      <CalendarPlus className="h-5 w-5" />
                       <span>Nieuwe shift</span>
                     </button>
                   )}
