@@ -120,7 +120,7 @@ export default function Modal() {
         {/* Close button */}
         <button
           onClick={hideModal}
-          className="absolute top-4 right-4 p-2 rounded-lg bg-gray-100/80 hover:bg-gray-200/80 transition-colors duration-200 z-10 cursor-pointer"
+          className="absolute top-4 right-4 p-2 rounded-lg bg-gray-100/80 hover:bg-gray-200/80 transition-colors duration-200 z-50 cursor-pointer"
           disabled={isLoading}
         >
           <X className="h-4 w-4" style={{ color: '#67697c' }} />
