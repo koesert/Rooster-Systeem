@@ -1,6 +1,6 @@
 'use client';
 
-import { Users, LogOut, Home, Shield, User, Calendar } from 'lucide-react';
+import { Users, LogOut, Home, User, CalendarCheck, CalendarDays } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
 
@@ -31,7 +31,7 @@ export default function Sidebar() {
     },
     {
       name: 'Rooster',
-      icon: Calendar,
+      icon: CalendarDays,
       path: '/schedule',
       onClick: () => router.push('/schedule'),
       allowedRoles: ['all'] // All users can view the schedule
@@ -39,7 +39,7 @@ export default function Sidebar() {
     ,
     {
       name: 'Beschikbaarheid',
-      icon: Calendar,
+      icon: CalendarCheck,
       path: '/availability',
       onClick: () => router.push('/availability'),
       allowedRoles: ['all'] // All users can view their availability

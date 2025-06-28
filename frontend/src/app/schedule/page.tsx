@@ -7,7 +7,7 @@ import { useModal } from '@/contexts/ModalContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
-import { Calendar, Clock, Plus, ChevronLeft, ChevronRight, Eye, Edit, Trash2, Users, AlertTriangle, RefreshCw, CheckCircle, User } from 'lucide-react';
+import { Calendar, Clock, Plus, ChevronLeft, ChevronRight, Eye, Edit, Trash2, Users, AlertTriangle, RefreshCw, CheckCircle, User, CalendarDays } from 'lucide-react';
 import { formatDate } from '@/utils/dateUtils';
 import { Shift, ShiftType } from '@/types/shift';
 import { Employee } from '@/types/auth';
@@ -592,7 +592,7 @@ export default function SchedulePage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
                     <div className="p-3 rounded-xl" style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}>
-                      <Calendar className="h-8 w-8 text-white" />
+                      <CalendarDays className="h-8 w-8 text-white" />
                     </div>
                     <div>
                       <h1 className="text-4xl font-bold" style={{ background: 'linear-gradient(135deg, #120309, #67697c)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>

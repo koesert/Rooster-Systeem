@@ -1,5 +1,6 @@
 import { LoginRequest, LoginResponse, Employee, CreateEmployeeRequest, UpdateEmployeeRequest } from '@/types/auth';
 import { Shift, CreateShiftRequest, UpdateShiftRequest, ShiftFilter, WeekSchedule, MonthSchedule } from '@/types/shift';
+import { WeekAvailability, DateRangeInfo } from '@/types/availability';
 
 const API_BASE_URL = 'http://localhost:5000/api';
 
@@ -312,4 +313,24 @@ export const updateProfile = async (profileData: UpdateEmployeeRequest, options:
 
 export const getCurrentProfile = async (options: ApiCallOptions = {}): Promise<Employee> => {
   return apiRequest('/employee/profile', {}, options);
+};
+
+// Availability API functions
+export const getMyAvailability = async (startDate?: string, endDate?: string, options: ApiCallOptions = {}): Promise<WeekAvailability[]> => {
+  const params = new URLSearchParams();
+  if (startDate) params.append('startDate', startDate);
+  if (endDate) params.append('endDate', endDate);
+
+  const queryString = params.toString();
+  const url = `/availability/my-availability${queryString ? `?${queryString}` : ''}`;
+
+  return apiRequest(url, {}, options);
+};
+
+export const getMyWeekAvailability = async (weekStart: string, options: ApiCallOptions = {}): Promise<WeekAvailability> => {
+  return apiRequest(`/availability/my-availability/week/${weekStart}`, {}, options);
+};
+
+export const getAvailabilityDateRange = async (options: ApiCallOptions = {}): Promise<DateRangeInfo> => {
+  return apiRequest('/availability/date-range', {}, options);
 };
