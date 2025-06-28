@@ -1,6 +1,6 @@
 import { LoginRequest, LoginResponse, Employee, CreateEmployeeRequest, UpdateEmployeeRequest } from '@/types/auth';
 import { Shift, CreateShiftRequest, UpdateShiftRequest, ShiftFilter, WeekSchedule, MonthSchedule } from '@/types/shift';
-import { WeekAvailability, DateRangeInfo } from '@/types/availability';
+import { WeekAvailability, DateRangeInfo, UpdateWeekAvailability } from '@/types/availability';
 
 const API_BASE_URL = 'http://localhost:5000/api';
 
@@ -325,6 +325,13 @@ export const getMyAvailability = async (startDate?: string, endDate?: string, op
   const url = `/availability/my-availability${queryString ? `?${queryString}` : ''}`;
 
   return apiRequest(url, {}, options);
+};
+
+export const updateMyWeekAvailability = async (updateData: UpdateWeekAvailability, options: ApiCallOptions = {}): Promise<WeekAvailability> => {
+  return apiRequest('/availability/my-availability/week', {
+    method: 'PUT',
+    body: JSON.stringify(updateData),
+  }, options);
 };
 
 export const getMyWeekAvailability = async (weekStart: string, options: ApiCallOptions = {}): Promise<WeekAvailability> => {
