@@ -12,6 +12,7 @@ public class ApplicationDbContext : DbContext
 	public DbSet<Employee> Employees { get; set; }
 	public DbSet<RefreshToken> RefreshTokens { get; set; }
 	public DbSet<Shift> Shifts { get; set; }
+	public DbSet<Availability> Availabilities { get; set; }
 
 	protected override void OnModelCreating(ModelBuilder modelBuilder)
 	{
@@ -147,6 +148,48 @@ public class ApplicationDbContext : DbContext
 			// Composite index for efficient date range queries
 			entity.HasIndex(s => new { s.Date, s.StartTime })
 				  .HasDatabaseName("IX_Shifts_Date_StartTime");
+		});
+
+		// Configure Availability entity
+		modelBuilder.Entity<Availability>(entity =>
+		{
+			entity.Property(a => a.EmployeeId)
+				  .IsRequired();
+
+			entity.Property(a => a.Date)
+				  .IsRequired()
+				  .HasColumnType("DATE"); // Store only date part
+
+			entity.Property(a => a.IsAvailable)
+				  .IsRequired();
+
+			entity.Property(a => a.Notes)
+				  .HasMaxLength(500);
+
+			// Auto-populate timestamps
+			entity.Property(a => a.CreatedAt)
+				  .HasDefaultValueSql("datetime('now')");
+
+			entity.Property(a => a.UpdatedAt)
+				  .HasDefaultValueSql("datetime('now')");
+
+			// Set up foreign key relationship with Employee
+			entity.HasOne(a => a.Employee)
+				  .WithMany() // Employee can have many availability records
+				  .HasForeignKey(a => a.EmployeeId)
+				  .OnDelete(DeleteBehavior.Cascade); // Delete availability when employee is deleted
+
+			// Unique constraint: one availability record per employee per date
+			entity.HasIndex(a => new { a.EmployeeId, a.Date })
+				  .IsUnique()
+				  .HasDatabaseName("IX_Availability_EmployeeId_Date");
+
+			// Index for efficient date range queries
+			entity.HasIndex(a => a.Date)
+				  .HasDatabaseName("IX_Availability_Date");
+
+			entity.HasIndex(a => a.EmployeeId)
+				  .HasDatabaseName("IX_Availability_EmployeeId");
 		});
 
 		// Seed default admin user for initial system access

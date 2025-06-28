@@ -36,6 +36,14 @@ export default function Sidebar() {
       onClick: () => router.push('/schedule'),
       allowedRoles: ['all'] // All users can view the schedule
     }
+    ,
+    {
+      name: 'Mijn beschikbaarheid',
+      icon: Calendar,
+      path: '/availability',
+      onClick: () => router.push('/availability'),
+      allowedRoles: ['all'] // All users can view their availability
+    }
   ];
 
   // Only add employee management for managers
