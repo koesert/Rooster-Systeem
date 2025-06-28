@@ -23,14 +23,14 @@ export default function Sidebar() {
       allowedRoles: ['all'] // All users can access dashboard
     },
     {
-      name: 'Mijn profiel',
+      name: 'Profiel',
       icon: User,
       path: '/profile',
       onClick: () => router.push('/profile'),
       allowedRoles: ['all'] // All users can access their profile
     },
     {
-      name: 'Mijn rooster',
+      name: 'Rooster',
       icon: Calendar,
       path: '/schedule',
       onClick: () => router.push('/schedule'),
@@ -38,7 +38,7 @@ export default function Sidebar() {
     }
     ,
     {
-      name: 'Mijn beschikbaarheid',
+      name: 'Beschikbaarheid',
       icon: Calendar,
       path: '/availability',
       onClick: () => router.push('/availability'),
