@@ -211,7 +211,7 @@ export default function AvailabilityPage() {
                   <button
                     onClick={() => navigateWeeks('prev')}
                     disabled={currentWeekIndex === 0}
-                    className="flex items-center space-x-2 px-4 py-2 text-gray-900 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center space-x-2 px-4 py-2 text-gray-900 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     <ChevronLeft className="h-4 w-4" />
                     <span className="text-sm font-medium">Vorige week</span>
@@ -231,7 +231,7 @@ export default function AvailabilityPage() {
                   <button
                     onClick={() => navigateWeeks('next')}
                     disabled={currentWeekIndex === weekAvailabilities.length - 1}
-                    className="flex items-center space-x-2 px-4 py-2 text-gray-900 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center space-x-2 px-4 py-2 text-gray-900 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     <span className="text-sm font-medium">Volgende week</span>
                     <ChevronRight className="h-4 w-4" />

@@ -223,7 +223,7 @@ export default function CreateAvailabilityPage() {
                 <button
                   onClick={() => navigateWeek('prev')}
                   disabled={selectedWeekIndex === 0}
-                  className="flex items-center space-x-2 px-4 py-2 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center space-x-2 px-4 py-2 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   <ChevronLeft className="h-4 w-4" />
                   <span className="text-sm font-medium">Vorige week</span>
@@ -241,7 +241,7 @@ export default function CreateAvailabilityPage() {
                 <button
                   onClick={() => navigateWeek('next')}
                   disabled={selectedWeekIndex >= 3}
-                  className="flex items-center space-x-2 px-4 py-2 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center space-x-2 px-4 py-2 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   <span className="text-sm font-medium">Volgende week</span>
                   <ChevronRight className="h-4 w-4" />
@@ -283,7 +283,7 @@ export default function CreateAvailabilityPage() {
                                   value="true"
                                   checked={day.isAvailable === true}
                                   onChange={() => updateDayAvailability(index, 'isAvailable', true)}
-                                  className="h-4 w-4 text-green-600 border-gray-300 focus:ring-green-500"
+                                  className="h-4 w-4 text-green-600 border-gray-300 focus:ring-green-500 cursor-pointer"
                                 />
                                 <span className="ml-2 text-sm font-medium text-green-700">
                                   Beschikbaar
@@ -296,7 +296,7 @@ export default function CreateAvailabilityPage() {
                                   value="false"
                                   checked={day.isAvailable === false}
                                   onChange={() => updateDayAvailability(index, 'isAvailable', false)}
-                                  className="h-4 w-4 text-red-600 border-gray-300 focus:ring-red-500"
+                                  className="h-4 w-4 text-red-600 border-gray-300 focus:ring-red-500 cursor-pointer"
                                 />
                                 <span className="ml-2 text-sm font-medium text-red-700">
                                   Niet beschikbaar
