@@ -7,7 +7,7 @@ import { useError } from '@/contexts/ErrorContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
-import { UserPlus, User, Lock, Eye, EyeOff, ArrowLeft, Save, X, Shield, Calendar } from 'lucide-react';
+import { UserPlus, User, Lock, Eye, EyeOff, ArrowLeft, Save, X, Shield, Calendar, Plus } from 'lucide-react';
 import { CreateEmployeeRequest, Role } from '@/types/auth';
 import * as api from '@/lib/api';
 import { getCurrentDate, toInputDateFormat, fromInputDateFormat } from '@/utils/dateUtils';
@@ -106,15 +106,21 @@ export default function CreateEmployeePage() {
     } else {
       const birthDate = new Date(formData.birthDate);
       const today = new Date();
-      let age = today.getFullYear() - birthDate.getFullYear();
-      const monthDiff = today.getMonth() - birthDate.getMonth();
+      today.setHours(0, 0, 0, 0);
 
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-        age--;
-      }
+      if (birthDate > today) {
+        errors.birthDate = 'Geboortedatum kan niet in de toekomst liggen';
+      } else {
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
 
-      if (age > 100) {
-        errors.birthDate = 'Controleer de geboortedatum';
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+
+        if (age > 100) {
+          errors.birthDate = 'Controleer de geboortedatum';
+        }
       }
     }
 
@@ -155,12 +161,20 @@ export default function CreateEmployeePage() {
     } catch (error: any) {
       console.error('Error creating employee:', error);
 
-      // Handle specific username conflict error
-      if (error.status === 400 && 
-          error.message && 
-          error.message.includes('Username') && 
-          error.message.includes('already exists')) {
-        setFieldErrors({ username: 'Deze gebruikersnaam bestaat al' });
+      // Handle specific errors and convert them to field errors
+      if (error.status === 400) {
+        if (error.message && error.message.includes('Username') && error.message.includes('already exists')) {
+          setFieldErrors({ username: 'Deze gebruikersnaam bestaat al' });
+        } else if (error.message && error.message.includes('Hire date cannot be more than one day in the future')) {
+          setFieldErrors({ hireDate: 'Datum in dienst kan niet in de toekomst liggen' });
+        } else if (error.message && (error.message.includes('hire date') || error.message.includes('Hire date'))) {
+          setFieldErrors({ hireDate: 'Ongeldige datum in dienst' });
+        } else if (error.message && (error.message.includes('birth date') || error.message.includes('Birth date'))) {
+          setFieldErrors({ birthDate: 'Ongeldige geboortedatum' });
+        } else {
+          // Use centralized error handling for other 400 errors
+          showApiError(error, 'Er is een fout opgetreden bij het aanmaken van de medewerker');
+        }
       } else {
         // Use centralized error handling for all other errors
         showApiError(error, 'Er is een fout opgetreden bij het aanmaken van de medewerker');
@@ -484,7 +498,7 @@ export default function CreateEmployeePage() {
                         className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.hireDate ? 'border-red-300' : 'border-gray-200'}`}
                         style={{ color: '#120309' }}
                         disabled={isSubmitting}
-                        max={new Date().toISOString().split('T')[0]}
+                        onInvalid={(e) => e.preventDefault()}
                         onFocus={(e) => {
                           if (!fieldErrors.hireDate) {
                             const target = e.target as HTMLInputElement;
@@ -522,7 +536,7 @@ export default function CreateEmployeePage() {
                         className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.birthDate ? 'border-red-300' : 'border-gray-200'}`}
                         style={{ color: '#120309' }}
                         disabled={isSubmitting}
-                        max={new Date().toISOString().split('T')[0]}
+                        onInvalid={(e) => e.preventDefault()}
                         onFocus={(e) => {
                           if (!fieldErrors.birthDate) {
                             const target = e.target as HTMLInputElement;
@@ -569,6 +583,7 @@ export default function CreateEmployeePage() {
                     </>
                   ) : (
                     <>
+                      <Plus className="h-5 w-5" />
                       <span>Medewerker aanmaken</span>
                     </>
                   )}
