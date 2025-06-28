@@ -2,7 +2,8 @@ import { LoginRequest, LoginResponse, Employee, CreateEmployeeRequest, UpdateEmp
 import { Shift, CreateShiftRequest, UpdateShiftRequest, ShiftFilter, WeekSchedule, MonthSchedule } from '@/types/shift';
 import { WeekAvailability, DateRangeInfo, UpdateWeekAvailability } from '@/types/availability';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+// Use environment variable for API base URL, fallback to localhost for development
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 class ApiError extends Error {
   constructor(public status: number, message: string) {
