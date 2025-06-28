@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
-import { Plus, User, Calendar, Clock, Type, FileText, ArrowLeft, Save, X, AlertTriangle, CheckCircle, XCircle, Minus } from 'lucide-react';
+import { Plus, User, Calendar, Clock, Type, FileText, ArrowLeft, X, CheckCircle, XCircle, Minus, CalendarCheck } from 'lucide-react';
 import { CreateShiftRequest, ShiftType } from '@/types/shift';
 import { Employee } from '@/types/auth';
 import { WeekAvailability } from '@/types/availability';
@@ -328,12 +328,12 @@ export default function CreateShiftPage() {
   const getWeekNumber = (dateString: string): number => {
     const [day, month, year] = dateString.split('-').map(Number);
     const date = new Date(year, month - 1, day);
-    
+
     // ISO week number calculation
     const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
     const dayOfYear = Math.floor((date.getTime() - firstDayOfYear.getTime()) / (24 * 60 * 60 * 1000)) + 1;
     const dayOfWeek = firstDayOfYear.getDay() === 0 ? 7 : firstDayOfYear.getDay(); // Monday = 1, Sunday = 7
-    
+
     return Math.ceil((dayOfYear + dayOfWeek - 1) / 7);
   };
 
@@ -716,7 +716,7 @@ export default function CreateShiftPage() {
                         </>
                       ) : (
                         <>
-                          <Save className="h-5 w-5" />
+                          <Plus className="h-5 w-5" />
                           <span>Shift aanmaken</span>
                         </>
                       )}
@@ -731,7 +731,7 @@ export default function CreateShiftPage() {
               <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-6">
                 <div className="flex items-center space-x-3 mb-6">
                   <div className="p-2 rounded-lg" style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}>
-                    <CheckCircle className="h-5 w-5 text-white" />
+                    <CalendarCheck className="h-5 w-5 text-white" />
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold" style={{ color: '#120309' }}>

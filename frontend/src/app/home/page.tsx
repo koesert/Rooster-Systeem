@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
-import { Users, Calendar, BarChart3, Settings, Clock, TrendingUp, CheckCircle, X, Hand } from 'lucide-react';
+import { Users, Settings, CheckCircle, X } from 'lucide-react';
 
 export default function HomePage() {
   usePageTitle('Dashboard - Home');

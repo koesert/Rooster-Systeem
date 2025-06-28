@@ -12,7 +12,7 @@ import { UpdateWeekAvailability, UpdateDayAvailability } from '@/types/availabil
 import * as api from '@/lib/api';
 
 export default function CreateAvailabilityPage() {
-  usePageTitle('Dashboard - Beschikbaarheid toevoegen');
+  usePageTitle('Dashboard - Beschikbaarheid beheren');
 
   const { user, isLoading } = useAuth();
   const { showApiError } = useError();
@@ -24,6 +24,7 @@ export default function CreateAvailabilityPage() {
   // Form state
   const [formData, setFormData] = useState<UpdateDayAvailability[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingAvailability, setIsLoadingAvailability] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Redirect if not authenticated
@@ -38,7 +39,50 @@ export default function CreateAvailabilityPage() {
     initializeFormData();
   }, [selectedWeekIndex]);
 
-  const initializeFormData = () => {
+  const initializeFormData = async () => {
+    setIsLoadingAvailability(true);
+    const startOfWeek = getSelectedWeekStart();
+    const weekStartString = formatDateString(startOfWeek);
+
+    try {
+      // Try to fetch existing availability for this week
+      const existingAvailability = await api.getMyWeekAvailability(weekStartString, { showErrors: false });
+      
+      // If we have existing data, use it
+      if (existingAvailability && existingAvailability.days && existingAvailability.days.length > 0) {
+        const weekDays: UpdateDayAvailability[] = [];
+        
+        // Generate 7 days (Monday to Sunday) and map with existing data
+        for (let i = 0; i < 7; i++) {
+          const currentDate = new Date(startOfWeek);
+          currentDate.setDate(currentDate.getDate() + i);
+          const dateString = formatDateString(currentDate);
+          
+          // Find existing availability for this date
+          const existingDay = existingAvailability.days.find(day => day.date === dateString);
+          
+          weekDays.push({
+            date: dateString,
+            isAvailable: existingDay?.isAvailable ?? true, // Default to available if not set
+            notes: existingDay?.notes || ''
+          });
+        }
+        
+        setFormData(weekDays);
+      } else {
+        // No existing data, create default availability (all available)
+        initializeDefaultFormData();
+      }
+    } catch (error) {
+      // If fetching fails (e.g., no availability exists yet), create default data
+      console.log('No existing availability found, using defaults');
+      initializeDefaultFormData();
+    } finally {
+      setIsLoadingAvailability(false);
+    }
+  };
+
+  const initializeDefaultFormData = () => {
     const startOfWeek = getSelectedWeekStart();
     const weekDays: UpdateDayAvailability[] = [];
 
@@ -191,10 +235,10 @@ export default function CreateAvailabilityPage() {
                     </div>
                     <div>
                       <h1 className="text-4xl font-bold" style={{ background: 'linear-gradient(135deg, #120309, #67697c)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                        Beschikbaarheid toevoegen
+                        Beschikbaarheid beheren
                       </h1>
                       <p className="text-lg mt-1" style={{ color: '#67697c' }}>
-                        Stel je beschikbaarheid in voor de geselecteerde week
+                        Bekijk en bewerk je beschikbaarheid voor de geselecteerde week
                       </p>
                     </div>
                   </div>
@@ -251,7 +295,19 @@ export default function CreateAvailabilityPage() {
           </div>
 
           {/* Form Section */}
-          <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8">
+          {isLoadingAvailability ? (
+            <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8">
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#d5896f] mx-auto mb-4"></div>
+                  <p className="text-lg" style={{ color: '#67697c' }}>
+                    Beschikbaarheid laden...
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8">
             <div className="space-y-6">
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold" style={{ color: '#120309' }}>
@@ -364,7 +420,8 @@ export default function CreateAvailabilityPage() {
                 </button>
               </div>
             </div>
-          </div>
+            </div>
+          )}
         </div>
       </main>
     </div>

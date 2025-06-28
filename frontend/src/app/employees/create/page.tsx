@@ -7,7 +7,7 @@ import { useError } from '@/contexts/ErrorContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
-import { UserPlus, User, Lock, Eye, EyeOff, ArrowLeft, Save, X, Shield, Calendar, Plus } from 'lucide-react';
+import { UserPlus, User, Lock, Eye, EyeOff, ArrowLeft, X, Shield, Calendar, Plus } from 'lucide-react';
 import { CreateEmployeeRequest, Role } from '@/types/auth';
 import * as api from '@/lib/api';
 import { getCurrentDate, toInputDateFormat, fromInputDateFormat } from '@/utils/dateUtils';

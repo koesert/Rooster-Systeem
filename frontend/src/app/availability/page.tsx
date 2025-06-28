@@ -31,6 +31,9 @@ export default function AvailabilityPage() {
 
   // Get page title based on selected employee
   const getPageTitle = (): string => {
+    if (selectedEmployee) {
+      return `Beschikbaarheid van ${selectedEmployee.fullName}`;
+    }
     return 'Mijn beschikbaarheid';
   };
 

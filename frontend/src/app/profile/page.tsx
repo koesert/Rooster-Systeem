@@ -8,7 +8,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
 import { formatDate } from '@/utils/dateUtils';
-import { User, Edit, Calendar, Shield, Clock, Home } from 'lucide-react';
+import { User, Edit, Calendar, Home } from 'lucide-react';
 
 export default function ProfilePage() {
   usePageTitle('Dashboard - Mijn profiel');
