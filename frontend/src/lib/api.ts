@@ -81,7 +81,7 @@ const apiRequest = async (url: string, options: RequestInit = {}, apiOptions: Ap
   }
 
   if (!response.ok) {
-    let errorMessage = 'Er is een fout opgetreden';
+    let errorMessage = 'er is een fout opgetreden';
 
     try {
       const errorData = await response.text();
@@ -94,9 +94,9 @@ const apiRequest = async (url: string, options: RequestInit = {}, apiOptions: Ap
 
     // Handle specific error cases
     if (response.status === 403) {
-      errorMessage = 'Je hebt geen toegang tot deze functie. Alleen managers kunnen medewerkers beheren.';
+      errorMessage = 'je hebt geen toegang tot deze functie. alleen managers kunnen medewerkers beheren.';
     } else if (response.status === 401) {
-      errorMessage = 'Je sessie is verlopen. Log opnieuw in.';
+      errorMessage = 'je sessie is verlopen. log opnieuw in.';
     }
 
     const apiError = new ApiError(response.status, errorMessage);
@@ -142,7 +142,7 @@ export const logout = async (options: ApiCallOptions = {}): Promise<void> => {
       }, options);
     } catch (error) {
       // Continue with logout even if API call fails
-      console.error('Logout API call failed:', error);
+      console.error('logout api call failed:', error);
     }
   }
 
@@ -178,7 +178,7 @@ export const refreshAccessToken = async (): Promise<boolean> => {
       return true;
     }
   } catch (error) {
-    console.error('Token refresh failed:', error);
+    console.error('token refresh failed:', error);
   }
 
   // Clear tokens if refresh failed
@@ -280,6 +280,9 @@ export const getAllEmployees = async (options: ApiCallOptions = {}): Promise<Emp
   return apiRequest('/employee', {}, options);
 };
 
+// Alias for consistency with other parts of the codebase
+export const getEmployees = getAllEmployees;
+
 export const createEmployee = async (employeeData: CreateEmployeeRequest, options: ApiCallOptions = {}): Promise<Employee> => {
   return apiRequest('/employee', {
     method: 'POST',
@@ -327,6 +330,17 @@ export const getMyAvailability = async (startDate?: string, endDate?: string, op
   return apiRequest(url, {}, options);
 };
 
+export const getEmployeeAvailability = async (employeeId: number, startDate?: string, endDate?: string, options: ApiCallOptions = {}): Promise<WeekAvailability[]> => {
+  const params = new URLSearchParams();
+  if (startDate) params.append('startDate', startDate);
+  if (endDate) params.append('endDate', endDate);
+
+  const queryString = params.toString();
+  const url = `/availability/employee/${employeeId}${queryString ? `?${queryString}` : ''}`;
+
+  return apiRequest(url, {}, options);
+};
+
 export const updateMyWeekAvailability = async (updateData: UpdateWeekAvailability, options: ApiCallOptions = {}): Promise<WeekAvailability> => {
   return apiRequest('/availability/my-availability/week', {
     method: 'PUT',
@@ -336,6 +350,10 @@ export const updateMyWeekAvailability = async (updateData: UpdateWeekAvailabilit
 
 export const getMyWeekAvailability = async (weekStart: string, options: ApiCallOptions = {}): Promise<WeekAvailability> => {
   return apiRequest(`/availability/my-availability/week/${weekStart}`, {}, options);
+};
+
+export const getEmployeeWeekAvailability = async (employeeId: number, weekStart: string, options: ApiCallOptions = {}): Promise<WeekAvailability> => {
+  return apiRequest(`/availability/employee/${employeeId}/week/${weekStart}`, {}, options);
 };
 
 export const getAvailabilityDateRange = async (options: ApiCallOptions = {}): Promise<DateRangeInfo> => {

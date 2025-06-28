@@ -7,14 +7,13 @@ import { useError } from '@/contexts/ErrorContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
-import { ChevronLeft, ChevronRight, CheckCircle, XCircle, Minus, CalendarCheck, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CheckCircle, XCircle, Minus, CalendarCheck, Plus, User } from 'lucide-react';
 import { WeekAvailability, DayAvailability } from '@/types/availability';
+import { Employee } from '@/types/auth';
 import * as api from '@/lib/api';
 
 export default function AvailabilityPage() {
-  usePageTitle('Dashboard - Mijn beschikbaarheid');
-
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isManager } = useAuth();
   const { showApiError } = useError();
   const router = useRouter();
 
@@ -24,6 +23,27 @@ export default function AvailabilityPage() {
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0); // Index voor navigatie door weken
   const [error, setError] = useState<string | null>(null);
 
+  // Manager dropdown state
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [isLoadingEmployees, setIsLoadingEmployees] = useState(false);
+
+  // Get page title based on selected employee
+  const getPageTitle = (): string => {
+    return 'Mijn beschikbaarheid';
+  };
+
+  // Get page description based on selected employee
+  const getPageDescription = (): string => {
+    if (selectedEmployee) {
+      return `Bekijk de beschikbaarheid van ${selectedEmployee.fullName}`;
+    }
+    return 'Bekijk je beschikbaarheid voor de komende weken';
+  };
+
+  usePageTitle(`Dashboard - ${getPageTitle()}`);
+
   // Redirect if not authenticated
   useEffect(() => {
     if (!isLoading && !user) {
@@ -31,19 +51,47 @@ export default function AvailabilityPage() {
     }
   }, [user, isLoading, router]);
 
+  // Load employees for managers
+  useEffect(() => {
+    if (user && isManager()) {
+      loadEmployees();
+    }
+  }, [user, isManager]);
+
   // Load availability data
   useEffect(() => {
     if (user) {
       loadAvailability();
     }
-  }, [user]);
+  }, [user, selectedEmployeeId]);
+
+  const loadEmployees = async () => {
+    setIsLoadingEmployees(true);
+    try {
+      const employeeList = await api.getEmployees();
+      setEmployees(employeeList);
+    } catch (error: any) {
+      console.error('Error loading employees:', error);
+      showApiError(error, 'Fout bij het laden van medewerkers');
+    } finally {
+      setIsLoadingEmployees(false);
+    }
+  };
 
   const loadAvailability = async () => {
     setIsLoadingAvailability(true);
     setError(null);
     try {
-      // Get availability for current week + 4 weeks ahead (5 weeks total)
-      const availability = await api.getMyAvailability();
+      let availability: WeekAvailability[];
+
+      if (selectedEmployeeId && isManager()) {
+        // Manager viewing specific employee's availability
+        availability = await api.getEmployeeAvailability(selectedEmployeeId);
+      } else {
+        // User viewing their own availability
+        availability = await api.getMyAvailability();
+      }
+
       setWeekAvailabilities(availability);
     } catch (error: any) {
       console.error('Error loading availability:', error);
@@ -51,6 +99,18 @@ export default function AvailabilityPage() {
       showApiError(error, 'Fout bij het laden van beschikbaarheid');
     } finally {
       setIsLoadingAvailability(false);
+    }
+  };
+
+  const handleEmployeeSelection = (value: string) => {
+    if (value === 'own') {
+      setSelectedEmployeeId(null);
+      setSelectedEmployee(null);
+    } else {
+      const employeeId = parseInt(value);
+      setSelectedEmployeeId(employeeId);
+      const employee = employees.find(emp => emp.id === employeeId);
+      setSelectedEmployee(employee || null);
     }
   };
 
@@ -151,23 +211,67 @@ export default function AvailabilityPage() {
                     </div>
                     <div>
                       <h1 className="text-4xl font-bold" style={{ background: 'linear-gradient(135deg, #120309, #67697c)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                        Mijn beschikbaarheid
+                        {getPageTitle()}
                       </h1>
                       <p className="text-lg mt-1" style={{ color: '#67697c' }}>
-                        Bekijk je beschikbaarheid voor de komende weken
+                        {getPageDescription()}
                       </p>
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => router.push('/availability/create')}
-                    className="flex items-center space-x-2 px-6 py-3 rounded-xl text-white font-semibold transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer"
-                    style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}
-                  >
-                    <Plus className="h-5 w-5" />
-                    <span>Beschikbaarheid toevoegen</span>
-                  </button>
+                  {/* Only show "Add availability" button when viewing own availability */}
+                  {!selectedEmployeeId && (
+                    <button
+                      onClick={() => router.push('/availability/create')}
+                      className="flex items-center space-x-2 px-6 py-3 rounded-xl text-white font-semibold transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer"
+                      style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}
+                    >
+                      <Plus className="h-5 w-5" />
+                      <span>Beschikbaarheid toevoegen</span>
+                    </button>
+                  )}
                 </div>
+
+                {/* Employee selection dropdown for managers */}
+                {isManager() && (
+                  <div className="mt-6 flex items-center space-x-3 bg-white/80 backdrop-blur-lg rounded-xl shadow-lg border border-white/20 px-4 py-3">
+                    <User className="h-5 w-5" style={{ color: '#67697c' }} />
+                    <label className="text-sm font-medium" style={{ color: '#120309' }}>
+                      {selectedEmployee ? `Beschikbaarheid van:` : `Bekijk beschikbaarheid van:`}
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={selectedEmployeeId || 'own'}
+                        onChange={(e) => handleEmployeeSelection(e.target.value)}
+                        disabled={isLoadingEmployees}
+                        className="pl-3 pr-8 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg min-w-[180px]"
+                        style={{ color: '#120309' }}
+                        onFocus={(e) => {
+                          const target = e.target as HTMLSelectElement;
+                          target.style.boxShadow = '0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)';
+                          target.style.borderColor = '#d5896f';
+                        }}
+                        onBlur={(e) => {
+                          const target = e.target as HTMLSelectElement;
+                          target.style.boxShadow = '';
+                          target.style.borderColor = '#d1d5db';
+                        }}
+                      >
+                        <option value="own">Mijn eigen beschikbaarheid</option>
+                        {employees.map((employee) => (
+                          <option key={employee.id} value={employee.id}>
+                            {employee.fullName}
+                          </option>
+                        ))}
+                      </select>
+                      {isLoadingEmployees && (
+                        <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2" style={{ borderColor: '#d5896f' }}></div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -199,7 +303,12 @@ export default function AvailabilityPage() {
               <div className="text-center">
                 <CalendarCheck className="mx-auto h-16 w-16 text-gray-400" />
                 <h3 className="mt-4 text-xl font-semibold text-gray-900">Geen beschikbaarheid gevonden</h3>
-                <p className="mt-2 text-gray-600">Er is nog geen beschikbaarheid ingesteld voor de komende weken.</p>
+                <p className="mt-2 text-gray-600">
+                  {selectedEmployee
+                    ? `${selectedEmployee.fullName} heeft nog geen beschikbaarheid ingesteld voor de komende weken.`
+                    : 'Er is nog geen beschikbaarheid ingesteld voor de komende weken.'
+                  }
+                </p>
               </div>
             </div>
           ) : (
