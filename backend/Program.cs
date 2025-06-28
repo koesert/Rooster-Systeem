@@ -5,13 +5,21 @@ using Microsoft.OpenApi.Models;
 using System.Text;
 using backend.Data;
 using backend.Services;
+using backend.Converters;
+using Swashbuckle.AspNetCore.Annotations;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Configure custom date formatting
+        options.JsonSerializerOptions.Converters.Add(new DateTimeConverter());
+        options.JsonSerializerOptions.Converters.Add(new NullableDateTimeConverter());
+    });
 
-// Configure Entity Framework with SQLite
+// Configure Entity Framework with SQLite database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")
         ?? "Data Source=Data/restaurant_roster.db"));
@@ -106,18 +114,13 @@ builder.Services.AddSwaggerGen(c =>
     c.EnableAnnotations();
 });
 
-// Configure CORS for frontend communication (updated for production)
+// Configure CORS for frontend communication (Next.js on port 3000)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend",
         policy =>
         {
-            policy.WithOrigins(
-                    "http://localhost:3000",  // Development
-                    "https://localhost:3000", // Development HTTPS
-                    "https://rooster-systeem.vercel.app", // Replace with your actual Vercel URL
-                    "https://*.vercel.app"    // Allow any Vercel preview deployments
-                  )
+            policy.WithOrigins("http://localhost:3000")
                   .AllowAnyHeader()
                   .AllowAnyMethod()
                   .AllowCredentials(); // Required for JWT cookies if used
