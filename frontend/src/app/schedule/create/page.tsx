@@ -74,14 +74,14 @@ export default function CreateShiftPage() {
       setEmployeeAvailability(null);
       setCurrentWeekStart('');
     }
-  }, [formData.employeeId, formData.date]);
+  }, [formData.employeeId, formData.date, currentWeekStart, employeeAvailability?.employeeId]);
 
   const loadEmployees = async () => {
     setIsLoadingEmployees(true);
     try {
       const employeesData = await api.getAllEmployees();
       setEmployees(employeesData);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error loading employees:', error);
       setError('Fout bij het laden van medewerkers');
     } finally {
@@ -113,7 +113,7 @@ export default function CreateShiftPage() {
     try {
       const availability = await api.getEmployeeWeekAvailability(employeeId, weekStart);
       setEmployeeAvailability(availability);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error loading employee availability:', error);
       // Don't show error for availability - it's not critical for shift creation
       setEmployeeAvailability(null);
@@ -169,7 +169,7 @@ export default function CreateShiftPage() {
         if (formData.startTime && formData.endTime) {
           const [startHour, startMinute] = formData.startTime.split(':').map(Number);
 
-          let startTotalMinutes = startHour * 60 + startMinute;
+          const startTotalMinutes = startHour * 60 + startMinute;
           let endTotalMinutes = endHour * 60 + endMinute;
 
           // Handle midnight (00:00) as end of day
@@ -244,48 +244,39 @@ export default function CreateShiftPage() {
 
       // Success! Redirect to schedule page
       router.push('/schedule');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating shift:', error);
       console.error('Full error details:', JSON.stringify(error, null, 2));
 
       let errorMessage = 'Er is een fout opgetreden bij het aanmaken van de shift';
 
-      if (error.status === 400) {
-        if (error.message.includes('overlapping') || error.message.includes('overlap')) {
-          errorMessage = 'Deze medewerker heeft al een overlappende shift op deze datum en tijd';
-        } else if (error.errors) {
-          // Handle validation errors from backend
-          const errorDetails = Object.entries(error.errors)
-            .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
-            .join('\n');
-          errorMessage = `Validatie fouten:\n${errorDetails}`;
-        } else {
-          errorMessage = 'Controleer je invoer en probeer het opnieuw';
+      if (error && typeof error === 'object' && 'status' in error) {
+        const errorWithStatus = error as { status: number; message?: string; errors?: Record<string, string[]> };
+        
+        if (errorWithStatus.status === 400) {
+          if (errorWithStatus.message?.includes('overlapping') || errorWithStatus.message?.includes('overlap')) {
+            errorMessage = 'Deze medewerker heeft al een overlappende shift op deze datum en tijd';
+          } else if (errorWithStatus.errors) {
+            // Handle validation errors from backend
+            const errorDetails = Object.entries(errorWithStatus.errors)
+              .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+              .join('\n');
+            errorMessage = `Validatie fouten:\n${errorDetails}`;
+          } else {
+            errorMessage = 'Controleer je invoer en probeer het opnieuw';
+          }
+        } else if (errorWithStatus.status === 401 || errorWithStatus.status === 403) {
+          errorMessage = 'Je hebt geen toestemming om shifts aan te maken';
+        } else if (errorWithStatus.status === 500) {
+          errorMessage = 'Server fout. Probeer het later opnieuw';
+        } else if (errorWithStatus.message) {
+          errorMessage = errorWithStatus.message;
         }
-      } else if (error.status === 401 || error.status === 403) {
-        errorMessage = 'Je hebt geen toestemming om shifts aan te maken';
-      } else if (error.status === 500) {
-        errorMessage = 'Server fout. Probeer het later opnieuw';
-      } else if (error.message) {
-        errorMessage = error.message;
       }
 
       setError(errorMessage);
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const getShiftTypeName = (shiftType: ShiftType): string => {
-    switch (shiftType) {
-      case ShiftType.Schoonmaak:
-        return 'Schoonmaak';
-      case ShiftType.Bedienen:
-        return 'Bedienen';
-      case ShiftType.SchoonmaakBedienen:
-        return 'Schoonmaak & Bedienen';
-      default:
-        return 'Onbekend';
     }
   };
 
@@ -302,7 +293,7 @@ export default function CreateShiftPage() {
   const getAvailabilityText = (isAvailable?: boolean | null) => {
     if (isAvailable === true) return 'Beschikbaar';
     if (isAvailable === false) return 'Niet beschikbaar';
-    return 'Niet ingesteld';
+    return 'Niet opgegeven';
   };
 
   const getAvailabilityColor = (isAvailable?: boolean | null) => {

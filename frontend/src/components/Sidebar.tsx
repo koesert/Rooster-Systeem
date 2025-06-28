@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
 
 export default function Sidebar() {
-  const { logout, user, isManager, getRoleName } = useAuth();
+  const { logout, user, isManager } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 

@@ -5,7 +5,7 @@ import { useModal } from '@/contexts/ModalContext';
 import { AlertTriangle } from 'lucide-react';
 
 interface ErrorContextType {
-  showApiError: (error: any, customMessage?: string) => void;
+  showApiError: (error: unknown, customMessage?: string) => void;
 }
 
 const ErrorContext = createContext<ErrorContextType | undefined>(undefined);
@@ -21,13 +21,13 @@ export const useError = () => {
 export const ErrorProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { showAlert } = useModal();
 
-  const showApiError = (error: any, customMessage?: string) => {
+  const showApiError = (error: unknown, customMessage?: string) => {
     let errorMessage = customMessage || 'Er is een onbekende fout opgetreden';
 
     // Parse different error types
-    if (error?.message) {
+    if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
       errorMessage = error.message;
-    } else if (error?.status) {
+    } else if (error && typeof error === 'object' && 'status' in error && typeof error.status === 'number') {
       switch (error.status) {
         case 400:
           errorMessage = 'Ongeldige gegevens. Controleer je invoer en probeer het opnieuw.';

@@ -154,7 +154,7 @@ export default function EditShiftPage() {
         if (formData.startTime && formData.endTime) {
           const [startHour, startMinute] = formData.startTime.split(':').map(Number);
 
-          let startTotalMinutes = startHour * 60 + startMinute;
+          const startTotalMinutes = startHour * 60 + startMinute;
           let endTotalMinutes = endHour * 60 + endMinute;
 
           // Handle midnight (00:00) as end of day

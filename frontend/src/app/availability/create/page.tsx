@@ -73,7 +73,7 @@ export default function CreateAvailabilityPage() {
         // No existing data, create default availability (all available)
         initializeDefaultFormData();
       }
-    } catch (error) {
+    } catch {
       // If fetching fails (e.g., no availability exists yet), create default data
       console.log('No existing availability found, using defaults');
       initializeDefaultFormData();
@@ -171,17 +171,21 @@ export default function CreateAvailabilityPage() {
 
       // Success! Redirect back to availability page
       router.push('/availability');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error saving availability:', error);
 
       let errorMessage = 'Er is een fout opgetreden bij het opslaan van de beschikbaarheid';
 
-      if (error.status === 400) {
-        errorMessage = 'Controleer je invoer en probeer het opnieuw';
-      } else if (error.status === 401 || error.status === 403) {
-        errorMessage = 'Je hebt geen toestemming om beschikbaarheid bij te werken';
-      } else if (error.message) {
-        errorMessage = error.message;
+      if (error && typeof error === 'object' && 'status' in error && 'message' in error) {
+        const errorWithDetails = error as { status: number; message: string };
+        
+        if (errorWithDetails.status === 400) {
+          errorMessage = 'Controleer je invoer en probeer het opnieuw';
+        } else if (errorWithDetails.status === 401 || errorWithDetails.status === 403) {
+          errorMessage = 'Je hebt geen toestemming om beschikbaarheid bij te werken';
+        } else if (errorWithDetails.message) {
+          errorMessage = errorWithDetails.message;
+        }
       }
 
       setError(errorMessage);

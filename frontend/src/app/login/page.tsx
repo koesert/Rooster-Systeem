@@ -40,7 +40,7 @@ export default function LoginPage() {
         // Show error using the new error system
         showApiError(result.error || 'Inloggen mislukt');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       // This catches any unexpected errors
       showApiError(error, 'Er is een onverwachte fout opgetreden tijdens het inloggen');
     } finally {

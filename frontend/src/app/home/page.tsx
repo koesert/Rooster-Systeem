@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
-import { Users, Settings, CheckCircle, X } from 'lucide-react';
+import { CheckCircle, X } from 'lucide-react';
 
 export default function HomePage() {
   usePageTitle('Dashboard - Home');
@@ -53,23 +53,6 @@ export default function HomePage() {
   if (!user) {
     return null;
   }
-
-  const quickActions = [
-    {
-      title: 'Medewerkers beheren',
-      description: 'Bekijk en beheer alle medewerkers',
-      icon: Users,
-      onClick: () => router.push('/employees'),
-      gradient: 'from-orange-400 to-orange-600'
-    },
-    {
-      title: 'Instellingen',
-      description: 'Beheer systeem instellingen',
-      icon: Settings,
-      onClick: () => console.log('Instellingen - nog niet geïmplementeerd'),
-      gradient: 'from-gray-400 to-gray-600'
-    }
-  ];
 
   return (
     <div className="flex min-h-screen" style={{ background: 'linear-gradient(135deg, #e8eef2 0%, #f5f7fa 100%)' }}>

@@ -12,9 +12,9 @@ class ApiError extends Error {
 }
 
 // Error handler reference - will be set by ErrorProvider
-let globalErrorHandler: ((error: any, customMessage?: string) => void) | null = null;
+let globalErrorHandler: ((error: unknown, customMessage?: string) => void) | null = null;
 
-export const setGlobalErrorHandler = (handler: (error: any, customMessage?: string) => void) => {
+export const setGlobalErrorHandler = (handler: (error: unknown, customMessage?: string) => void) => {
   globalErrorHandler = handler;
 };
 
@@ -88,7 +88,7 @@ const apiRequest = async (url: string, options: RequestInit = {}, apiOptions: Ap
       if (errorData) {
         errorMessage = errorData;
       }
-    } catch (e) {
+    } catch {
       // Use default error message if parsing fails
     }
 

@@ -4,21 +4,19 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useModal } from '@/contexts/ModalContext';
-import { useError } from '@/contexts/ErrorContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
 import { formatDate } from '@/utils/dateUtils';
-import { Users, Search, Edit, Trash2, Eye, UserPlus, AlertTriangle, CheckCircle, Info, RefreshCcw, Shield } from 'lucide-react';
+import { Users, Search, Edit, Trash2, Eye, UserPlus, AlertTriangle, CheckCircle, Info, Shield } from 'lucide-react';
 import { Employee, Role } from '@/types/auth';
 import * as api from '@/lib/api';
 
 export default function EmployeesPage() {
   usePageTitle('Dashboard - Medewerkers');
 
-  const { user, isLoading, hasAccess, isManager, getRoleName } = useAuth();
+  const { user, isLoading, isManager, getRoleName } = useAuth();
   const { showConfirm, showAlert } = useModal();
-  const { showApiError } = useError();
   const router = useRouter();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -152,10 +150,6 @@ export default function EmployeesPage() {
       return;
     }
     router.push('/employees/create');
-  };
-
-  const handleRetryLoad = () => {
-    loadEmployees();
   };
 
   if (isLoading) {

@@ -15,7 +15,7 @@ import { getCurrentDate, toInputDateFormat, fromInputDateFormat } from '@/utils/
 export default function CreateEmployeePage() {
   usePageTitle('Dashboard - Nieuwe medewerker');
 
-  const { user, isLoading, hasAccess, isManager, getRoleName } = useAuth();
+  const { user, isLoading, isManager, getRoleName } = useAuth();
   const { showApiError } = useError();
   const router = useRouter();
 
@@ -158,21 +158,28 @@ export default function CreateEmployeePage() {
 
       // Success! Redirect to employees page
       router.push('/employees');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating employee:', error);
 
       // Handle specific errors and convert them to field errors
-      if (error.status === 400) {
-        if (error.message && error.message.includes('Username') && error.message.includes('already exists')) {
-          setFieldErrors({ username: 'Deze gebruikersnaam bestaat al' });
-        } else if (error.message && error.message.includes('Hire date cannot be more than one day in the future')) {
-          setFieldErrors({ hireDate: 'Datum in dienst kan niet in de toekomst liggen' });
-        } else if (error.message && (error.message.includes('hire date') || error.message.includes('Hire date'))) {
-          setFieldErrors({ hireDate: 'Ongeldige datum in dienst' });
-        } else if (error.message && (error.message.includes('birth date') || error.message.includes('Birth date'))) {
-          setFieldErrors({ birthDate: 'Ongeldige geboortedatum' });
+      if (error && typeof error === 'object' && 'status' in error && 'message' in error) {
+        const errorWithDetails = error as { status: number; message: string };
+        
+        if (errorWithDetails.status === 400) {
+          if (errorWithDetails.message && errorWithDetails.message.includes('Username') && errorWithDetails.message.includes('already exists')) {
+            setFieldErrors({ username: 'Deze gebruikersnaam bestaat al' });
+          } else if (errorWithDetails.message && errorWithDetails.message.includes('Hire date cannot be more than one day in the future')) {
+            setFieldErrors({ hireDate: 'Datum in dienst kan niet in de toekomst liggen' });
+          } else if (errorWithDetails.message && (errorWithDetails.message.includes('hire date') || errorWithDetails.message.includes('Hire date'))) {
+            setFieldErrors({ hireDate: 'Ongeldige datum in dienst' });
+          } else if (errorWithDetails.message && (errorWithDetails.message.includes('birth date') || errorWithDetails.message.includes('Birth date'))) {
+            setFieldErrors({ birthDate: 'Ongeldige geboortedatum' });
+          } else {
+            // Use centralized error handling for other 400 errors
+            showApiError(error, 'Er is een fout opgetreden bij het aanmaken van de medewerker');
+          }
         } else {
-          // Use centralized error handling for other 400 errors
+          // Use centralized error handling for all other errors
           showApiError(error, 'Er is een fout opgetreden bij het aanmaken van de medewerker');
         }
       } else {

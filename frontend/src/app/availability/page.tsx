@@ -130,7 +130,7 @@ export default function AvailabilityPage() {
   const getAvailabilityText = (isAvailable?: boolean | null) => {
     if (isAvailable === true) return 'Beschikbaar';
     if (isAvailable === false) return 'Niet beschikbaar';
-    return 'Niet ingesteld';
+    return 'Niet opgegeven';
   };
 
   const getAvailabilityColor = (isAvailable?: boolean | null) => {

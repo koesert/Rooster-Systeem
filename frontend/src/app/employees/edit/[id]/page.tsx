@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useError } from '@/contexts/ErrorContext';
@@ -10,7 +10,7 @@ import LoadingScreen from '@/components/LoadingScreen';
 import { Edit, User, Lock, Eye, EyeOff, ArrowLeft, Save, X, Shield, Calendar } from 'lucide-react';
 import { UpdateEmployeeRequest, Role, Employee } from '@/types/auth';
 import * as api from '@/lib/api';
-import { getCurrentDate, toInputDateFormat, fromInputDateFormat } from '@/utils/dateUtils';
+import { toInputDateFormat, fromInputDateFormat } from '@/utils/dateUtils';
 
 export default function EditEmployeePage() {
   const params = useParams();
@@ -59,14 +59,7 @@ export default function EditEmployeePage() {
     }
   }, [user, isLoading, router, canEdit]);
 
-  // Load employee data
-  useEffect(() => {
-    if (user && canEdit) {
-      loadEmployee();
-    }
-  }, [user, canEdit, employeeId]);
-
-  const loadEmployee = async () => {
+  const loadEmployee = useCallback(async () => {
     setIsLoadingEmployee(true);
 
     try {
@@ -83,7 +76,7 @@ export default function EditEmployeePage() {
         hireDate: employeeData.hireDate, // Keep in DD-MM-YYYY format
         birthDate: employeeData.birthDate // Keep in DD-MM-YYYY format
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error loading employee:', error);
       
       // Use centralized error handling
@@ -94,7 +87,14 @@ export default function EditEmployeePage() {
     } finally {
       setIsLoadingEmployee(false);
     }
-  };
+  }, [employeeId, showApiError, router]);
+
+  // Load employee data
+  useEffect(() => {
+    if (user && canEdit) {
+      loadEmployee();
+    }
+  }, [user, canEdit, employeeId, loadEmployee]);
 
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
@@ -235,15 +235,21 @@ export default function EditEmployeePage() {
 
       // Go back to employees list after successful update
       router.push('/employees');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating employee:', error);
 
       // Handle specific username conflict error
-      if (error.status === 400 && 
-          error.message && 
-          error.message.includes('Username') && 
-          error.message.includes('already exists')) {
-        setFieldErrors({ username: 'Deze gebruikersnaam bestaat al' });
+      if (error && typeof error === 'object' && 'status' in error && 'message' in error) {
+        const errorWithDetails = error as { status: number; message: string };
+        if (errorWithDetails.status === 400 && 
+            errorWithDetails.message && 
+            errorWithDetails.message.includes('Username') && 
+            errorWithDetails.message.includes('already exists')) {
+          setFieldErrors({ username: 'Deze gebruikersnaam bestaat al' });
+        } else {
+          // Use centralized error handling for all other errors
+          showApiError(error, 'Er is een fout opgetreden bij het bijwerken van de medewerker');
+        }
       } else {
         // Use centralized error handling for all other errors
         showApiError(error, 'Er is een fout opgetreden bij het bijwerken van de medewerker');

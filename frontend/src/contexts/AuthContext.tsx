@@ -70,15 +70,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('justLoggedIn', 'true');
 
       return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
       let errorMessage = 'Inloggen mislukt';
 
-      if (error.status === 401) {
-        errorMessage = 'Ongeldige gebruikersnaam of wachtwoord';
-      } else if (error.status === 500) {
-        errorMessage = 'Server fout, probeer het later opnieuw';
-      } else if (error.message) {
-        errorMessage = error.message;
+      if (error && typeof error === 'object' && 'status' in error) {
+        const errorWithStatus = error as { status: number; message?: string };
+        
+        if (errorWithStatus.status === 401) {
+          errorMessage = 'Ongeldige gebruikersnaam of wachtwoord';
+        } else if (errorWithStatus.status === 500) {
+          errorMessage = 'Server fout, probeer het later opnieuw';
+        } else if (errorWithStatus.message) {
+          errorMessage = errorWithStatus.message;
+        }
       }
 
       return { success: false, error: errorMessage };
