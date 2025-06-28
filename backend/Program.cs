@@ -120,7 +120,11 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend",
         policy =>
         {
-            policy.WithOrigins("http://localhost:3000", "https://localhost:3000")
+            policy.WithOrigins(
+                    "http://localhost:3000",
+                    "https://localhost:3000",
+                    "https://rooster-systeem.vercel.app"
+                  )
                   .AllowAnyHeader()
                   .AllowAnyMethod()
                   .AllowCredentials() // Required for JWT cookies if used

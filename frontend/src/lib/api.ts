@@ -2,8 +2,8 @@ import { LoginRequest, LoginResponse, Employee, CreateEmployeeRequest, UpdateEmp
 import { Shift, CreateShiftRequest, UpdateShiftRequest, ShiftFilter, WeekSchedule, MonthSchedule } from '@/types/shift';
 import { WeekAvailability, DateRangeInfo, UpdateWeekAvailability } from '@/types/availability';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 
-  (process.env.NODE_ENV === 'production' 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ||
+  (process.env.NODE_ENV === 'production'
     ? 'https://rooster-systeem-production.up.railway.app/api'
     : 'http://localhost:5000/api');
 
