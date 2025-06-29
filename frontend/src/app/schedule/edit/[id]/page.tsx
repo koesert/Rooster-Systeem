@@ -48,7 +48,7 @@ export default function EditShiftPage() {
     if (!isLoading && !user) {
       router.push('/login');
     } else if (!isLoading && user && !isManager()) {
-      router.push('/schedule');
+      router.back();
     }
   }, [user, isLoading, router, isManager]);
 
@@ -220,7 +220,7 @@ export default function EditShiftPage() {
       await api.updateShift(shiftId, apiData);
 
       // Success! Redirect to schedule page
-      router.push('/schedule');
+      router.back();
     } catch (error: any) {
       console.error('Error updating shift:', error);
 
@@ -286,7 +286,7 @@ export default function EditShiftPage() {
               <AlertTriangle className="h-16 w-16 mx-auto mb-4 text-red-600" />
               <h1 className="text-2xl font-bold mb-4 text-gray-900">{error}</h1>
               <button
-                onClick={() => router.push('/schedule')}
+                onClick={() => router.back()}
                 className="px-6 py-3 bg-gray-600 text-white rounded-xl font-semibold hover:bg-gray-700 transition-colors cursor-pointer"
               >
                 Terug naar rooster
@@ -315,7 +315,7 @@ export default function EditShiftPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
                     <button
-                      onClick={() => router.push('/schedule')}
+                      onClick={() => router.back()}
                       className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200 cursor-pointer"
                       title="Terug naar rooster"
                     >
@@ -640,7 +640,7 @@ export default function EditShiftPage() {
               <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200/50">
                 <button
                   type="button"
-                  onClick={() => router.push('/schedule')}
+                  onClick={() => router.back()}
                   disabled={isSubmitting}
                   className="flex items-center space-x-2 px-6 py-3 rounded-xl border border-gray-300 text-gray-700 font-semibold transition-all duration-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
