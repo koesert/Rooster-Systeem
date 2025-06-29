@@ -173,7 +173,7 @@ public class ShiftController : ControllerBase
     /// Get available employees for a specific time slot
     /// </summary>
     [HttpGet("available-employees")]
-    [Authorize(Policy = "ManagerOrShiftLeider")] // Only managers and shift leaders can check availability
+    [Authorize(Policy = "ManagerOnly")] // Only managers can check availability
     public async Task<ActionResult<IEnumerable<EmployeeResponseDto>>> GetAvailableEmployees(
         [FromQuery] DateTime date,
         [FromQuery] TimeSpan startTime,
@@ -195,7 +195,7 @@ public class ShiftController : ControllerBase
     /// Create a new shift
     /// </summary>
     [HttpPost]
-    [Authorize(Policy = "ManagerOrShiftLeider")] // Only managers and shift leaders can create shifts
+    [Authorize(Policy = "ManagerOnly")] // Only managers can create shifts
     public async Task<ActionResult<ShiftResponseDto>> CreateShift([FromBody] CreateShiftDto request)
     {
         try
@@ -223,7 +223,7 @@ public class ShiftController : ControllerBase
     /// Update an existing shift
     /// </summary>
     [HttpPut("{id}")]
-    [Authorize(Policy = "ManagerOrShiftLeider")] // Only managers and shift leaders can update shifts
+    [Authorize(Policy = "ManagerOnly")] // Only managers can update shifts
     public async Task<ActionResult<ShiftResponseDto>> UpdateShift(int id, [FromBody] UpdateShiftDto request)
     {
         try
@@ -257,7 +257,7 @@ public class ShiftController : ControllerBase
     /// Delete a shift
     /// </summary>
     [HttpDelete("{id}")]
-    [Authorize(Policy = "ManagerOrShiftLeider")] // Only managers and shift leaders can delete shifts
+    [Authorize(Policy = "ManagerOnly")] // Only managers can delete shifts
     public async Task<IActionResult> DeleteShift(int id)
     {
         try
@@ -282,7 +282,7 @@ public class ShiftController : ControllerBase
     /// Check for overlapping shifts for an employee
     /// </summary>
     [HttpPost("check-overlap")]
-    [Authorize(Policy = "ManagerOrShiftLeider")] // Only managers and shift leaders can check overlaps
+    [Authorize(Policy = "ManagerOnly")] // Only managers can check overlaps
     public async Task<ActionResult<bool>> CheckOverlappingShifts([FromBody] CreateShiftDto request)
     {
         try
@@ -306,7 +306,7 @@ public class ShiftController : ControllerBase
     /// Get shift statistics for reporting
     /// </summary>
     [HttpGet("statistics")]
-    [Authorize(Policy = "ManagerOrShiftLeider")] // Only managers and shift leaders can view statistics
+    [Authorize(Policy = "ManagerOnly")] // Only managers can view statistics
     public async Task<ActionResult> GetShiftStatistics(
         [FromQuery] DateTime? startDate = null,
         [FromQuery] DateTime? endDate = null)

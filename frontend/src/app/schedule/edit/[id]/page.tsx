@@ -10,7 +10,7 @@ import { Edit, User, Calendar, Clock, Type, FileText, ArrowLeft, Save, X, AlertT
 import { UpdateShiftRequest, ShiftType, Shift } from '@/types/shift';
 import { Employee } from '@/types/auth';
 import * as api from '@/lib/api';
-import { toInputDateFormat, fromInputDateFormat } from '@/utils/dateUtils';
+import { toInputDateFormat, fromInputDateFormat, parseDate } from '@/utils/dateUtils';
 
 export default function EditShiftPage() {
   const params = useParams();
@@ -118,14 +118,6 @@ export default function EditShiftPage() {
     // Date validation
     if (!formData.date) {
       errors.date = 'Datum is verplicht';
-    } else {
-      const shiftDate = new Date(formData.date);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      if (shiftDate < today) {
-        errors.date = 'Shift datum kan niet in het verleden liggen';
-      }
     }
 
     // Start time validation
@@ -421,7 +413,6 @@ export default function EditShiftPage() {
                         className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.date ? 'border-red-300' : 'border-gray-200'}`}
                         style={{ color: '#120309' }}
                         disabled={isSubmitting}
-                        min={new Date().toISOString().split('T')[0]}
                         onFocus={(e) => {
                           if (!fieldErrors.date) {
                             const target = e.target as HTMLInputElement;

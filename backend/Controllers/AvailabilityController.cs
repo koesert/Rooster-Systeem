@@ -141,7 +141,7 @@ public class AvailabilityController : ControllerBase
     /// Get specific employee's availability for a week (managers only)
     /// </summary>
     [HttpGet("employee/{employeeId}/week/{weekStart}")]
-    [Authorize(Policy = "ManagerOrShiftLeider")] // Only managers and shift leaders can view other employees
+    [Authorize(Policy = "ManagerOnly")] // Only managers can view other employees
     public async Task<ActionResult<WeekAvailabilityDto>> GetEmployeeWeekAvailability(int employeeId, string weekStart)
     {
         try
@@ -168,7 +168,7 @@ public class AvailabilityController : ControllerBase
     /// Get specific employee's availability for multiple weeks (managers only)
     /// </summary>
     [HttpGet("employee/{employeeId}")]
-    [Authorize(Policy = "ManagerOrShiftLeider")] // Only managers and shift leaders can view other employees
+    [Authorize(Policy = "ManagerOnly")] // Only managers can view other employees
     public async Task<ActionResult<List<WeekAvailabilityDto>>> GetEmployeeAvailability(
         int employeeId,
         [FromQuery] string? startDate = null,
@@ -243,7 +243,7 @@ public class AvailabilityController : ControllerBase
     /// Get all employees' availability for a specific week (managers only)
     /// </summary>
     [HttpGet("all-employees/week/{weekStart}")]
-    [Authorize(Policy = "ManagerOrShiftLeider")] // Only managers and shift leaders can view all employees
+    [Authorize(Policy = "ManagerOnly")] // Only managers can view all employees
     public async Task<ActionResult<List<WeekAvailabilityDto>>> GetAllEmployeesWeekAvailability(string weekStart)
     {
         try

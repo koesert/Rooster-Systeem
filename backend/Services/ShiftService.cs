@@ -349,12 +349,6 @@ public class ShiftService : IShiftService
             throw new InvalidOperationException("Medewerker niet gevonden");
         }
 
-        // Validate date (not in the past, but allow today)
-        if (date.Date < DateTime.UtcNow.Date)
-        {
-            throw new InvalidOperationException("Shift datum kan niet in het verleden liggen");
-        }
-
         // Validate times
         if (!isOpenEnded)
         {
