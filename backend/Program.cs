@@ -20,9 +20,13 @@ builder.Services.AddControllers()
     });
 
 // Configure Entity Framework with PostgreSQL database
+// Railway gebruikt DATABASE_URL environment variable
+var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
+    ?? builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? "Host=localhost;Database=restaurant_roster;Username=postgres;Password=dev_password123";
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")
-        ?? "Host=localhost;Database=restaurant_roster;Username=postgres;Password=dev_password123"));
+    options.UseNpgsql(connectionString));
 
 // Register custom services with dependency injection
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
