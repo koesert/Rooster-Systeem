@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using backend.Data;
 using backend.Models;
+using backend.Extensions;
 
 namespace backend.Services;
 
@@ -46,6 +47,10 @@ public class EmployeeService : IEmployeeService
         employee.CreatedAt = DateTime.UtcNow;
         employee.UpdatedAt = DateTime.UtcNow;
 
+        // Ensure DateTime values have proper UTC kind for PostgreSQL compatibility
+        employee.BirthDate = employee.BirthDate.EnsureUtc();
+        employee.HireDate = employee.HireDate.EnsureUtc();
+
         // Validate dates
         if (employee.BirthDate > DateTime.UtcNow)
         {
@@ -89,12 +94,16 @@ public class EmployeeService : IEmployeeService
             throw new InvalidOperationException("Hire date cannot be more than one day in the future");
         }
 
+        // Ensure DateTime values have proper UTC kind for PostgreSQL compatibility
+        var utcBirthDate = employee.BirthDate.EnsureUtc();
+        var utcHireDate = employee.HireDate.EnsureUtc();
+
         existingEmployee.FirstName = employee.FirstName;
         existingEmployee.LastName = employee.LastName;
         existingEmployee.Username = employee.Username;
         existingEmployee.Role = employee.Role;
-        existingEmployee.HireDate = employee.HireDate;
-        existingEmployee.BirthDate = employee.BirthDate;
+        existingEmployee.HireDate = utcHireDate;
+        existingEmployee.BirthDate = utcBirthDate;
         existingEmployee.UpdatedAt = DateTime.UtcNow;
 
         // Only update password if a new one is provided (optional during updates)

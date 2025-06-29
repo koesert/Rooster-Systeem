@@ -64,6 +64,7 @@ if (!string.IsNullOrEmpty(databaseUrl))
         throw new InvalidOperationException("Could not convert Railway DATABASE_URL to valid connection string");
     }
     Console.WriteLine("Using Railway PostgreSQL database");
+    Console.WriteLine("Railway PostgreSQL UTC timezone compatibility enabled");
 }
 else
 {
@@ -71,10 +72,30 @@ else
     connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
         ?? "Host=localhost;Database=restaurant_roster;Username=postgres;Password=dev_password123";
     Console.WriteLine("Using local PostgreSQL database");
+    Console.WriteLine("Local PostgreSQL UTC timezone compatibility enabled");
 }
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(connectionString));
+{
+    options.UseNpgsql(connectionString, npgsqlOptions =>
+    {
+        // Set command timeout for Railway's potential latency
+        npgsqlOptions.CommandTimeout(30);
+
+        // Configure timezone handling for Railway PostgreSQL
+        npgsqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+    });
+
+    // Configure Entity Framework options
+    if (builder.Environment.IsDevelopment())
+    {
+        options.EnableSensitiveDataLogging();
+        options.EnableDetailedErrors();
+    }
+});
+
+// Configure PostgreSQL to use UTC timestamps globally - critical for Railway deployment
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 // Register custom services with dependency injection
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();

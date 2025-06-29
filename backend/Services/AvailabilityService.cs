@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using backend.Data;
 using backend.DTOs;
 using backend.Models;
+using backend.Extensions;
 using System.Globalization;
 
 namespace backend.Services;
@@ -190,19 +191,16 @@ public class AvailabilityService : IAvailabilityService
             throw new ArgumentException("Datum string mag niet leeg zijn");
         }
 
-        // Handle DD-MM-YYYY format
-        if (DateTime.TryParseExact(dateString, "dd-MM-yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+        // Use the extension method for robust UTC handling
+        try
         {
-            return date;
+            return DateTimeExtensions.ParseAsUtc(dateString, "dd-MM-yyyy");
         }
-
-        // Fallback to standard parsing
-        if (DateTime.TryParse(dateString, out var fallbackDate))
+        catch
         {
-            return fallbackDate;
+            // Fallback to standard parsing
+            return DateTimeExtensions.ParseAsUtc(dateString);
         }
-
-        throw new ArgumentException($"Ongeldige datum format: {dateString}. Verwacht format: DD-MM-YYYY");
     }
 
     public string FormatDateString(DateTime date)
