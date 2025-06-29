@@ -19,10 +19,10 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.Converters.Add(new NullableDateTimeConverter());
     });
 
-// Configure Entity Framework with SQLite database
+// Configure Entity Framework with PostgreSQL database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")
-        ?? "Data Source=Data/restaurant_roster.db"));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? "Host=localhost;Database=restaurant_roster;Username=postgres;Password=dev_password123"));
 
 // Register custom services with dependency injection
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();

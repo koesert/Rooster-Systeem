@@ -54,12 +54,12 @@ public class ApplicationDbContext : DbContext
 			entity.Property(e => e.BirthDate)
 				  .IsRequired();
 
-			// Auto-populate timestamps using SQLite datetime function
+			// Auto-populate timestamps using PostgreSQL datetime function
 			entity.Property(e => e.CreatedAt)
-				  .HasDefaultValueSql("datetime('now')");
+				  .HasDefaultValueSql("NOW()");
 
 			entity.Property(e => e.UpdatedAt)
-				  .HasDefaultValueSql("datetime('now')");
+				  .HasDefaultValueSql("NOW()");
 		});
 
 		// Configure RefreshToken entity
@@ -73,7 +73,7 @@ public class ApplicationDbContext : DbContext
 				  .IsRequired();
 
 			entity.Property(rt => rt.CreatedAt)
-				  .HasDefaultValueSql("datetime('now')");
+				  .HasDefaultValueSql("NOW()");
 
 			// Set up foreign key relationship with cascade delete
 			// When an employee is deleted, all their refresh tokens are automatically removed
@@ -121,10 +121,10 @@ public class ApplicationDbContext : DbContext
 
 			// Auto-populate timestamps
 			entity.Property(s => s.CreatedAt)
-				  .HasDefaultValueSql("datetime('now')");
+				  .HasDefaultValueSql("NOW()");
 
 			entity.Property(s => s.UpdatedAt)
-				  .HasDefaultValueSql("datetime('now')");
+				  .HasDefaultValueSql("NOW()");
 
 			// Set up foreign key relationship with Employee
 			entity.HasOne(s => s.Employee)
@@ -168,10 +168,10 @@ public class ApplicationDbContext : DbContext
 
 			// Auto-populate timestamps
 			entity.Property(a => a.CreatedAt)
-				  .HasDefaultValueSql("datetime('now')");
+				  .HasDefaultValueSql("NOW()");
 
 			entity.Property(a => a.UpdatedAt)
-				  .HasDefaultValueSql("datetime('now')");
+				  .HasDefaultValueSql("NOW()");
 
 			// Set up foreign key relationship with Employee
 			entity.HasOne(a => a.Employee)
@@ -195,6 +195,8 @@ public class ApplicationDbContext : DbContext
 		// Seed default admin user for initial system access
 		// Password: "Admin123" (meets validation requirements)
 		var adminPasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123");
+		var utcNow = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Utc);
+		var birthDate = DateTime.SpecifyKind(new DateTime(1990, 1, 1), DateTimeKind.Utc);
 
 		modelBuilder.Entity<Employee>().HasData(
 			new Employee
@@ -205,10 +207,10 @@ public class ApplicationDbContext : DbContext
 				Username = "admin",
 				PasswordHash = adminPasswordHash,
 				Role = Role.Manager,
-				HireDate = DateTime.UtcNow,
-				BirthDate = new DateTime(1990, 1, 1), // Default birth date
-				CreatedAt = DateTime.UtcNow,
-				UpdatedAt = DateTime.UtcNow
+				HireDate = utcNow,
+				BirthDate = birthDate,
+				CreatedAt = utcNow,
+				UpdatedAt = utcNow
 			}
 		);
 	}
