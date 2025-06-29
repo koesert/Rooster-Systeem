@@ -19,11 +19,55 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.Converters.Add(new NullableDateTimeConverter());
     });
 
+// Helper function to convert Railway DATABASE_URL to Npgsql connection string
+static string ConvertDatabaseUrl(string databaseUrl)
+{
+    if (string.IsNullOrEmpty(databaseUrl))
+    {
+        return "";
+    }
+
+    try
+    {
+        var uri = new Uri(databaseUrl);
+        var host = uri.Host;
+        var port = uri.Port > 0 ? uri.Port : 5432;
+        var database = uri.LocalPath.TrimStart('/');
+        var userInfo = uri.UserInfo.Split(':');
+        var username = userInfo.Length > 0 ? userInfo[0] : "";
+        var password = userInfo.Length > 1 ? userInfo[1] : "";
+
+        return $"Host={host};Port={port};Database={database};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true";
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error parsing DATABASE_URL: {ex.Message}");
+        return "";
+    }
+}
+
 // Configure Entity Framework with PostgreSQL database
-// Railway gebruikt DATABASE_URL environment variable
-var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
-    ?? builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? "Host=localhost;Database=restaurant_roster;Username=postgres;Password=dev_password123";
+// Railway gebruikt DATABASE_URL environment variable, lokaal normale connection string
+var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+var connectionString = "";
+
+if (!string.IsNullOrEmpty(databaseUrl))
+{
+    // Production: Railway PostgreSQL database (convert DATABASE_URL)
+    connectionString = ConvertDatabaseUrl(databaseUrl);
+    if (string.IsNullOrEmpty(connectionString))
+    {
+        throw new InvalidOperationException("Could not convert Railway DATABASE_URL to valid connection string");
+    }
+    Console.WriteLine("Using Railway PostgreSQL database");
+}
+else
+{
+    // Development: Local PostgreSQL database
+    connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? "Host=localhost;Database=restaurant_roster;Username=postgres;Password=dev_password123";
+    Console.WriteLine("Using local PostgreSQL database");
+}
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
@@ -92,7 +136,8 @@ builder.Services.AddSwaggerGen(c =>
     // Add JWT authentication to Swagger
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Description = "JWT Authorization header using the Bearer scheme. Enter 'Bearer' [space] and then your token in the text input below.",
+        Description = "JWT Authorization header using the Bearer scheme. " +
+                      "Enter 'Bearer' [space] and then your token in the text input below.",
         Name = "Authorization",
         In = ParameterLocation.Header,
         Type = SecuritySchemeType.ApiKey,
@@ -148,11 +193,12 @@ using (var scope = app.Services.CreateScope())
         // Only create database if it doesn't exist (preserves existing data)
         await context.Database.EnsureCreatedAsync();
 
-        Console.WriteLine("Database initialized successfully");
+        Console.WriteLine("Database geïnitialiseerd succesvol");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error initializing database: {ex.Message}");
+        Console.WriteLine($"Fout bij initialiseren database: {ex.Message}");
+        Console.WriteLine($"Connection string gebruikt: {connectionString.Replace("Password=", "Password=***")}");
         throw; // Re-throw to prevent app from starting with broken database
     }
 }
