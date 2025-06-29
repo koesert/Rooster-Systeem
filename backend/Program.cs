@@ -163,21 +163,16 @@ builder.Services.AddSwaggerGen(c =>
     c.EnableAnnotations();
 });
 
-// Configure CORS for frontend communication (Next.js on port 3000)
+// Configure CORS for frontend communication (Next.js on port 3000 + Vercel deployment)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend",
         policy =>
         {
-            policy.WithOrigins(
-                    "http://localhost:3000",
-                    "https://localhost:3000",
-                    "https://rooster-systeem.vercel.app"
-                  )
+            // Temporarily allow all origins for debugging
+            policy.AllowAnyOrigin()
                   .AllowAnyHeader()
-                  .AllowAnyMethod()
-                  .AllowCredentials() // Required for JWT cookies if used
-                  .SetPreflightMaxAge(TimeSpan.FromMinutes(10)); // Cache preflight for 10 minutes
+                  .AllowAnyMethod();
         });
 });
 
