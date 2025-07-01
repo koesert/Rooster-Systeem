@@ -280,7 +280,7 @@ export default function EditShiftPage() {
     return (
       <div className="flex min-h-screen" style={{ background: 'linear-gradient(135deg, #e8eef2 0%, #f5f7fa 100%)' }}>
         <Sidebar />
-        <main className="flex-1 p-8">
+        <main className="layout-main-content overflow-y-auto">
           <div className="max-w-4xl mx-auto">
             <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8 text-center">
               <AlertTriangle className="h-16 w-16 mx-auto mb-4 text-red-600" />
@@ -302,7 +302,7 @@ export default function EditShiftPage() {
     <div className="flex min-h-screen" style={{ background: 'linear-gradient(135deg, #e8eef2 0%, #f5f7fa 100%)' }}>
       <Sidebar />
 
-      <main className="flex-1 p-8">
+      <main className="layout-main-content overflow-y-auto">
         <div className="max-w-4xl mx-auto">
           {/* Header Section */}
           <div className="mb-8">
