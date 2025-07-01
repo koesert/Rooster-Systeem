@@ -10,7 +10,7 @@ import { Edit, User, Calendar, Clock, Type, FileText, ArrowLeft, Save, X, AlertT
 import { UpdateShiftRequest, ShiftType, Shift } from '@/types/shift';
 import { Employee } from '@/types/auth';
 import * as api from '@/lib/api';
-import { toInputDateFormat, fromInputDateFormat, parseDate } from '@/utils/dateUtils';
+import { toInputDateFormat, fromInputDateFormat } from '@/utils/dateUtils';
 
 export default function EditShiftPage() {
   const params = useParams();
@@ -251,19 +251,6 @@ export default function EditShiftPage() {
       setError(errorMessage);
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const getShiftTypeName = (shiftType: ShiftType): string => {
-    switch (shiftType) {
-      case ShiftType.Schoonmaak:
-        return 'Schoonmaak';
-      case ShiftType.Bedienen:
-        return 'Bedienen';
-      case ShiftType.SchoonmaakBedienen:
-        return 'Schoonmaak & Bedienen';
-      default:
-        return 'Onbekend';
     }
   };
 

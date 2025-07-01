@@ -9,7 +9,7 @@ import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
 import { CheckCircle, X, CalendarDays, CalendarCheck, User, Clock, Edit, Trash2, AlertTriangle, Home } from 'lucide-react';
 import { Shift } from '@/types/shift';
-import { WeekAvailability, DayAvailability } from '@/types/availability';
+import { WeekAvailability } from '@/types/availability';
 import { formatDate } from '@/utils/dateUtils';
 import * as api from '@/lib/api';
 import { useModal } from '@/contexts/ModalContext';
@@ -34,7 +34,7 @@ export default function HomePage() {
   // State for schedule
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [isLoadingShifts, setIsLoadingShifts] = useState(false);
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const currentDate = new Date(); // Current date for today's schedule
   const [hoveredShiftId, setHoveredShiftId] = useState<number | null>(null);
 
   // State for availability
@@ -268,7 +268,7 @@ export default function HomePage() {
         }
 
         return shiftDateStr === dateStr;
-      } catch (error) {
+      } catch {
         // Invalid date format - would be logged by logging service in production
         return false;
       }

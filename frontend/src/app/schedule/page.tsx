@@ -9,7 +9,7 @@ import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
 import { Clock, ChevronLeft, ChevronRight, Edit, Trash2, AlertTriangle, CheckCircle, User, CalendarDays, CalendarPlus } from 'lucide-react';
 import { formatDate } from '@/utils/dateUtils';
-import { Shift, ShiftType } from '@/types/shift';
+import { Shift } from '@/types/shift';
 import { Employee } from '@/types/auth';
 import * as api from '@/lib/api';
 import {
@@ -20,8 +20,7 @@ import {
   calculateShiftHeight,
   getWeekDates,
   getDaysInMonth,
-  generateTimeSlots,
-  shouldRenderShiftInTimeSlot
+  generateTimeSlots
 } from '@/utils/scheduleUtils';
 
 type ViewType = 'week' | 'month' | 'day';
@@ -789,7 +788,6 @@ export default function SchedulePage() {
                     const isToday = date.toDateString() === new Date().toDateString();
                     const dayName = date.toLocaleDateString('nl-NL', { weekday: 'long' });
                     const dayNumber = date.getDate();
-                    const hasShifts = getShiftsForDate(date).length > 0;
 
                     return (
                       <div

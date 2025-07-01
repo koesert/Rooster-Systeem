@@ -11,7 +11,7 @@ import { CreateShiftRequest, ShiftType } from '@/types/shift';
 import { Employee } from '@/types/auth';
 import { WeekAvailability } from '@/types/availability';
 import * as api from '@/lib/api';
-import { getCurrentDate, toInputDateFormat, fromInputDateFormat, parseDate } from '@/utils/dateUtils';
+import { getCurrentDate, toInputDateFormat, fromInputDateFormat } from '@/utils/dateUtils';
 
 export default function CreateShiftPage() {
   usePageTitle('Dashboard - Nieuwe shift');

@@ -30,10 +30,6 @@ export default function Sidebar() {
     }
   }, []);
 
-  const handleLogout = () => {
-    logout();
-  };
-
   // Handle ESC key to close mobile menu
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
