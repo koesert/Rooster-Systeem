@@ -105,11 +105,8 @@ export default function Sidebar() {
     return pathname === path;
   };
 
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    console.log('Backdrop clicked');
-    if (e.target === e.currentTarget) {
-      setIsMobileMenuOpen(false);
-    }
+  const handleBackdropClick = () => {
+    setIsMobileMenuOpen(false);
   };
 
   const handleMobileLogout = () => {
