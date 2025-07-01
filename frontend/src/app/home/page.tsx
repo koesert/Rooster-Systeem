@@ -424,7 +424,7 @@ export default function HomePage() {
 
       {/* Welcome Notification */}
       {showWelcomeNotification && (
-        <div className="fixed top-4 right-4 z-50 max-w-md">
+        <div className="fixed top-4 right-4 z-50 max-w-md lg:top-4 lg:right-4 lg:z-50" style={{ top: '5rem' }}>
           <div className="bg-white/95 backdrop-blur-lg rounded-xl shadow-2xl border border-white/20 p-4 transform transition-all duration-500 ease-out animate-slide-in" style={{ boxShadow: '0 25px 50px rgba(103, 105, 124, 0.15)' }}>
             <div className="flex items-start space-x-3">
               <div className="p-2 rounded-lg flex-shrink-0" style={{ background: 'linear-gradient(135deg, #22c55e, #16a34a)' }}>
@@ -452,7 +452,7 @@ export default function HomePage() {
         </div>
       )}
 
-      <main className="flex-1 p-8 overflow-y-auto">
+      <main className="flex-1 p-8 overflow-y-auto pt-20 lg:pt-8">
         <div className="max-w-7xl mx-auto">
           {/* Header Section */}
           <div className="mb-8">
@@ -467,10 +467,10 @@ export default function HomePage() {
                     <Home className="h-8 w-8 text-white" />
                   </div>
                   <div>
-                    <h1 className="text-4xl font-bold" style={{ background: 'linear-gradient(135deg, #120309, #67697c)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                    <h1 className="text-4xl font-bold lg:text-4xl text-2xl" style={{ background: 'linear-gradient(135deg, #120309, #67697c)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                       Welkom in je dashboard, {user.firstName}!
                     </h1>
-                    <p className="text-lg mt-2" style={{ color: '#67697c' }}>
+                    <p className="text-lg mt-2 lg:text-lg text-base" style={{ color: '#67697c' }}>
                       Bekijk je rooster voor vandaag en je beschikbaarheid voor deze week
                     </p>
                   </div>
@@ -708,6 +708,13 @@ export default function HomePage() {
         }
         .animate-slide-in {
           animation: slide-in 0.5s ease-out;
+        }
+
+        /* Mobile responsive adjustments */
+        @media (max-width: 799px) {
+          main {
+            padding-top: 5rem !important;
+          }
         }
       `}</style>
     </div>
