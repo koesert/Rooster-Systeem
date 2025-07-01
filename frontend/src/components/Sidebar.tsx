@@ -10,6 +10,25 @@ export default function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  // Handle screen size detection
+  useEffect(() => {
+    const checkScreenSize = () => {
+      if (typeof window !== 'undefined') {
+        setIsDesktop(window.innerWidth >= 1250);
+      }
+    };
+
+    // Check on mount
+    checkScreenSize();
+
+    // Add event listener for resize
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', checkScreenSize);
+      return () => window.removeEventListener('resize', checkScreenSize);
+    }
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -116,8 +135,8 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Mobile Top Bar - Only visible on screens < 800px */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 h-16 px-4 flex items-center justify-between text-white" style={{ background: 'linear-gradient(90deg, #120309, #090c02)' }}>
+      {/* Mobile Top Bar - Only visible on screens < 1250px */}
+      <div className="mobile-header fixed top-0 left-0 right-0 z-40 h-16 px-4 flex items-center justify-between text-white" style={{ background: 'linear-gradient(90deg, #120309, #090c02)' }}>
         {/* Hamburger Menu Button */}
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -143,7 +162,7 @@ export default function Sidebar() {
       {/* Mobile Backdrop - Only visible when menu is open */}
       {isMobileMenuOpen && (
         <div
-          className="lg:hidden fixed inset-0"
+          className="mobile-backdrop fixed inset-0"
           style={{ background: 'rgba(0, 0, 0, 0.6)', zIndex: 45 }}
           onClick={handleBackdropClick}
         >
@@ -151,12 +170,13 @@ export default function Sidebar() {
         </div>
       )}
 
-      {/* Desktop Sidebar - Always visible on lg screens and up */}
+      {/* Desktop Sidebar - Always visible on desktop screens */}
       {/* Mobile Sidebar - Slides in from left when menu is open */}
       <div className={`
-        fixed top-0 h-screen text-white w-64 p-4 flex flex-col relative overflow-hidden z-50 transition-transform duration-300 ease-in-out
-        lg:sticky lg:translate-x-0
-        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        sidebar-main fixed top-0 h-screen text-white w-64 p-4 flex flex-col relative overflow-hidden z-50 transition-transform duration-300 ease-in-out
+        ${isDesktop ? 'translate-x-0' : (isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full')}
+        desktop-sidebar-visible
+        
       `} style={{ background: 'linear-gradient(180deg, #120309, #090c02)' }}>
         {/* Decorative background elements */}
         <div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-10" style={{ background: 'linear-gradient(135deg, #d5896f, #e8eef2)' }}></div>
@@ -173,7 +193,7 @@ export default function Sidebar() {
             {/* Close button - only visible on mobile when menu is open */}
             <button
               onClick={() => setIsMobileMenuOpen(false)}
-              className="lg:hidden p-1 rounded-xl hover:bg-white/10 transition-colors duration-200 cursor-pointer"
+              className="close-button p-1 rounded-xl hover:bg-white/10 transition-colors duration-200 cursor-pointer"
               style={{ border: '1px solid rgba(213, 137, 111, 0.2)' }}
             >
               <X className="h-6 w-6 text-white" />
@@ -255,25 +275,32 @@ export default function Sidebar() {
       </div>
 
       <style jsx>{`
-        /* Custom styles for responsive behavior */
-        @media (max-width: 799px) {
-          .lg\\:hidden {
+        /* Mobile view - screens less than 1250px */
+        @media (max-width: 1249px) {
+          .mobile-header {
+            display: flex !important;
+          }
+          .mobile-backdrop {
             display: block;
           }
-          .lg\\:sticky {
-            position: fixed;
+          .sidebar-main {
+            position: fixed !important;
+          }
+          .close-button {
+            display: block !important;
           }
         }
 
-        @media (min-width: 800px) {
-          .lg\\:hidden {
-            display: none;
+        /* Desktop view - screens 1250px and up */
+        @media (min-width: 1250px) {
+          .mobile-header {
+            display: none !important;
           }
-          .lg\\:sticky {
-            position: sticky;
+          .mobile-backdrop {
+            display: none !important;
           }
-          .lg\\:translate-x-0 {
-            transform: translateX(0);
+          .close-button {
+            display: none !important;
           }
         }
       `}</style>

@@ -419,7 +419,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="flex min-h-screen" style={{ background: 'linear-gradient(135deg, #e8eef2 0%, #f5f7fa 100%)' }}>
+    <div className="layout-with-sidebar" style={{ background: 'linear-gradient(135deg, #e8eef2 0%, #f5f7fa 100%)' }}>
       <Sidebar />
 
       {/* Welcome Notification */}
@@ -452,7 +452,7 @@ export default function HomePage() {
         </div>
       )}
 
-      <main className="flex-1 p-8 overflow-y-auto pt-20 lg:pt-8">
+      <main className="layout-main-content overflow-y-auto">
         <div className="max-w-7xl mx-auto">
           {/* Header Section */}
           <div className="mb-8">
@@ -708,13 +708,6 @@ export default function HomePage() {
         }
         .animate-slide-in {
           animation: slide-in 0.5s ease-out;
-        }
-
-        /* Mobile responsive adjustments */
-        @media (max-width: 799px) {
-          main {
-            padding-top: 5rem !important;
-          }
         }
       `}</style>
     </div>

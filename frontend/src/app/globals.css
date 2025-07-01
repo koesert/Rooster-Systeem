@@ -24,3 +24,33 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Sidebar layout styles */
+.layout-with-sidebar {
+  display: flex;
+  min-height: 100vh;
+}
+
+.layout-main-content {
+  flex: 1;
+  padding: 2rem;
+}
+
+/* Mobile styles - screens less than 1250px */
+@media (max-width: 1249px) {
+  .layout-main-content {
+    padding-top: 6rem !important; /* Increased to account for mobile header + extra spacing */
+    margin-left: 0 !important;
+    margin-top: 0 !important;
+  }
+}
+
+/* Desktop styles - screens 1250px and up */
+@media (min-width: 1250px) {
+  .layout-main-content {
+    margin-left: 0 !important; /* No margin - let flexbox handle the layout */
+    padding-top: 2rem !important;
+    margin-top: 0 !important;
+    padding-left: 2rem !important; /* Add some padding for spacing from sidebar */
+  }
+}
