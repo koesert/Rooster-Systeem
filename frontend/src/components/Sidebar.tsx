@@ -241,10 +241,8 @@ export default function Sidebar() {
               </li>
             ))}
           </ul>
-        </nav>
-
-        {/* Logout Button - Always visible at bottom */}
-        <div className="relative z-10 flex-shrink-0 pt-4 border-t border-gray-700/30 mb-10">
+          {/* Logout Button - Always visible at bottom */}
+        <div className="relative z-10 flex-shrink-0 pt-4 border-t border-gray-700/30 mb-30">
           <button
             onClick={handleMobileLogout}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-300 group hover:shadow-lg cursor-pointer"
@@ -268,6 +266,7 @@ export default function Sidebar() {
             <span className="font-medium">Uitloggen</span>
           </button>
         </div>
+        </nav>
       </div>
 
       <style jsx>{`
