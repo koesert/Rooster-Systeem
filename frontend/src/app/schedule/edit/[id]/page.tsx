@@ -315,9 +315,6 @@ export default function EditShiftPage() {
                       <h1 className="text-4xl font-bold" style={{ background: 'linear-gradient(135deg, #120309, #67697c)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                         Shift bewerken
                       </h1>
-                      <p className="text-lg mt-1" style={{ color: '#67697c' }}>
-                        Bewerk de shift van {shift.employeeName}
-                      </p>
                     </div>
                   </div>
                 </div>

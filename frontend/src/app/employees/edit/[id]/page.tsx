@@ -302,9 +302,6 @@ export default function EditEmployeePage() {
                       <h1 className="text-4xl font-bold" style={{ background: 'linear-gradient(135deg, #120309, #67697c)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                         {isEditingSelf ? 'Mijn profiel bewerken' : `${employee.fullName} bewerken`}
                       </h1>
-                      <p className="text-lg mt-1" style={{ color: '#67697c' }}>
-                        {isEditingSelf ? 'Pas je profielgegevens aan' : 'Bewerk medewerkersgegevens'}
-                      </p>
                     </div>
                   </div>
                 </div>
