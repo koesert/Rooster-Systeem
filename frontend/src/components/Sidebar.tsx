@@ -198,7 +198,7 @@ export default function Sidebar() {
           {user && (
             <div className="px-4">
               <p className="text-sm" style={{ color: '#e8eef2' }}>
-                Welkom, <span className="font-semibold" style={{ color: '#d5896f' }}>{user.firstName}</span>
+                Ingelogd als: <span className="font-semibold" style={{ color: '#d5896f' }}>{user.firstName}</span>
               </p>
             </div>
           )}

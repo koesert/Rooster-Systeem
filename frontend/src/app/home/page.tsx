@@ -470,9 +470,6 @@ export default function HomePage() {
                     <h1 className="text-4xl font-bold lg:text-4xl text-2xl" style={{ background: 'linear-gradient(135deg, #120309, #67697c)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                       Welkom in je dashboard, {user.firstName}!
                     </h1>
-                    <p className="text-lg mt-2 lg:text-lg text-base" style={{ color: '#67697c' }}>
-                      Bekijk je rooster voor vandaag en je beschikbaarheid voor deze week
-                    </p>
                   </div>
                 </div>
               </div>
