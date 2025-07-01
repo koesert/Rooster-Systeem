@@ -219,7 +219,7 @@ export default function AvailabilityPage() {
                       style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}
                     >
                       <Edit className="h-5 w-5" />
-                      <span>Beschikbaarheid beheren</span>
+                      <span>Aanpassen</span>
                     </button>
                   )}
                 </div>

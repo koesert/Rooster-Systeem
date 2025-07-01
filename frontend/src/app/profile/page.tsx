@@ -62,7 +62,7 @@ export default function ProfilePage() {
                     style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}
                   >
                     <Edit className="h-5 w-5" />
-                    <span>Profiel bewerken</span>
+                    <span>Bewerken</span>
                   </button>
                 </div>
               </div>

@@ -198,7 +198,7 @@ export default function EmployeesPage() {
                     style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}
                   >
                     <UserPlus className="h-5 w-5" />
-                    <span>Nieuwe medewerker</span>
+                    <span>Medewerker</span>
                   </button>
                 </div>
 
