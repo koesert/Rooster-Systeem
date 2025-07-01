@@ -179,7 +179,7 @@ export default function Sidebar() {
         <div className="absolute bottom-1/3 left-0 w-24 h-24 rounded-full blur-2xl opacity-8" style={{ background: 'linear-gradient(45deg, #d5896f, #67697c)' }}></div>
 
         {/* Header */}
-        <div className="mb-8 relative z-10">
+        <div className="mb-8 relative z-10 flex-shrink-0">
           <div className="flex items-center space-x-3 mb-4">
             <div className="p-4 rounded-xl cursor-pointer"
               style={{ background: 'linear-gradient(135deg, #d5896f20, #d5896f10)', border: '1px solid rgba(213, 137, 111, 0.2)' }}
@@ -204,9 +204,9 @@ export default function Sidebar() {
           )}
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 relative z-10">
-          <ul className="space-y-3">
+        {/* Navigation - Now scrollable */}
+        <nav className="flex-1 relative z-10 overflow-y-0">
+          <ul className="space-y-3 pb-4">
             {navigationItems.map((item, index) => (
               <li key={index}>
                 <button
@@ -243,8 +243,8 @@ export default function Sidebar() {
           </ul>
         </nav>
 
-        {/* Logout Button */}
-        <div className="mt-auto relative z-10">
+        {/* Logout Button - Always visible at bottom */}
+        <div className="relative z-10 flex-shrink-0 pt-4 border-t border-gray-700/30 mb-10">
           <button
             onClick={handleMobileLogout}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-300 group hover:shadow-lg cursor-pointer"
@@ -285,6 +285,8 @@ export default function Sidebar() {
           .close-button {
             display: block !important;
           }
+          
+
         }
 
         /* Desktop view - screens 1250px and up */

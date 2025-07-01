@@ -591,7 +591,7 @@ export default function SchedulePage() {
               <div className="absolute bottom-0 left-0 w-24 h-24 rounded-full blur-2xl opacity-15" style={{ background: 'linear-gradient(45deg, #d5896f, #67697c)' }}></div>
 
               <div className="relative z-10">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between mb-8">
                   <div className="flex items-center space-x-4">
                     <div className="p-3 rounded-xl" style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}>
                       <CalendarDays className="h-8 w-8 text-white" />
@@ -614,6 +614,43 @@ export default function SchedulePage() {
                     </button>
                   )}
                 </div>
+                {/* Employee selection dropdown for managers (hidden in day view since it shows all shifts) */}
+                {isManager() && viewType !== 'day' && (
+                  <div className="flex items-center space-x-3 bg-white/80 backdrop-blur-lg rounded-xl shadow-lg border border-white/20 px-4 py-2">
+                    <User className="h-5 w-5" style={{ color: '#67697c' }} />
+                    <div className="relative">
+                      <select
+                        value={selectedEmployeeId || 'own'}
+                        onChange={(e) => handleEmployeeSelection(e.target.value)}
+                        disabled={isLoadingEmployees}
+                        className="pl-3 pr-8 py-1 border border-gray-200 rounded-lg focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg min-w-[180px]"
+                        style={{ color: '#120309' }}
+                        onFocus={(e) => {
+                          const target = e.target as HTMLSelectElement;
+                          target.style.boxShadow = '0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)';
+                          target.style.borderColor = '#d5896f';
+                        }}
+                        onBlur={(e) => {
+                          const target = e.target as HTMLSelectElement;
+                          target.style.boxShadow = '';
+                          target.style.borderColor = '#d1d5db';
+                        }}
+                      >
+                        <option value="own">Mijn eigen rooster</option>
+                        {employees.map((employee) => (
+                          <option key={employee.id} value={employee.id}>
+                            {employee.fullName}
+                          </option>
+                        ))}
+                      </select>
+                      {isLoadingEmployees && (
+                        <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                          <div className="animate-spin rounded-full h-3 w-3 border-b-2" style={{ borderColor: '#d5896f' }}></div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -882,44 +919,6 @@ export default function SchedulePage() {
               </div>
             )}
           </div>
-
-          {/* Employee selection dropdown for managers (hidden in day view since it shows all shifts) */}
-          {isManager() && viewType !== 'day' && (
-            <div className="flex items-center space-x-3 bg-white/80 backdrop-blur-lg rounded-xl shadow-lg border border-white/20 px-4 py-2">
-              <User className="h-5 w-5" style={{ color: '#67697c' }} />
-              <div className="relative">
-                <select
-                  value={selectedEmployeeId || 'own'}
-                  onChange={(e) => handleEmployeeSelection(e.target.value)}
-                  disabled={isLoadingEmployees}
-                  className="pl-3 pr-8 py-1 border border-gray-200 rounded-lg focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg min-w-[180px]"
-                  style={{ color: '#120309' }}
-                  onFocus={(e) => {
-                    const target = e.target as HTMLSelectElement;
-                    target.style.boxShadow = '0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)';
-                    target.style.borderColor = '#d5896f';
-                  }}
-                  onBlur={(e) => {
-                    const target = e.target as HTMLSelectElement;
-                    target.style.boxShadow = '';
-                    target.style.borderColor = '#d1d5db';
-                  }}
-                >
-                  <option value="own">Mijn eigen rooster</option>
-                  {employees.map((employee) => (
-                    <option key={employee.id} value={employee.id}>
-                      {employee.fullName}
-                    </option>
-                  ))}
-                </select>
-                {isLoadingEmployees && (
-                  <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
-                    <div className="animate-spin rounded-full h-3 w-3 border-b-2" style={{ borderColor: '#d5896f' }}></div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
         </div>
       </main>
     </div>
