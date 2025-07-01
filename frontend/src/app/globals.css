@@ -36,18 +36,67 @@ body {
 /* Mobile styles - screens less than 1250px */
 @media (max-width: 1249px) {
   .layout-main-content {
-    padding-top: 6rem !important; /* Increased to account for mobile header + extra spacing */
+    padding-top: 6rem !important;
+    /* Increased to account for mobile header + extra spacing */
     margin-left: 0 !important;
     margin-top: 0 !important;
+  }
+}
+
+/* Mobile styles - screens less than 500px */
+@media (max-width: 499px) {
+  .layout-main-content {
+    padding: 1rem !important;
+    padding-top: 5rem !important;
+    /* Increased padding for mobile */
+    margin-left: 0 !important;
+    margin-top: 0 !important;
+  }
+
+  .layout-main-content h1 {
+    font-size: 1.5rem;
+    /* Smaller h1 text on mobile */
+  }
+
+  .layout-main-content h2 {
+    font-size: 1.25rem;
+    /* Smaller h2 text on mobile */
+  }
+
+  .layout-main-content h3 {
+    font-size: 1.125rem;
+    /* Smaller h3 text on mobile */
+  }
+
+  .layout-main-content h4 {
+    font-size: 1rem;
+    /* Smaller h4 text on mobile */
+  }
+
+  .layout-main-content h5 {
+    font-size: 0.875rem;
+    /* Smaller h5 text on mobile */
+  }
+
+  .layout-main-content h6 {
+    font-size: 0.75rem;
+    /* Smaller h6 text on mobile */
+  }
+
+  .layout-main-content p {
+    font-size: 0.875rem;
+    /* Smaller paragraph text on mobile */
   }
 }
 
 /* Desktop styles - screens 1250px and up */
 @media (min-width: 1250px) {
   .layout-main-content {
-    margin-left: 0 !important; /* No margin - let flexbox handle the layout */
+    margin-left: 0 !important;
+    /* No margin - let flexbox handle the layout */
     padding-top: 2rem !important;
     margin-top: 0 !important;
-    padding-left: 2rem !important; /* Add some padding for spacing from sidebar */
+    padding-left: 2rem !important;
+    /* Add some padding for spacing from sidebar */
   }
 }
