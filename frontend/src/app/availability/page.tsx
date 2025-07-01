@@ -199,7 +199,7 @@ export default function AvailabilityPage() {
               <div className="absolute bottom-0 left-0 w-24 h-24 rounded-full blur-2xl opacity-15" style={{ background: 'linear-gradient(45deg, #d5896f, #67697c)' }}></div>
 
               <div className="relative z-10">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between mb-8">
                   <div className="flex items-center space-x-4">
                     <div className="p-3 rounded-xl" style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}>
                       <CalendarCheck className="h-8 w-8 text-white" />
@@ -226,7 +226,7 @@ export default function AvailabilityPage() {
 
                 {/* Employee selection dropdown for managers */}
                 {isManager() && (
-                  <div className="mt-6 flex items-center space-x-3 bg-white/80 backdrop-blur-lg rounded-xl shadow-lg border border-white/20 px-4 py-3">
+                  <div className="flex items-center space-x-3 bg-white/80 backdrop-blur-lg rounded-xl shadow-lg border border-white/20 px-4 py-2">
                     <User className="h-5 w-5" style={{ color: '#67697c' }} />
                     <div className="relative">
                       <select
