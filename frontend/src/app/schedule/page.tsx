@@ -7,9 +7,9 @@ import { useModal } from '@/contexts/ModalContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
-import { Clock, ChevronLeft, ChevronRight, Edit, Trash2, AlertTriangle, CheckCircle, User, CalendarDays, CalendarPlus } from 'lucide-react';
+import { Clock, ChevronLeft, ChevronRight, Edit, Trash2, AlertTriangle, CheckCircle, User, CalendarDays, CalendarPlus, Plus } from 'lucide-react';
 import { formatDate } from '@/utils/dateUtils';
-import { Shift, ShiftType } from '@/types/shift';
+import { Shift } from '@/types/shift';
 import { Employee } from '@/types/auth';
 import * as api from '@/lib/api';
 import {
@@ -20,11 +20,24 @@ import {
   calculateShiftHeight,
   getWeekDates,
   getDaysInMonth,
-  generateTimeSlots,
-  shouldRenderShiftInTimeSlot
+  generateTimeSlots
 } from '@/utils/scheduleUtils';
 
 type ViewType = 'week' | 'month' | 'day';
+
+// Helper function to get short day names for mobile
+const getShortDayName = (dayName: string): string => {
+  const shortNames: { [key: string]: string } = {
+    'maandag': 'ma',
+    'dinsdag': 'di',
+    'woensdag': 'wo',
+    'donderdag': 'do',
+    'vrijdag': 'vr',
+    'zaterdag': 'za',
+    'zondag': 'zo'
+  };
+  return shortNames[dayName.toLowerCase()] || dayName;
+};
 
 export default function SchedulePage() {
   usePageTitle('Dashboard - Mijn rooster');
@@ -557,17 +570,6 @@ export default function SchedulePage() {
     return 'Mijn rooster';
   };
 
-  // Get page description based on selected employee
-  const getPageDescription = (): string => {
-    if (selectedEmployee) {
-      return `Bekijk het rooster van ${selectedEmployee.fullName}`;
-    }
-    if (viewType === 'day') {
-      return 'Bekijk het rooster voor deze dag';
-    }
-    return 'Bekijk je rooster voor de week of maand';
-  };
-
   if (isLoading) {
     return <LoadingScreen message="Rooster laden" />;
   }
@@ -580,7 +582,7 @@ export default function SchedulePage() {
     <div className="flex min-h-screen" style={{ background: 'linear-gradient(135deg, #e8eef2 0%, #f5f7fa 100%)' }}>
       <Sidebar />
 
-      <main className="flex-1 p-8">
+      <main className="layout-main-content overflow-y-auto">
         <div className="max-w-full mx-auto">
           {/* Header */}
           <div className="mb-8">
@@ -598,9 +600,6 @@ export default function SchedulePage() {
                       <h1 className="text-4xl font-bold" style={{ background: 'linear-gradient(135deg, #120309, #67697c)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                         {getPageTitle()}
                       </h1>
-                      <p className="text-lg mt-1" style={{ color: '#67697c' }}>
-                        {getPageDescription()}
-                      </p>
                     </div>
                   </div>
 
@@ -610,8 +609,8 @@ export default function SchedulePage() {
                       className="flex items-center space-x-2 px-6 py-3 rounded-xl text-white font-semibold transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer"
                       style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}
                     >
-                      <CalendarPlus className="h-5 w-5" />
-                      <span>Nieuwe shift</span>
+                      <Plus className="h-5 w-5" />
+                      <span>Shift</span>
                     </button>
                   )}
                 </div>
@@ -652,46 +651,7 @@ export default function SchedulePage() {
               </button>
             </div>
 
-            {/* Employee selection dropdown for managers (hidden in day view since it shows all shifts) */}
-            {isManager() && viewType !== 'day' && (
-              <div className="flex items-center space-x-3 bg-white/80 backdrop-blur-lg rounded-xl shadow-lg border border-white/20 px-4 py-2">
-                <User className="h-5 w-5" style={{ color: '#67697c' }} />
-                <label className="text-sm font-medium" style={{ color: '#120309' }}>
-                  Bekijk rooster van:
-                </label>
-                <div className="relative">
-                  <select
-                    value={selectedEmployeeId || 'own'}
-                    onChange={(e) => handleEmployeeSelection(e.target.value)}
-                    disabled={isLoadingEmployees}
-                    className="pl-3 pr-8 py-1 border border-gray-200 rounded-lg focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg min-w-[180px]"
-                    style={{ color: '#120309' }}
-                    onFocus={(e) => {
-                      const target = e.target as HTMLSelectElement;
-                      target.style.boxShadow = '0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)';
-                      target.style.borderColor = '#d5896f';
-                    }}
-                    onBlur={(e) => {
-                      const target = e.target as HTMLSelectElement;
-                      target.style.boxShadow = '';
-                      target.style.borderColor = '#d1d5db';
-                    }}
-                  >
-                    <option value="own">Mijn eigen rooster</option>
-                    {employees.map((employee) => (
-                      <option key={employee.id} value={employee.id}>
-                        {employee.fullName}
-                      </option>
-                    ))}
-                  </select>
-                  {isLoadingEmployees && (
-                    <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
-                      <div className="animate-spin rounded-full h-3 w-3 border-b-2" style={{ borderColor: '#d5896f' }}></div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+
 
             {/* Navigation */}
             <div className="flex items-center space-x-4">
@@ -709,11 +669,6 @@ export default function SchedulePage() {
                 >
                   <ChevronLeft className="h-5 w-5 text-gray-600" />
                 </button>
-
-                <div className="px-4 py-2 min-w-[200px] text-center font-medium text-gray-900">
-                  {getNavigationTitle()}
-                </div>
-
                 <button
                   onClick={navigateNext}
                   className="p-2 hover:bg-gray-100 rounded-r-lg transition-colors cursor-pointer"
@@ -725,7 +680,7 @@ export default function SchedulePage() {
           </div>
 
           {/* Schedule View */}
-          <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 overflow-hidden">
+          <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 overflow-hidden mb-8">
             {isLoadingShifts ? (
               // Loading state
               <div className="p-12 text-center">
@@ -788,8 +743,8 @@ export default function SchedulePage() {
                   {getWeekDates(currentDate).map((date, index) => {
                     const isToday = date.toDateString() === new Date().toDateString();
                     const dayName = date.toLocaleDateString('nl-NL', { weekday: 'long' });
+                    const shortDayName = getShortDayName(dayName);
                     const dayNumber = date.getDate();
-                    const hasShifts = getShiftsForDate(date).length > 0;
 
                     return (
                       <div
@@ -798,7 +753,10 @@ export default function SchedulePage() {
                         className={`bg-white p-4 text-center cursor-pointer hover:bg-gray-50 transition-colors ${isToday ? 'bg-orange-50' : ''}`}
                         title="Klik om dag weergave te openen"
                       >
-                        <p className="text-lg font-medium text-gray-600 capitalize">{dayName}</p>
+                        <p className="text-lg font-medium text-gray-600 capitalize">
+                          <span className="hidden md:inline">{dayName}</span>
+                          <span className="md:hidden">{shortDayName}</span>
+                        </p>
                         <p className={`text-2xl font-bold ${isToday ? 'text-orange-600' : 'text-gray-900'}`}>
                           {dayNumber}
                         </p>
@@ -842,11 +800,17 @@ export default function SchedulePage() {
               <div className="p-6">
                 <div className="grid grid-cols-7 gap-px bg-gray-200 border border-gray-200">
                   {/* Day headers */}
-                  {['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag'].map((day) => (
-                    <div key={day} className="bg-gray-50 p-4 text-center">
-                      <p className="text-lg font-medium text-gray-700 capitalize">{day}</p>
-                    </div>
-                  ))}
+                  {['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag'].map((day) => {
+                    const shortDay = getShortDayName(day);
+                    return (
+                      <div key={day} className="bg-gray-50 p-4 text-center">
+                        <p className="text-lg font-medium text-gray-700 capitalize">
+                          <span className="hidden md:inline">{day}</span>
+                          <span className="md:hidden">{shortDay}</span>
+                        </p>
+                      </div>
+                    );
+                  })}
 
                   {/* Calendar days */}
                   {(() => {
@@ -909,6 +873,7 @@ export default function SchedulePage() {
                               </div>
                             )}
                           </div>
+
                         </div>
                       );
                     });
@@ -917,6 +882,44 @@ export default function SchedulePage() {
               </div>
             )}
           </div>
+
+          {/* Employee selection dropdown for managers (hidden in day view since it shows all shifts) */}
+          {isManager() && viewType !== 'day' && (
+            <div className="flex items-center space-x-3 bg-white/80 backdrop-blur-lg rounded-xl shadow-lg border border-white/20 px-4 py-2">
+              <User className="h-5 w-5" style={{ color: '#67697c' }} />
+              <div className="relative">
+                <select
+                  value={selectedEmployeeId || 'own'}
+                  onChange={(e) => handleEmployeeSelection(e.target.value)}
+                  disabled={isLoadingEmployees}
+                  className="pl-3 pr-8 py-1 border border-gray-200 rounded-lg focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg min-w-[180px]"
+                  style={{ color: '#120309' }}
+                  onFocus={(e) => {
+                    const target = e.target as HTMLSelectElement;
+                    target.style.boxShadow = '0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)';
+                    target.style.borderColor = '#d5896f';
+                  }}
+                  onBlur={(e) => {
+                    const target = e.target as HTMLSelectElement;
+                    target.style.boxShadow = '';
+                    target.style.borderColor = '#d1d5db';
+                  }}
+                >
+                  <option value="own">Mijn eigen rooster</option>
+                  {employees.map((employee) => (
+                    <option key={employee.id} value={employee.id}>
+                      {employee.fullName}
+                    </option>
+                  ))}
+                </select>
+                {isLoadingEmployees && (
+                  <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                    <div className="animate-spin rounded-full h-3 w-3 border-b-2" style={{ borderColor: '#d5896f' }}></div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </main>
     </div>

@@ -9,7 +9,7 @@ import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
 import { CheckCircle, X, CalendarDays, CalendarCheck, User, Clock, Edit, Trash2, AlertTriangle, Home } from 'lucide-react';
 import { Shift } from '@/types/shift';
-import { WeekAvailability, DayAvailability } from '@/types/availability';
+import { WeekAvailability } from '@/types/availability';
 import { formatDate } from '@/utils/dateUtils';
 import * as api from '@/lib/api';
 import { useModal } from '@/contexts/ModalContext';
@@ -34,7 +34,7 @@ export default function HomePage() {
   // State for schedule
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [isLoadingShifts, setIsLoadingShifts] = useState(false);
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const currentDate = new Date(); // Current date for today's schedule
   const [hoveredShiftId, setHoveredShiftId] = useState<number | null>(null);
 
   // State for availability
@@ -268,7 +268,7 @@ export default function HomePage() {
         }
 
         return shiftDateStr === dateStr;
-      } catch (error) {
+      } catch {
         // Invalid date format - would be logged by logging service in production
         return false;
       }
@@ -419,12 +419,12 @@ export default function HomePage() {
   }
 
   return (
-    <div className="flex min-h-screen" style={{ background: 'linear-gradient(135deg, #e8eef2 0%, #f5f7fa 100%)' }}>
+    <div className="layout-with-sidebar" style={{ background: 'linear-gradient(135deg, #e8eef2 0%, #f5f7fa 100%)' }}>
       <Sidebar />
 
       {/* Welcome Notification */}
       {showWelcomeNotification && (
-        <div className="fixed top-4 right-4 z-50 max-w-md">
+        <div className="fixed top-4 right-4 z-50 max-w-md lg:top-4 lg:right-4 lg:z-50" style={{ top: '5rem' }}>
           <div className="bg-white/95 backdrop-blur-lg rounded-xl shadow-2xl border border-white/20 p-4 transform transition-all duration-500 ease-out animate-slide-in" style={{ boxShadow: '0 25px 50px rgba(103, 105, 124, 0.15)' }}>
             <div className="flex items-start space-x-3">
               <div className="p-2 rounded-lg flex-shrink-0" style={{ background: 'linear-gradient(135deg, #22c55e, #16a34a)' }}>
@@ -452,7 +452,7 @@ export default function HomePage() {
         </div>
       )}
 
-      <main className="flex-1 p-8 overflow-y-auto">
+      <main className="layout-main-content overflow-y-auto">
         <div className="max-w-7xl mx-auto">
           {/* Header Section */}
           <div className="mb-8">
@@ -467,12 +467,9 @@ export default function HomePage() {
                     <Home className="h-8 w-8 text-white" />
                   </div>
                   <div>
-                    <h1 className="text-4xl font-bold" style={{ background: 'linear-gradient(135deg, #120309, #67697c)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                    <h1 className="text-4xl font-bold lg:text-4xl text-2xl" style={{ background: 'linear-gradient(135deg, #120309, #67697c)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                       Welkom in je dashboard, {user.firstName}!
                     </h1>
-                    <p className="text-lg mt-2" style={{ color: '#67697c' }}>
-                      Bekijk je rooster voor vandaag en je beschikbaarheid voor deze week
-                    </p>
                   </div>
                 </div>
               </div>

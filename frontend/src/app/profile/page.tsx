@@ -7,7 +7,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
 import { formatDate } from '@/utils/dateUtils';
-import { User, Edit, Calendar, CalendarCheck } from 'lucide-react';
+import { User, Edit, Calendar, CalendarCheck, Home, CalendarDays } from 'lucide-react';
 
 export default function ProfilePage() {
   usePageTitle('Dashboard - Mijn profiel');
@@ -34,7 +34,7 @@ export default function ProfilePage() {
     <div className="flex min-h-screen" style={{ background: 'linear-gradient(135deg, #e8eef2 0%, #f5f7fa 100%)' }}>
       <Sidebar />
 
-      <main className="flex-1 p-8">
+      <main className="layout-main-content overflow-y-auto">
         <div className="max-w-7xl mx-auto">
           {/* Header Section */}
           <div className="mb-8">
@@ -53,9 +53,6 @@ export default function ProfilePage() {
                       <h1 className="text-4xl font-bold" style={{ background: 'linear-gradient(135deg, #120309, #67697c)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                         Mijn profiel
                       </h1>
-                      <p className="text-lg mt-1" style={{ color: '#67697c' }}>
-                        Bekijk en beheer je profielgegevens
-                      </p>
                     </div>
                   </div>
 
@@ -65,7 +62,7 @@ export default function ProfilePage() {
                     style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}
                   >
                     <Edit className="h-5 w-5" />
-                    <span>Profiel bewerken</span>
+                    <span>Bewerken</span>
                   </button>
                 </div>
               </div>
@@ -120,21 +117,21 @@ export default function ProfilePage() {
               </h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* Edit Profile */}
+                {/* Dashboard */}
                 <button
-                  onClick={() => router.push('/profile/edit')}
+                  onClick={() => router.push('home')}
                   className="group p-6 bg-white/60 backdrop-blur-sm rounded-xl border border-white/30 hover:bg-white/80 transition-all duration-300 hover:shadow-lg hover:scale-105 text-left cursor-pointer"
                 >
                   <div className="flex items-start space-x-4">
                     <div className="p-3 rounded-xl" style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}>
-                      <Edit className="h-6 w-6 text-white" />
+                      <Home className="h-6 w-6 text-white" />
                     </div>
                     <div className="flex-1">
                       <h4 className="font-semibold mb-2 group-hover:text-opacity-80 transition-all duration-200" style={{ color: '#120309' }}>
-                        Profiel bewerken
+                        Naar dashboard
                       </h4>
                       <p className="text-sm" style={{ color: '#67697c' }}>
-                        Wijzig je gegevens
+                        Naar het dashboard
                       </p>
                     </div>
                   </div>
@@ -147,7 +144,7 @@ export default function ProfilePage() {
                 >
                   <div className="flex items-start space-x-4">
                     <div className="p-3 rounded-xl" style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}>
-                      <Calendar className="h-6 w-6 text-white" />
+                      <CalendarDays className="h-6 w-6 text-white" />
                     </div>
                     <div className="flex-1">
                       <h4 className="font-semibold mb-2 group-hover:text-opacity-80 transition-all duration-200" style={{ color: '#120309' }}>

@@ -230,7 +230,7 @@ export default function ProfileEditPage() {
     <div className="flex min-h-screen" style={{ background: 'linear-gradient(135deg, #e8eef2 0%, #f5f7fa 100%)' }}>
       <Sidebar />
 
-      <main className="flex-1 p-8">
+      <main className="layout-main-content overflow-y-auto">
         <div className="max-w-4xl mx-auto">
           {/* Header Section */}
           <div className="mb-8">
@@ -256,12 +256,6 @@ export default function ProfileEditPage() {
                       <h1 className="text-4xl font-bold" style={{ background: 'linear-gradient(135deg, #120309, #67697c)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                         Mijn profiel bewerken
                       </h1>
-                      <p className="text-lg mt-1" style={{ color: '#67697c' }}>
-                        {isManager()
-                          ? 'Beheer je volledige profiel'
-                          : 'Pas je gebruikersnaam en wachtwoord aan'
-                        }
-                      </p>
                     </div>
                   </div>
                 </div>

@@ -10,7 +10,7 @@ import { Edit, User, Calendar, Clock, Type, FileText, ArrowLeft, Save, X, AlertT
 import { UpdateShiftRequest, ShiftType, Shift } from '@/types/shift';
 import { Employee } from '@/types/auth';
 import * as api from '@/lib/api';
-import { toInputDateFormat, fromInputDateFormat, parseDate } from '@/utils/dateUtils';
+import { toInputDateFormat, fromInputDateFormat } from '@/utils/dateUtils';
 
 export default function EditShiftPage() {
   const params = useParams();
@@ -254,19 +254,6 @@ export default function EditShiftPage() {
     }
   };
 
-  const getShiftTypeName = (shiftType: ShiftType): string => {
-    switch (shiftType) {
-      case ShiftType.Schoonmaak:
-        return 'Schoonmaak';
-      case ShiftType.Bedienen:
-        return 'Bedienen';
-      case ShiftType.SchoonmaakBedienen:
-        return 'Schoonmaak & Bedienen';
-      default:
-        return 'Onbekend';
-    }
-  };
-
   if (isLoading || isLoadingShift || isLoadingEmployees) {
     return <LoadingScreen message="Shift gegevens laden" />;
   }
@@ -280,7 +267,7 @@ export default function EditShiftPage() {
     return (
       <div className="flex min-h-screen" style={{ background: 'linear-gradient(135deg, #e8eef2 0%, #f5f7fa 100%)' }}>
         <Sidebar />
-        <main className="flex-1 p-8">
+        <main className="layout-main-content overflow-y-auto">
           <div className="max-w-4xl mx-auto">
             <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8 text-center">
               <AlertTriangle className="h-16 w-16 mx-auto mb-4 text-red-600" />
@@ -302,7 +289,7 @@ export default function EditShiftPage() {
     <div className="flex min-h-screen" style={{ background: 'linear-gradient(135deg, #e8eef2 0%, #f5f7fa 100%)' }}>
       <Sidebar />
 
-      <main className="flex-1 p-8">
+      <main className="layout-main-content overflow-y-auto">
         <div className="max-w-4xl mx-auto">
           {/* Header Section */}
           <div className="mb-8">
@@ -328,9 +315,6 @@ export default function EditShiftPage() {
                       <h1 className="text-4xl font-bold" style={{ background: 'linear-gradient(135deg, #120309, #67697c)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                         Shift bewerken
                       </h1>
-                      <p className="text-lg mt-1" style={{ color: '#67697c' }}>
-                        Bewerk de shift van {shift.employeeName}
-                      </p>
                     </div>
                   </div>
                 </div>

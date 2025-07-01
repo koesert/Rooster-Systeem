@@ -170,7 +170,7 @@ export default function EmployeesPage() {
     <div className="flex min-h-screen" style={{ background: 'linear-gradient(135deg, #e8eef2 0%, #f5f7fa 100%)' }}>
       <Sidebar />
 
-      <main className="flex-1 p-8">
+      <main className="layout-main-content overflow-y-auto">
         <div className="max-w-7xl mx-auto">
           {/* Header Section */}
           <div className="mb-8">
@@ -189,9 +189,6 @@ export default function EmployeesPage() {
                       <h1 className="text-4xl font-bold" style={{ background: 'linear-gradient(135deg, #120309, #67697c)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                         Medewerkers beheren
                       </h1>
-                      <p className="text-lg mt-1" style={{ color: '#67697c' }}>
-                        Bekijk en beheer alle medewerkers in het systeem
-                      </p>
                     </div>
                   </div>
 
@@ -201,7 +198,7 @@ export default function EmployeesPage() {
                     style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}
                   >
                     <UserPlus className="h-5 w-5" />
-                    <span>Nieuwe medewerker</span>
+                    <span>Medewerker</span>
                   </button>
                 </div>
 

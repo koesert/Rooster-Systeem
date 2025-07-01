@@ -37,14 +37,6 @@ export default function AvailabilityPage() {
     return 'Mijn beschikbaarheid';
   };
 
-  // Get page description based on selected employee
-  const getPageDescription = (): string => {
-    if (selectedEmployee) {
-      return `Bekijk de beschikbaarheid van ${selectedEmployee.fullName}`;
-    }
-    return 'Bekijk je beschikbaarheid voor de komende weken';
-  };
-
   usePageTitle(`Dashboard - ${getPageTitle()}`);
 
   // Redirect if not authenticated
@@ -198,7 +190,7 @@ export default function AvailabilityPage() {
     <div className="flex min-h-screen" style={{ background: 'linear-gradient(135deg, #e8eef2 0%, #f5f7fa 100%)' }}>
       <Sidebar />
 
-      <main className="flex-1 p-8">
+      <main className="layout-main-content overflow-y-auto">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="mb-8">
@@ -216,9 +208,6 @@ export default function AvailabilityPage() {
                       <h1 className="text-4xl font-bold" style={{ background: 'linear-gradient(135deg, #120309, #67697c)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                         {getPageTitle()}
                       </h1>
-                      <p className="text-lg mt-1" style={{ color: '#67697c' }}>
-                        {getPageDescription()}
-                      </p>
                     </div>
                   </div>
 
@@ -230,7 +219,7 @@ export default function AvailabilityPage() {
                       style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}
                     >
                       <Edit className="h-5 w-5" />
-                      <span>Beschikbaarheid beheren</span>
+                      <span>Aanpassen</span>
                     </button>
                   )}
                 </div>
@@ -239,9 +228,6 @@ export default function AvailabilityPage() {
                 {isManager() && (
                   <div className="mt-6 flex items-center space-x-3 bg-white/80 backdrop-blur-lg rounded-xl shadow-lg border border-white/20 px-4 py-3">
                     <User className="h-5 w-5" style={{ color: '#67697c' }} />
-                    <label className="text-sm font-medium" style={{ color: '#120309' }}>
-                      {selectedEmployee ? `Beschikbaarheid van:` : `Bekijk beschikbaarheid van:`}
-                    </label>
                     <div className="relative">
                       <select
                         value={selectedEmployeeId || 'own'}
