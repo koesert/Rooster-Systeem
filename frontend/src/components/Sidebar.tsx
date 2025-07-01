@@ -169,7 +169,7 @@ export default function Sidebar() {
       {/* Desktop Sidebar - Always visible on desktop screens */}
       {/* Mobile Sidebar - Slides in from left when menu is open */}
       <div className={`
-        sidebar-main fixed top-0 h-screen text-white w-64 p-4 flex flex-col relative overflow-hidden z-50 transition-transform duration-300 ease-in-out
+        sidebar-main sticky fixed top-0 h-screen text-white w-64 p-4 flex flex-col relative overflow-hidden z-50 transition-transform duration-300 ease-in-out
         ${isDesktop ? 'translate-x-0' : (isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full')}
         desktop-sidebar-visible
         
