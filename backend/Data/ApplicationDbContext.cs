@@ -13,6 +13,7 @@ public class ApplicationDbContext : DbContext
 	public DbSet<RefreshToken> RefreshTokens { get; set; }
 	public DbSet<Shift> Shifts { get; set; }
 	public DbSet<Availability> Availabilities { get; set; }
+	public DbSet<TimeOffRequest> TimeOffRequests { get; set; }
 
 	protected override void OnModelCreating(ModelBuilder modelBuilder)
 	{
@@ -190,6 +191,63 @@ public class ApplicationDbContext : DbContext
 
 			entity.HasIndex(a => a.EmployeeId)
 				  .HasDatabaseName("IX_Availability_EmployeeId");
+		});
+
+		// Configure TimeOffRequest entity
+		modelBuilder.Entity<TimeOffRequest>(entity =>
+		{
+			entity.Property(t => t.EmployeeId)
+				  .IsRequired();
+
+			entity.Property(t => t.Status)
+				  .IsRequired()
+				  .HasConversion<int>();
+
+			entity.Property(t => t.Reason)
+				  .IsRequired()
+				  .HasMaxLength(500);
+
+			entity.Property(t => t.StartDate)
+				  .IsRequired()
+				  .HasColumnType("DATE");
+
+			entity.Property(t => t.EndDate)
+				  .IsRequired()
+				  .HasColumnType("DATE");
+
+			entity.Property(t => t.ApprovedBy)
+				  .IsRequired(false);
+
+			// Auto-populate timestamps
+			entity.Property(t => t.CreatedAt)
+				  .HasDefaultValueSql("NOW()");
+
+			entity.Property(t => t.UpdatedAt)
+				  .HasDefaultValueSql("NOW()");
+
+			// Set up foreign key relationships
+			entity.HasOne(t => t.Employee)
+				  .WithMany()
+				  .HasForeignKey(t => t.EmployeeId)
+				  .OnDelete(DeleteBehavior.Cascade);
+
+			entity.HasOne(t => t.Approver)
+				  .WithMany()
+				  .HasForeignKey(t => t.ApprovedBy)
+				  .OnDelete(DeleteBehavior.SetNull);
+
+			// Indexes for efficient querying
+			entity.HasIndex(t => t.EmployeeId)
+				  .HasDatabaseName("IX_TimeOffRequests_EmployeeId");
+
+			entity.HasIndex(t => t.Status)
+				  .HasDatabaseName("IX_TimeOffRequests_Status");
+
+			entity.HasIndex(t => new { t.StartDate, t.EndDate })
+				  .HasDatabaseName("IX_TimeOffRequests_Dates");
+
+			entity.HasIndex(t => new { t.EmployeeId, t.Status })
+				  .HasDatabaseName("IX_TimeOffRequests_EmployeeId_Status");
 		});
 
 		// Seed default admin user for initial system access

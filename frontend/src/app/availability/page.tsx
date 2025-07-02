@@ -34,7 +34,7 @@ export default function AvailabilityPage() {
     if (selectedEmployee) {
       return `Beschikbaarheid van ${selectedEmployee.fullName}`;
     }
-    return 'Mijn beschikbaarheid';
+    return 'Beschikbaarheid';
   };
 
   usePageTitle(`Dashboard - ${getPageTitle()}`);
@@ -194,12 +194,12 @@ export default function AvailabilityPage() {
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="mb-8">
-            <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8 relative overflow-hidden">
+            <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8 max-[500px]:p-4 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-20" style={{ background: 'linear-gradient(135deg, #d5896f, #e8eef2)' }}></div>
               <div className="absolute bottom-0 left-0 w-24 h-24 rounded-full blur-2xl opacity-15" style={{ background: 'linear-gradient(45deg, #d5896f, #67697c)' }}></div>
 
               <div className="relative z-10">
-                <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center justify-between mb-8 max-[500px]:mb-4 max-[500px]:p-1 max-[500px]:mr-0">
                   <div className="flex items-center space-x-4">
                     <div className="p-3 rounded-xl" style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}>
                       <CalendarCheck className="h-8 w-8 text-white" />
@@ -215,11 +215,11 @@ export default function AvailabilityPage() {
                   {!selectedEmployeeId && (
                     <button
                       onClick={() => router.push('/availability/create')}
-                      className="flex items-center space-x-2 px-6 py-3 rounded-xl text-white font-semibold transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer"
+                      className="flex items-center space-x-2 px-6 py-3 max-[700px]:px-3 max-[500px]:space-x-0 rounded-xl text-white font-semibold transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer"
                       style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}
                     >
                       <Edit className="h-5 w-5" />
-                      <span>Aanpassen</span>
+                      <span className="max-[700px]:hidden">Aanpassen</span>
                     </button>
                   )}
                 </div>
@@ -246,7 +246,7 @@ export default function AvailabilityPage() {
                           target.style.borderColor = '#d1d5db';
                         }}
                       >
-                        <option value="own">Mijn eigen beschikbaarheid</option>
+                        <option value="own">Mijn beschikbaarheid</option>
                         {employees.map((employee) => (
                           <option key={employee.id} value={employee.id}>
                             {employee.fullName}
@@ -304,15 +304,15 @@ export default function AvailabilityPage() {
             // Availability Content
             <div className="space-y-6">
               {/* Week Navigation */}
-              <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-6">
+              <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-6 max-[500px]:p-3">
                 <div className="flex items-center justify-between">
                   <button
                     onClick={() => navigateWeeks('prev')}
                     disabled={currentWeekIndex === 0}
-                    className="flex items-center space-x-2 px-4 py-2 text-gray-900 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    className="flex items-center space-x-2 max-[500px]:space-x-0 px-4 py-2 max-[500px]:px-3 text-gray-900 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     <ChevronLeft className="h-4 w-4" />
-                    <span className="text-sm font-medium">Vorige week</span>
+                    <span className="text-sm font-medium max-[500px]:hidden">Vorige week</span>
                   </button>
 
                   <div className="text-center">
@@ -329,9 +329,9 @@ export default function AvailabilityPage() {
                   <button
                     onClick={() => navigateWeeks('next')}
                     disabled={currentWeekIndex === weekAvailabilities.length - 1}
-                    className="flex items-center space-x-2 px-4 py-2 text-gray-900 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    className="flex items-center space-x-2 max-[500px]:space-x-0 px-4 py-2 max-[500px]:px-3 text-gray-900 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
-                    <span className="text-sm font-medium">Volgende week</span>
+                    <span className="text-sm font-medium max-[500px]:hidden">Volgende week</span>
                     <ChevronRight className="h-4 w-4" />
                   </button>
                 </div>
@@ -339,7 +339,7 @@ export default function AvailabilityPage() {
 
               {/* Current Week Availability */}
               {currentWeek && (
-                <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-6">
+                <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-6 max-[500px]:p-3">
                   <h3 className="text-lg font-semibold mb-6" style={{ color: '#120309' }}>
                     Beschikbaarheid voor week van {formatWeekRange(currentWeek.weekStart)}
                   </h3>
@@ -372,7 +372,7 @@ export default function AvailabilityPage() {
               )}
 
               {/* Week Overview Grid */}
-              <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-6">
+              <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-6 max-[500px]:p-3">
                 <h3 className="text-lg font-semibold mb-6" style={{ color: '#120309' }}>
                   Overzicht alle weken
                 </h3>

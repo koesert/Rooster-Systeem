@@ -109,6 +109,16 @@ export default function Sidebar() {
         setIsMobileMenuOpen(false);
       },
       allowedRoles: ['all'] // All users can view their availability
+    },
+    {
+      name: 'Vrij vragen',
+      icon: CalendarCheck,
+      path: '/timeoff',
+      onClick: () => {
+        router.push('/timeoff');
+        setIsMobileMenuOpen(false);
+      },
+      allowedRoles: ['all'] // All users can view their time off requests
     }
   ];
 
