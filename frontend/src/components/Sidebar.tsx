@@ -11,12 +11,19 @@ export default function Sidebar() {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
+  const [hasToggled, setHasToggled] = useState(false); // Track if mobile menu was ever toggled
 
   // Handle screen size detection
   useEffect(() => {
     const checkScreenSize = () => {
       if (typeof window !== 'undefined') {
-        setIsDesktop(window.innerWidth >= 1250);
+        const newIsDesktop = window.innerWidth >= 1250;
+        setIsDesktop(newIsDesktop);
+        // Reset mobile menu and toggle state when switching to desktop
+        if (newIsDesktop) {
+          setIsMobileMenuOpen(false);
+          setHasToggled(false);
+        }
       }
     };
 
@@ -54,6 +61,12 @@ export default function Sidebar() {
       document.body.style.overflow = 'unset';
     };
   }, [isMobileMenuOpen]);
+
+  // Handle mobile menu toggle
+  const toggleMobileMenu = () => {
+    setHasToggled(true);
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
 
   // Build navigation items based on user role
   const navigationItems = [
@@ -135,7 +148,7 @@ export default function Sidebar() {
       <div className="mobile-header fixed top-0 left-0 right-0 z-40 h-16 px-4 flex items-center justify-between text-white" style={{ background: 'linear-gradient(90deg, #120309, #090c02)' }}>
         {/* Hamburger Menu Button */}
         <button
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          onClick={toggleMobileMenu}
           className="p-2 rounded-lg transition-all duration-300 cursor-pointer"
           style={{ background: 'linear-gradient(135deg, #d5896f20, #d5896f10)', border: '1px solid rgba(213, 137, 111, 0.2)' }}
         >
@@ -169,10 +182,11 @@ export default function Sidebar() {
       {/* Desktop Sidebar - Always visible on desktop screens */}
       {/* Mobile Sidebar - Slides in from left when menu is open */}
       <div className={`
-        sidebar-main sticky fixed top-0 h-screen text-white w-64 p-4 flex flex-col relative overflow-hidden z-50 transition-transform duration-300 ease-in-out
+        sidebar-main sticky fixed top-0 h-screen text-white w-64 p-4 flex flex-col relative overflow-hidden z-50
+        ${hasToggled ? 'transition-transform duration-300 ease-in-out' : ''}
         ${isDesktop ? 'translate-x-0' : (isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full')}
         desktop-sidebar-visible
-        
+
       `} style={{ background: 'linear-gradient(180deg, #120309, #090c02)' }}>
         {/* Decorative background elements */}
         <div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-10" style={{ background: 'linear-gradient(135deg, #d5896f, #e8eef2)' }}></div>
@@ -242,30 +256,30 @@ export default function Sidebar() {
             ))}
           </ul>
           {/* Logout Button - Always visible at bottom */}
-        <div className="relative z-10 flex-shrink-0 pt-4 border-t border-gray-700/30">
-          <button
-            onClick={handleMobileLogout}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-300 group hover:shadow-lg cursor-pointer"
-            style={{ color: '#e8eef2' }}
-            onMouseEnter={(e) => {
-              const target = e.target as HTMLElement;
-              target.style.background = 'linear-gradient(135deg,rgb(224, 61, 61),rgb(226, 119, 119))';
-              target.style.color = '#ffffff';
-              target.style.transform = 'translateX(4px)';
-            }}
-            onMouseLeave={(e) => {
-              const target = e.target as HTMLElement;
-              target.style.background = 'transparent';
-              target.style.color = '#e8eef2';
-              target.style.transform = 'translateX(0px)';
-            }}
-          >
-            <div className="p-2 rounded-lg transition-all duration-300" style={{ background: 'linear-gradient(135deg,rgba(173, 33, 33, 0.25), #dc262620)' }}>
-              <LogOut size={20} className="text-red-300" />
-            </div>
-            <span className="font-medium">Uitloggen</span>
-          </button>
-        </div>
+          <div className="relative z-10 flex-shrink-0 pt-4 border-t border-gray-700/30">
+            <button
+              onClick={handleMobileLogout}
+              className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-300 group hover:shadow-lg cursor-pointer"
+              style={{ color: '#e8eef2' }}
+              onMouseEnter={(e) => {
+                const target = e.target as HTMLElement;
+                target.style.background = 'linear-gradient(135deg,rgb(224, 61, 61),rgb(226, 119, 119))';
+                target.style.color = '#ffffff';
+                target.style.transform = 'translateX(4px)';
+              }}
+              onMouseLeave={(e) => {
+                const target = e.target as HTMLElement;
+                target.style.background = 'transparent';
+                target.style.color = '#e8eef2';
+                target.style.transform = 'translateX(0px)';
+              }}
+            >
+              <div className="p-2 rounded-lg transition-all duration-300" style={{ background: 'linear-gradient(135deg,rgba(173, 33, 33, 0.25), #dc262620)' }}>
+                <LogOut size={20} className="text-red-300" />
+              </div>
+              <span className="font-medium">Uitloggen</span>
+            </button>
+          </div>
         </nav>
       </div>
 
@@ -284,8 +298,6 @@ export default function Sidebar() {
           .close-button {
             display: block !important;
           }
-          
-
         }
 
         /* Desktop view - screens 1250px and up */
