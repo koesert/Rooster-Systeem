@@ -269,7 +269,7 @@ export default function EmployeesPage() {
                   <tbody>
                     {filteredEmployees.length === 0 ? (
                       <tr>
-                        <td colSpan={3} className="px-6 py-12 text-center">
+                        <td colSpan={4} className="px-6 py-12 text-center">
                           <div className="flex flex-col items-center space-y-3">
                             <Users className="h-12 w-12" style={{ color: '#67697c' }} />
                             <p className="font-medium" style={{ color: '#67697c' }}>

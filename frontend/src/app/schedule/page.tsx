@@ -7,7 +7,7 @@ import { useModal } from '@/contexts/ModalContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
-import { Clock, ChevronLeft, ChevronRight, Edit, Trash2, AlertTriangle, CheckCircle, User, CalendarDays, CalendarPlus, Plus } from 'lucide-react';
+import { Clock, ChevronLeft, ChevronRight, Edit, Trash2, AlertTriangle, CheckCircle, User, CalendarDays, Plus } from 'lucide-react';
 import { formatDate } from '@/utils/dateUtils';
 import { Shift } from '@/types/shift';
 import { Employee } from '@/types/auth';
