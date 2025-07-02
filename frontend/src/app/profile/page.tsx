@@ -10,7 +10,7 @@ import { formatDate } from '@/utils/dateUtils';
 import { User, Edit, Calendar, CalendarCheck, Home, CalendarDays } from 'lucide-react';
 
 export default function ProfilePage() {
-  usePageTitle('Dashboard - Mijn profiel');
+  usePageTitle('Dashboard - Profiel');
 
   const { user, isLoading } = useAuth();
   const router = useRouter();
@@ -51,18 +51,18 @@ export default function ProfilePage() {
                     </div>
                     <div>
                       <h1 className="text-4xl font-bold" style={{ background: 'linear-gradient(135deg, #120309, #67697c)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                        Mijn profiel
+                        Profiel
                       </h1>
                     </div>
                   </div>
 
                   <button
                     onClick={() => router.push('/profile/edit')}
-                    className="flex items-center space-x-2 px-6 py-3 rounded-xl text-white font-semibold transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer"
+                    className="flex items-center space-x-2 px-3 py-3 min-[425px]:px-6 rounded-xl text-white font-semibold transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer"
                     style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}
                   >
                     <Edit className="h-5 w-5" />
-                    <span>Bewerken</span>
+                    <span className="hidden min-[425px]:inline">Bewerken</span>
                   </button>
                 </div>
               </div>
@@ -81,7 +81,7 @@ export default function ProfilePage() {
                 <div className="p-4 rounded-xl" style={{ background: 'linear-gradient(135deg, #e8eef240, #e8eef220)' }}>
                   <div className="flex items-center space-x-3 mb-2">
                     <User className="h-5 w-5" style={{ color: '#d5896f' }} />
-                    <p className="text-sm font-medium" style={{ color: '#67697c' }}>Volledige naam</p>
+                    <p className="text-sm font-medium" style={{ color: '#67697c' }}>Naam</p>
                   </div>
                   <p className="text-lg font-semibold" style={{ color: '#120309' }}>{user.fullName}</p>
                 </div>

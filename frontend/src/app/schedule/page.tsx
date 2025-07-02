@@ -341,11 +341,8 @@ export default function SchedulePage() {
           }}
         >
           <div
-            className="font-medium"
+            className="font-medium text-xs max-[500px]:text-[10px]"
             style={{
-              fontSize: viewType === 'day'
-                ? (shift.totalLanes > 6 ? '14px' : '16px')
-                : (shift.totalLanes > 3 ? '13px' : '15px'),
               lineHeight: '1.2',
               wordBreak: 'break-word',
               overflowWrap: 'break-word',
@@ -355,11 +352,8 @@ export default function SchedulePage() {
             {displayName}
           </div>
           <div
-            className="text-xs opacity-80 mt-1"
+            className="text-xs max-[500px]:text-[9px] opacity-80 mt-1"
             style={{
-              fontSize: viewType === 'day'
-                ? (shift.totalLanes > 6 ? '14px' : '16px')
-                : (shift.totalLanes > 3 ? '13px' : '15px'),
               lineHeight: '1.1',
               wordBreak: 'break-word',
               overflowWrap: 'break-word',
@@ -368,7 +362,7 @@ export default function SchedulePage() {
           >
             {formatTime(shift.startTime)} - {shift.isOpenEnded ? 'einde' : formatTime(shift.endTime!)}
             {((viewType === 'day' && !selectedEmployeeId) || selectedEmployeeId) && (
-              <div className="mt-0.5 text-xs opacity-70">
+              <div className="mt-0.5 text-xs max-[500px]:text-[9px] opacity-70">
                 {(viewType === 'day' && !selectedEmployeeId) ? shift.shiftTypeName : shift.employeeName}
               </div>
             )}
@@ -606,11 +600,11 @@ export default function SchedulePage() {
                   {isManager() && (
                     <button
                       onClick={handleAddShift}
-                      className="flex items-center space-x-2 px-6 py-3 rounded-xl text-white font-semibold transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer"
+                      className="flex items-center space-x-2 px-3 py-3 min-[425px]:px-6 rounded-xl text-white font-semibold transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer"
                       style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}
                     >
                       <Plus className="h-5 w-5" />
-                      <span>Shift</span>
+                      <span className="hidden min-[425px]:inline">Shift</span>
                     </button>
                   )}
                 </div>
@@ -726,15 +720,15 @@ export default function SchedulePage() {
               </div>
             ) : viewType === 'day' ? (
               // Day View - Same grid layout as week view but with custom column widths (1/8 for time, 7/8 for day)
-              <div className="p-6">
+              <div className="p-6 max-[500px]:p-3">
                 <div className="grid gap-px bg-gray-200" style={{ gridTemplateColumns: '1fr 7fr' }}>
                   {/* Time column header */}
-                  <div className="bg-white p-4">
+                  <div className="bg-white p-4 max-[500px]:p-2">
                     <p className="text-sm font-medium text-gray-600">Tijd</p>
                   </div>
 
                   {/* Day header */}
-                  <div className="bg-white p-4 text-center">
+                  <div className="bg-white p-4 max-[500px]:p-2 text-center">
                     <p className="text-lg font-medium text-gray-600 capitalize">
                       {currentDate.toLocaleDateString('nl-NL', { weekday: 'long' })}
                     </p>
@@ -747,7 +741,7 @@ export default function SchedulePage() {
                   {timeSlots.map((time, timeIndex) => (
                     <React.Fragment key={`time-row-${timeIndex}`}>
                       {/* Time label */}
-                      <div className="bg-white p-2 flex items-start" style={{ minHeight: '50px', zIndex: 5 }}>
+                      <div className="bg-white p-2 max-[500px]:p-1 flex items-start" style={{ minHeight: '50px', zIndex: 5 }}>
                         <p className="text-sm text-gray-600 font-medium">{time}</p>
                       </div>
 
@@ -769,10 +763,10 @@ export default function SchedulePage() {
               </div>
             ) : viewType === 'week' ? (
               // Week View
-              <div className="p-6">
+              <div className="p-6 max-[500px]:p-3">
                 <div className="grid grid-cols-8 gap-px bg-gray-200">
                   {/* Time column header */}
-                  <div className="bg-white p-4">
+                  <div className="bg-white p-4 max-[500px]:p-2">
                     <p className="text-sm font-medium text-gray-600">Tijd</p>
                   </div>
 
@@ -787,7 +781,7 @@ export default function SchedulePage() {
                       <div
                         key={index}
                         onClick={() => navigateToDay(date)}
-                        className={`bg-white p-4 text-center cursor-pointer hover:bg-gray-50 transition-colors ${isToday ? 'bg-orange-50' : ''}`}
+                        className={`bg-white p-4 max-[500px]:p-2 text-center cursor-pointer hover:bg-gray-50 transition-colors ${isToday ? 'bg-orange-50' : ''}`}
                         title="Klik om dag weergave te openen"
                       >
                         <p className="text-lg font-medium text-gray-600 capitalize">
@@ -805,7 +799,7 @@ export default function SchedulePage() {
                   {timeSlots.map((time, timeIndex) => (
                     <React.Fragment key={`time-row-${timeIndex}`}>
                       {/* Time label */}
-                      <div className="bg-white p-2 flex items-start" style={{ minHeight: '50px', zIndex: 5 }}>
+                      <div className="bg-white p-2 max-[500px]:p-1 flex items-start" style={{ minHeight: '50px', zIndex: 5 }}>
                         <p className="text-sm text-gray-600 font-medium">{time}</p>
                       </div>
 
@@ -834,13 +828,13 @@ export default function SchedulePage() {
               </div>
             ) : (
               // Month View
-              <div className="p-6">
+              <div className="p-6 max-[500px]:p-3">
                 <div className="grid grid-cols-7 gap-px bg-gray-200 border border-gray-200">
                   {/* Day headers */}
                   {['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag'].map((day) => {
                     const shortDay = getShortDayName(day);
                     return (
-                      <div key={day} className="bg-gray-50 p-4 text-center">
+                      <div key={day} className="bg-gray-50 p-4 max-[500px]:p-2 text-center">
                         <p className="text-lg font-medium text-gray-700 capitalize">
                           <span className="hidden md:inline">{day}</span>
                           <span className="md:hidden">{shortDay}</span>
@@ -857,7 +851,7 @@ export default function SchedulePage() {
 
                     return [...paddingDays, ...days].map((date, index) => {
                       if (!date) {
-                        return <div key={`padding-${index}`} className="bg-gray-50 p-4" />;
+                        return <div key={`padding-${index}`} className="bg-gray-50 p-4 max-[500px]:p-2" />;
                       }
 
                       const isToday = date.toDateString() === new Date().toDateString();
@@ -868,7 +862,7 @@ export default function SchedulePage() {
                         <div
                           key={index}
                           onClick={() => navigateToDay(date)}
-                          className={`bg-white p-4 min-h-[120px] cursor-pointer hover:bg-gray-50 transition-colors ${isToday ? 'bg-orange-50 border-2 border-orange-400' : ''
+                          className={`bg-white p-4 max-[500px]:p-2 min-h-[120px] max-[500px]:min-h-[100px] cursor-pointer hover:bg-gray-50 transition-colors ${isToday ? 'bg-orange-50 border-2 border-orange-400' : ''
                             }`}
                           title="Klik om dag weergave te openen"
                         >

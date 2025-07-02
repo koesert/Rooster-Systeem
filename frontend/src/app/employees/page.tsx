@@ -187,7 +187,7 @@ export default function EmployeesPage() {
                     </div>
                     <div>
                       <h1 className="text-4xl font-bold" style={{ background: 'linear-gradient(135deg, #120309, #67697c)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                        Medewerkers beheren
+                        Medewerkers
                       </h1>
                     </div>
                   </div>
@@ -198,7 +198,7 @@ export default function EmployeesPage() {
                     style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}
                   >
                     <UserPlus className="h-5 w-5" />
-                    <span>Medewerker</span>
+                    <span className="max-[700px]:hidden">Medewerker</span>
                   </button>
                 </div>
 
@@ -261,7 +261,6 @@ export default function EmployeesPage() {
                   <thead style={{ background: 'linear-gradient(135deg, #e8eef240, #e8eef220)' }}>
                     <tr>
                       <th className="px-6 py-4 text-left text-sm font-semibold" style={{ color: '#120309' }}>Naam</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold" style={{ color: '#120309' }}>Gebruikersnaam</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold" style={{ color: '#120309' }}>Functie</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold" style={{ color: '#120309' }}>In dienst sinds</th>
                       <th className="px-6 py-4 text-center text-sm font-semibold" style={{ color: '#120309' }}>Acties</th>
@@ -270,7 +269,7 @@ export default function EmployeesPage() {
                   <tbody>
                     {filteredEmployees.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="px-6 py-12 text-center">
+                        <td colSpan={3} className="px-6 py-12 text-center">
                           <div className="flex flex-col items-center space-y-3">
                             <Users className="h-12 w-12" style={{ color: '#67697c' }} />
                             <p className="font-medium" style={{ color: '#67697c' }}>
@@ -314,9 +313,6 @@ export default function EmployeesPage() {
                                 <p className="font-semibold" style={{ color: '#120309' }}>{employee.fullName}</p>
                               </div>
                             </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="font-medium" style={{ color: '#120309' }}>{employee.username}</span>
                           </td>
                           <td className="px-6 py-4">
                             <span

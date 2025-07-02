@@ -254,7 +254,7 @@ export default function ProfileEditPage() {
                     </div>
                     <div>
                       <h1 className="text-4xl font-bold" style={{ background: 'linear-gradient(135deg, #120309, #67697c)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                        Mijn profiel bewerken
+                        Pofiel bewerken
                       </h1>
                     </div>
                   </div>
