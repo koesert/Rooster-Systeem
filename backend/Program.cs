@@ -102,6 +102,7 @@ builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IShiftService, ShiftService>();
 builder.Services.AddScoped<IAvailabilityService, AvailabilityService>();
+builder.Services.AddScoped<ITimeOffRequestService, TimeOffRequestService>();
 
 // Configure JWT settings programmatically
 // In production, these should be stored in secure configuration
