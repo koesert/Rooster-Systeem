@@ -144,6 +144,13 @@ export default function CreateAvailabilityPage() {
     return `Week ${startDay}-${startMonth} t/m ${endDay}-${endMonth}`;
   };
 
+  const getWeekNumber = (): number => {
+    const startOfWeek = getSelectedWeekStart();
+    const startOfYear = new Date(startOfWeek.getFullYear(), 0, 1);
+    const dayOfYear = Math.floor((startOfWeek.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+    return Math.ceil(dayOfYear / 7);
+  };
+
   const getWeekStatusText = (): string => {
     if (selectedWeekIndex === 0) return 'Huidige week';
     if (selectedWeekIndex === 1) return '1 week vooruit';
@@ -219,10 +226,10 @@ export default function CreateAvailabilityPage() {
         <div className="max-w-4xl mx-auto">
           {/* Header Section */}
           <div className="mb-8">
-            <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8 relative overflow-hidden">
+            <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8 max-[500px]:p-2 relative overflow-hidden">
               {/* Decorative background elements */}
-              <div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-20" style={{ background: 'linear-gradient(135deg, #d5896f, #e8eef2)' }}></div>
-              <div className="absolute bottom-0 left-0 w-24 h-24 rounded-full blur-2xl opacity-15" style={{ background: 'linear-gradient(45deg, #d5896f, #67697c)' }}></div>
+              <div className="absolute top-0 right-0 w-16 h-16 rounded-full blur-3xl opacity-20" style={{ background: 'linear-gradient(135deg, #d5896f, #e8eef2)' }}></div>
+              <div className="absolute bottom-0 left-0 w-12 h-12 rounded-full blur-2xl opacity-15" style={{ background: 'linear-gradient(45deg, #d5896f, #67697c)' }}></div>
 
               <div className="relative z-10">
                 <div className="flex items-center justify-between">
@@ -234,7 +241,7 @@ export default function CreateAvailabilityPage() {
                     >
                       <ArrowLeft className="h-5 w-5" style={{ color: '#67697c' }} />
                     </button>
-                    <div className="p-3 rounded-xl" style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}>
+                    <div className="p-2 rounded-xl" style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}>
                       <CalendarCheck className="h-8 w-8 text-white" />
                     </div>
                     <div>
@@ -271,12 +278,12 @@ export default function CreateAvailabilityPage() {
                   className="flex items-center space-x-2 px-4 py-2 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   <ChevronLeft className="h-4 w-4" />
-                  <span className="text-sm font-medium">Vorige week</span>
+                  <span className="text-sm font-medium max-[500px]:hidden">Vorige week</span>
                 </button>
 
                 <div className="text-center">
                   <h2 className="text-xl font-bold" style={{ color: '#120309' }}>
-                    {getWeekDisplayText()}
+                    Week {getWeekNumber()}
                   </h2>
                   <p className="text-sm" style={{ color: '#67697c' }}>
                     {getWeekStatusText()}
@@ -288,7 +295,7 @@ export default function CreateAvailabilityPage() {
                   disabled={selectedWeekIndex >= 3}
                   className="flex items-center space-x-2 px-4 py-2 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
-                  <span className="text-sm font-medium">Volgende week</span>
+                  <span className="text-sm font-medium max-[500px]:hidden">Volgende week</span>
                   <ChevronRight className="h-4 w-4" />
                 </button>
               </div>
@@ -316,15 +323,13 @@ export default function CreateAvailabilityPage() {
                 </h3>
 
                 {formData.map((day, index) => (
-                  <div key={day.date} className="p-4 border border-gray-200 rounded-xl bg-gray-50/50">
-                    <div className="flex items-start space-x-6">
-                      {/* Day Info */}
-                      <div className="min-w-[140px]">
-                        <h4 className="font-medium" style={{ color: '#120309' }}>
-                          {formatDisplayDate(day.date)}
-                        </h4>
-                      </div>
-
+                  <div key={day.date} className="space-y-2">
+                    {/* Day Info */}
+                    <h4 className="font-medium text-lg" style={{ color: '#120309' }}>
+                      {formatDisplayDate(day.date)}
+                    </h4>
+                    
+                    <div className="p-4 border border-gray-200 rounded-xl bg-gray-50/50">
                       {/* Availability Selection */}
                       <div className="flex-1">
                         <div className="space-y-3">
@@ -343,7 +348,7 @@ export default function CreateAvailabilityPage() {
                                   className="h-4 w-4 text-green-600 border-gray-300 focus:ring-green-500 cursor-pointer"
                                 />
                                 <span className="ml-2 text-sm font-medium text-green-700">
-                                  Beschikbaar
+                                  Ja
                                 </span>
                               </label>
                               <label className="flex items-center cursor-pointer">
@@ -356,7 +361,7 @@ export default function CreateAvailabilityPage() {
                                   className="h-4 w-4 text-red-600 border-gray-300 focus:ring-red-500 cursor-pointer"
                                 />
                                 <span className="ml-2 text-sm font-medium text-red-700">
-                                  Niet beschikbaar
+                                  Nee
                                 </span>
                               </label>
                             </div>
@@ -371,7 +376,7 @@ export default function CreateAvailabilityPage() {
                               id={`notes-${index}`}
                               value={day.notes || ''}
                               onChange={(e) => updateDayAvailability(index, 'notes', e.target.value)}
-                              placeholder="Eventuele opmerkingen..."
+                              placeholder="Opmerkingen..."
                               rows={2}
                               maxLength={500}
                               className="mt-1 block w-full px-3 py-2 text-gray-900 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#d5896f] focus:border-transparent resize-none"
@@ -391,14 +396,14 @@ export default function CreateAvailabilityPage() {
               </div>
 
               {/* Form Actions */}
-              <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200/50">
+              <div className="flex items-center justify-between space-x-4 pt-6 border-t border-gray-200/50">
                 <button
                   onClick={() => router.push('/availability')}
                   disabled={isSubmitting}
-                  className="flex items-center space-x-2 px-6 py-3 rounded-xl border border-gray-300 text-gray-700 font-semibold transition-all duration-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  className="flex items-center space-x-2 max-[500px]:space-x-0 px-6 py-3 max-[500px]:px-3 rounded-xl border border-gray-300 text-gray-700 font-semibold transition-all duration-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   <X className="h-5 w-5" />
-                  <span>Annuleren</span>
+                  <span className="max-[500px]:hidden">Annuleren</span>
                 </button>
 
                 <button
@@ -415,7 +420,7 @@ export default function CreateAvailabilityPage() {
                   ) : (
                     <>
                       <Save className="h-5 w-5" />
-                      <span>Beschikbaarheid opslaan</span>
+                      <span>Opslaan</span>
                     </>
                   )}
                 </button>

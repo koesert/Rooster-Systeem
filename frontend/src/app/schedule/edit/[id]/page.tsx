@@ -112,7 +112,7 @@ export default function EditShiftPage() {
 
     // Employee validation
     if (!formData.employeeId || formData.employeeId === 0) {
-      errors.employeeId = 'Selecteer een medewerker';
+      errors.employeeId = 'Medewerker selecteren';
     }
 
     // Date validation
@@ -367,7 +367,7 @@ export default function EditShiftPage() {
                           target.style.borderColor = fieldErrors.employeeId ? '#fca5a5' : '#d1d5db';
                         }}
                       >
-                        <option value={0}>Selecteer een medewerker</option>
+                        <option value={0}>Medewerker selecteren</option>
                         {employees.map((employee) => (
                           <option key={employee.id} value={employee.id}>
                             {employee.fullName}
@@ -621,15 +621,15 @@ export default function EditShiftPage() {
               </div>
 
               {/* Form Actions */}
-              <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200/50">
+              <div className="flex items-center justify-between space-x-4 pt-6 border-t border-gray-200/50">
                 <button
                   type="button"
                   onClick={() => router.back()}
                   disabled={isSubmitting}
-                  className="flex items-center space-x-2 px-6 py-3 rounded-xl border border-gray-300 text-gray-700 font-semibold transition-all duration-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  className="flex items-center space-x-2 max-[500px]:space-x-0 px-6 py-3 max-[500px]:px-3 rounded-xl border border-gray-300 text-gray-700 font-semibold transition-all duration-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   <X className="h-5 w-5" />
-                  <span>Annuleren</span>
+                  <span className="max-[500px]:hidden">Annuleren</span>
                 </button>
 
                 <button
@@ -646,7 +646,7 @@ export default function EditShiftPage() {
                   ) : (
                     <>
                       <Save className="h-5 w-5" />
-                      <span>Wijzigingen opslaan</span>
+                      <span>Opslaan</span>
                     </>
                   )}
                 </button>

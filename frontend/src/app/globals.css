@@ -51,23 +51,23 @@ body {
     gap: 1rem !important;
     align-items: center !important;
   }
-  
+
   /* Make view type tabs fit content only */
   .layout-main-content .mb-6.flex.items-center.justify-between > div:first-child {
     width: auto !important;
     align-self: center !important;
   }
-  
+
   /* Adjust navigation controls */
   .layout-main-content .mb-6.flex.items-center.justify-between > div:last-child {
     justify-content: center !important;
   }
-  
+
   /* Make employee selection full width */
   .layout-main-content .mb-6.flex.items-center.justify-between > div:nth-child(2) {
     justify-content: center !important;
   }
-  
+
   .layout-main-content {
     padding: 1rem !important;
     padding-top: 5rem !important;
@@ -129,32 +129,38 @@ body {
   /* Shorter day names for week view */
   .layout-main-content .grid.grid-cols-8 .text-lg.font-medium.text-gray-600.capitalize,
   .layout-main-content .grid.grid-cols-7 .text-lg.font-medium.text-gray-700.capitalize {
-    font-size: 0.875rem !important;
+    font-size: 0.75rem !important;
   }
-  
+
   /* Reduce lane width by making grid columns narrower */
   .layout-main-content .grid.grid-cols-8 {
     grid-template-columns: 0.7fr repeat(7, 1fr) !important;
   }
-  
+
   /* Adjust time column padding */
   .layout-main-content .grid.grid-cols-8 > div:first-child,
   .layout-main-content .grid.grid-cols-8 .bg-white.p-2 {
     padding: 0.5rem 0.25rem !important;
-    font-size: 0.75rem !important;
+    font-size: 0.5rem !important;
   }
-  
+
   /* Reduce day cell padding */
-  .layout-main-content .grid.grid-cols-8 .bg-white.p-4,
-  .layout-main-content .grid.grid-cols-7 .bg-gray-50.p-4 {
+  .layout-main-content .grid.grid-cols-8 .bg-white.p,
+  .layout-main-content .grid.grid-cols-7 .bg-gray-50.p {
     padding: 0.75rem 0.25rem !important;
   }
-  
+
   /* Make shift blocks more compact on mobile */
   .layout-main-content .grid.grid-cols-8 .absolute.cursor-pointer {
     padding: 0.25rem !important;
     font-size: 0.75rem !important;
     min-height: 32px !important;
   }
+}
 
+@media (max-width: 400px) {
+  .layout-main-content h1 {
+    font-size: 1.0rem;
+    /* Smaller h1 text on mobile */
+  }
 }

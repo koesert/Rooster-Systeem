@@ -194,7 +194,7 @@ export default function EmployeesPage() {
 
                   <button
                     onClick={handleAddEmployee}
-                    className="flex items-center space-x-2 px-6 py-3 rounded-xl text-white font-semibold transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer"
+                    className="flex items-center space-x-2 max-[700px]:space-x-0 px-6 max-[700px]:px-3 py-3 rounded-xl text-white font-semibold transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer"
                     style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}
                   >
                     <UserPlus className="h-5 w-5" />
@@ -287,11 +287,11 @@ export default function EmployeesPage() {
                               isManager() && (
                                 <button
                                   onClick={handleAddEmployee}
-                                  className="flex items-center space-x-2 px-4 py-2 rounded-lg text-white font-medium transition-all duration-200 hover:scale-105 cursor-pointer"
+                                  className="flex items-center max-[500px]:space-x-0 space-x-2 px-4 max-[500px]:px-3 py-2 rounded-lg text-white font-medium transition-all duration-200 hover:scale-105 cursor-pointer"
                                   style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}
                                 >
                                   <UserPlus className="h-4 w-4" />
-                                  <span>Eerste medewerker toevoegen</span>
+                                  <span className="max-[500px]:hidden">Eerste medewerker toevoegen</span>
                                 </button>
                               )
                             )}
