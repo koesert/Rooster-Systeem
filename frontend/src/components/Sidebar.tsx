@@ -9,6 +9,7 @@ import {
   CalendarDays,
   Menu,
   X,
+  CalendarRange,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
@@ -119,16 +120,16 @@ export default function Sidebar() {
       },
       allowedRoles: ["all"], // All users can view their availability
     },
-    // {
-    //   name: 'Vrij vragen',
-    //   icon: CalendarCheck,
-    //   path: '/timeoff',
-    //   onClick: () => {
-    //     router.push('/timeoff');
-    //     setIsMobileMenuOpen(false);
-    //   },
-    //   allowedRoles: ['all'] // All users can view their time off requests
-    // }
+    {
+      name: 'Vrij vragen',
+      icon: CalendarRange,
+      path: '/timeoff',
+      onClick: () => {
+        router.push('/timeoff');
+        setIsMobileMenuOpen(false);
+      },
+      allowedRoles: ['all'] // All users can view their time off requests
+    }
   ];
 
   // Only add employee management for managers

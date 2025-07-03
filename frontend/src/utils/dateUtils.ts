@@ -123,3 +123,48 @@ export const isValidDateFormat = (dateString: string): boolean => {
     date.getFullYear() === parseInt(year)
   );
 };
+
+/**
+ * Formats date range in Dutch readable format (e.g., "30 juli - 8 augustus")
+ */
+export const formatDateRange = (startDateStr: string, endDateStr: string): string => {
+  const startDate = parseDate(startDateStr);
+  const endDate = parseDate(endDateStr);
+
+  if (!startDate || !endDate) return "";
+
+  const months = [
+    "januari",
+    "februari",
+    "maart",
+    "april",
+    "mei",
+    "juni",
+    "juli",
+    "augustus",
+    "september",
+    "oktober",
+    "november",
+    "december",
+  ];
+
+  const startDay = startDate.getDate();
+  const startMonth = months[startDate.getMonth()];
+  const endDay = endDate.getDate();
+  const endMonth = months[endDate.getMonth()];
+
+  if (startDateStr === endDateStr) {
+    return `${startDay} ${startMonth}`;
+  }
+
+  if (
+    startDate.getMonth() === endDate.getMonth() &&
+    startDate.getFullYear() === endDate.getFullYear()
+  ) {
+    // Same month: "30 - 31 juli"
+    return `${startDay} - ${endDay} ${startMonth}`;
+  } else {
+    // Different months: "30 juli - 8 augustus"
+    return `${startDay} ${startMonth} - ${endDay} ${endMonth}`;
+  }
+};

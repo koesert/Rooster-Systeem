@@ -52,6 +52,62 @@ public class TimeOffRequestController : ControllerBase
     }
 
     /// <summary>
+    /// Update een bestaande vrij aanvraag (alleen eigen pending aanvragen)
+    /// </summary>
+    [HttpPut("{id}")]
+    [Authorize(Policy = "AllRoles")]
+    public async Task<ActionResult<TimeOffRequestResponseDto>> UpdateRequest(int id, [FromBody] CreateTimeOffRequestDto dto)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var employeeId = GetCurrentEmployeeId();
+            var request = await _timeOffRequestService.UpdateRequestAsync(id, employeeId, dto);
+            var response = await _timeOffRequestService.GetRequestByIdAsync(request.Id);
+
+            return Ok(response);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Fout bij bijwerken vrij aanvraag {Id}", id);
+            return StatusCode(500, new { message = "Er is een fout opgetreden bij het bijwerken van de aanvraag" });
+        }
+    }
+
+    /// <summary>
+    /// Verwijdert een vrij aanvraag (alleen eigen pending aanvragen)
+    /// </summary>
+    [HttpDelete("{id}")]
+    [Authorize(Policy = "AllRoles")]
+    public async Task<ActionResult> DeleteRequest(int id)
+    {
+        try
+        {
+            var employeeId = GetCurrentEmployeeId();
+            await _timeOffRequestService.DeleteRequestAsync(id, employeeId);
+
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Fout bij verwijderen vrij aanvraag {Id}", id);
+            return StatusCode(500, new { message = "Er is een fout opgetreden bij het verwijderen van de aanvraag" });
+        }
+    }
+
+    /// <summary>
     /// Haalt alle vrij aanvragen op (managers zien alles, werknemers alleen eigen aanvragen)
     /// </summary>
     [HttpGet]

@@ -18,6 +18,12 @@ import {
   DateRangeInfo,
   UpdateWeekAvailability,
 } from "@/types/availability";
+import {
+  TimeOffRequest,
+  CreateTimeOffRequestDto,
+  UpdateTimeOffRequestStatusDto,
+  TimeOffRequestFilter,
+} from "@/types/timeoff";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
@@ -26,10 +32,7 @@ const API_BASE_URL =
     : "http://localhost:5000/api");
 
 class ApiError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-  ) {
+  constructor(public status: number, message: string) {
     super(message);
     this.name = "ApiError";
   }
@@ -41,7 +44,7 @@ let globalErrorHandler:
   | null = null;
 
 export const setGlobalErrorHandler = (
-  handler: (error: unknown, customMessage?: string) => void,
+  handler: (error: unknown, customMessage?: string) => void
 ) => {
   globalErrorHandler = handler;
 };
@@ -82,7 +85,7 @@ export const setRefreshToken = (token: string | null) => {
 const apiRequest = async (
   url: string,
   options: RequestInit = {},
-  apiOptions: ApiCallOptions = {},
+  apiOptions: ApiCallOptions = {}
 ): Promise<any> => {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -153,7 +156,7 @@ const apiRequest = async (
 // Auth API functions
 export const login = async (
   credentials: LoginRequest,
-  options: ApiCallOptions = {},
+  options: ApiCallOptions = {}
 ): Promise<LoginResponse> => {
   const response = await apiRequest(
     "/auth/login",
@@ -161,7 +164,7 @@ export const login = async (
       method: "POST",
       body: JSON.stringify(credentials),
     },
-    options,
+    options
   );
 
   // Store tokens
@@ -182,7 +185,7 @@ export const logout = async (options: ApiCallOptions = {}): Promise<void> => {
           method: "POST",
           body: JSON.stringify({ refreshToken }),
         },
-        options,
+        options
       );
     } catch (error) {
       // Continue with logout even if API call fails
@@ -234,7 +237,7 @@ export const refreshAccessToken = async (): Promise<boolean> => {
 // Shift API functions
 export const getAllShifts = async (
   filter?: ShiftFilter,
-  options: ApiCallOptions = {},
+  options: ApiCallOptions = {}
 ): Promise<Shift[]> => {
   const params = new URLSearchParams();
 
@@ -257,7 +260,7 @@ export const getAllShifts = async (
 
 export const getShiftById = async (
   id: number,
-  options: ApiCallOptions = {},
+  options: ApiCallOptions = {}
 ): Promise<Shift> => {
   return apiRequest(`/shift/${id}`, {}, options);
 };
@@ -266,14 +269,16 @@ export const getShiftsByEmployee = async (
   employeeId: number,
   startDate?: string,
   endDate?: string,
-  options: ApiCallOptions = {},
+  options: ApiCallOptions = {}
 ): Promise<Shift[]> => {
   const params = new URLSearchParams();
   if (startDate) params.append("startDate", startDate);
   if (endDate) params.append("endDate", endDate);
 
   const queryString = params.toString();
-  const url = `/shift/employee/${employeeId}${queryString ? `?${queryString}` : ""}`;
+  const url = `/shift/employee/${employeeId}${
+    queryString ? `?${queryString}` : ""
+  }`;
 
   return apiRequest(url, {}, options);
 };
@@ -281,7 +286,7 @@ export const getShiftsByEmployee = async (
 export const getMyShifts = async (
   startDate?: string,
   endDate?: string,
-  options: ApiCallOptions = {},
+  options: ApiCallOptions = {}
 ): Promise<Shift[]> => {
   const params = new URLSearchParams();
   if (startDate) params.append("startDate", startDate);
@@ -295,14 +300,14 @@ export const getMyShifts = async (
 
 export const getWeekSchedule = async (
   weekNumber: string,
-  options: ApiCallOptions = {},
+  options: ApiCallOptions = {}
 ): Promise<WeekSchedule> => {
   return apiRequest(`/shift/schedule/week/${weekNumber}`, {}, options);
 };
 
 export const getMonthSchedule = async (
   monthYear: string,
-  options: ApiCallOptions = {},
+  options: ApiCallOptions = {}
 ): Promise<MonthSchedule> => {
   return apiRequest(`/shift/schedule/month/${monthYear}`, {}, options);
 };
@@ -311,7 +316,7 @@ export const getAvailableEmployees = async (
   date: string,
   startTime: string,
   endTime?: string,
-  options: ApiCallOptions = {},
+  options: ApiCallOptions = {}
 ): Promise<Employee[]> => {
   const params = new URLSearchParams();
   params.append("date", date);
@@ -321,13 +326,13 @@ export const getAvailableEmployees = async (
   return apiRequest(
     `/shift/available-employees?${params.toString()}`,
     {},
-    options,
+    options
   );
 };
 
 export const createShift = async (
   shiftData: CreateShiftRequest,
-  options: ApiCallOptions = {},
+  options: ApiCallOptions = {}
 ): Promise<Shift> => {
   return apiRequest(
     "/shift",
@@ -335,14 +340,14 @@ export const createShift = async (
       method: "POST",
       body: JSON.stringify(shiftData),
     },
-    options,
+    options
   );
 };
 
 export const updateShift = async (
   id: number,
   shiftData: UpdateShiftRequest,
-  options: ApiCallOptions = {},
+  options: ApiCallOptions = {}
 ): Promise<Shift> => {
   return apiRequest(
     `/shift/${id}`,
@@ -350,26 +355,26 @@ export const updateShift = async (
       method: "PUT",
       body: JSON.stringify(shiftData),
     },
-    options,
+    options
   );
 };
 
 export const deleteShift = async (
   id: number,
-  options: ApiCallOptions = {},
+  options: ApiCallOptions = {}
 ): Promise<void> => {
   return apiRequest(
     `/shift/${id}`,
     {
       method: "DELETE",
     },
-    options,
+    options
   );
 };
 
 export const checkShiftOverlap = async (
   shiftData: CreateShiftRequest,
-  options: ApiCallOptions = {},
+  options: ApiCallOptions = {}
 ): Promise<{ hasOverlap: boolean }> => {
   return apiRequest(
     "/shift/check-overlap",
@@ -377,13 +382,13 @@ export const checkShiftOverlap = async (
       method: "POST",
       body: JSON.stringify(shiftData),
     },
-    options,
+    options
   );
 };
 
 // Employee API functions
 export const getAllEmployees = async (
-  options: ApiCallOptions = {},
+  options: ApiCallOptions = {}
 ): Promise<Employee[]> => {
   return apiRequest("/employee", {}, options);
 };
@@ -393,7 +398,7 @@ export const getEmployees = getAllEmployees;
 
 export const createEmployee = async (
   employeeData: CreateEmployeeRequest,
-  options: ApiCallOptions = {},
+  options: ApiCallOptions = {}
 ): Promise<Employee> => {
   return apiRequest(
     "/employee",
@@ -401,13 +406,13 @@ export const createEmployee = async (
       method: "POST",
       body: JSON.stringify(employeeData),
     },
-    options,
+    options
   );
 };
 
 export const getEmployeeById = async (
   id: number,
-  options: ApiCallOptions = {},
+  options: ApiCallOptions = {}
 ): Promise<Employee> => {
   return apiRequest(`/employee/${id}`, {}, options);
 };
@@ -415,7 +420,7 @@ export const getEmployeeById = async (
 export const updateEmployee = async (
   id: number,
   employeeData: UpdateEmployeeRequest,
-  options: ApiCallOptions = {},
+  options: ApiCallOptions = {}
 ): Promise<Employee> => {
   return apiRequest(
     `/employee/${id}`,
@@ -423,26 +428,26 @@ export const updateEmployee = async (
       method: "PUT",
       body: JSON.stringify(employeeData),
     },
-    options,
+    options
   );
 };
 
 export const deleteEmployee = async (
   id: number,
-  options: ApiCallOptions = {},
+  options: ApiCallOptions = {}
 ): Promise<void> => {
   return apiRequest(
     `/employee/${id}`,
     {
       method: "DELETE",
     },
-    options,
+    options
   );
 };
 
 export const updateProfile = async (
   profileData: UpdateEmployeeRequest,
-  options: ApiCallOptions = {},
+  options: ApiCallOptions = {}
 ): Promise<Employee> => {
   return apiRequest(
     "/employee/profile",
@@ -450,12 +455,12 @@ export const updateProfile = async (
       method: "PUT",
       body: JSON.stringify(profileData),
     },
-    options,
+    options
   );
 };
 
 export const getCurrentProfile = async (
-  options: ApiCallOptions = {},
+  options: ApiCallOptions = {}
 ): Promise<Employee> => {
   return apiRequest("/employee/profile", {}, options);
 };
@@ -464,14 +469,16 @@ export const getCurrentProfile = async (
 export const getMyAvailability = async (
   startDate?: string,
   endDate?: string,
-  options: ApiCallOptions = {},
+  options: ApiCallOptions = {}
 ): Promise<WeekAvailability[]> => {
   const params = new URLSearchParams();
   if (startDate) params.append("startDate", startDate);
   if (endDate) params.append("endDate", endDate);
 
   const queryString = params.toString();
-  const url = `/availability/my-availability${queryString ? `?${queryString}` : ""}`;
+  const url = `/availability/my-availability${
+    queryString ? `?${queryString}` : ""
+  }`;
 
   return apiRequest(url, {}, options);
 };
@@ -480,21 +487,23 @@ export const getEmployeeAvailability = async (
   employeeId: number,
   startDate?: string,
   endDate?: string,
-  options: ApiCallOptions = {},
+  options: ApiCallOptions = {}
 ): Promise<WeekAvailability[]> => {
   const params = new URLSearchParams();
   if (startDate) params.append("startDate", startDate);
   if (endDate) params.append("endDate", endDate);
 
   const queryString = params.toString();
-  const url = `/availability/employee/${employeeId}${queryString ? `?${queryString}` : ""}`;
+  const url = `/availability/employee/${employeeId}${
+    queryString ? `?${queryString}` : ""
+  }`;
 
   return apiRequest(url, {}, options);
 };
 
 export const updateMyWeekAvailability = async (
   updateData: UpdateWeekAvailability,
-  options: ApiCallOptions = {},
+  options: ApiCallOptions = {}
 ): Promise<WeekAvailability> => {
   return apiRequest(
     "/availability/my-availability/week",
@@ -502,35 +511,133 @@ export const updateMyWeekAvailability = async (
       method: "PUT",
       body: JSON.stringify(updateData),
     },
-    options,
+    options
   );
 };
 
 export const getMyWeekAvailability = async (
   weekStart: string,
-  options: ApiCallOptions = {},
+  options: ApiCallOptions = {}
 ): Promise<WeekAvailability> => {
   return apiRequest(
     `/availability/my-availability/week/${weekStart}`,
     {},
-    options,
+    options
   );
 };
 
 export const getEmployeeWeekAvailability = async (
   employeeId: number,
   weekStart: string,
-  options: ApiCallOptions = {},
+  options: ApiCallOptions = {}
 ): Promise<WeekAvailability> => {
   return apiRequest(
     `/availability/employee/${employeeId}/week/${weekStart}`,
     {},
-    options,
+    options
   );
 };
 
 export const getAvailabilityDateRange = async (
-  options: ApiCallOptions = {},
+  options: ApiCallOptions = {}
 ): Promise<DateRangeInfo> => {
   return apiRequest("/availability/date-range", {}, options);
+};
+
+// TimeOff API functions
+export const getAllTimeOffRequests = async (
+  filter?: TimeOffRequestFilter,
+  options: ApiCallOptions = {}
+): Promise<TimeOffRequest[]> => {
+  const params = new URLSearchParams();
+
+  if (filter) {
+    if (filter.employeeId !== undefined)
+      params.append("employeeId", filter.employeeId.toString());
+    if (filter.status) params.append("status", filter.status);
+    if (filter.fromDate) params.append("fromDate", filter.fromDate);
+    if (filter.toDate) params.append("toDate", filter.toDate);
+  }
+
+  const queryString = params.toString();
+  const url = `/TimeOffRequest${queryString ? `?${queryString}` : ""}`;
+
+  return apiRequest(url, {}, options);
+};
+
+export const getTimeOffRequestById = async (
+  id: number,
+  options: ApiCallOptions = {}
+): Promise<TimeOffRequest> => {
+  return apiRequest(`/TimeOffRequest/${id}`, {}, options);
+};
+
+export const createTimeOffRequest = async (
+  requestData: CreateTimeOffRequestDto,
+  options: ApiCallOptions = {}
+): Promise<TimeOffRequest> => {
+  return apiRequest(
+    "/TimeOffRequest",
+    {
+      method: "POST",
+      body: JSON.stringify(requestData),
+    },
+    options
+  );
+};
+
+export const updateTimeOffRequestStatus = async (
+  id: number,
+  statusData: UpdateTimeOffRequestStatusDto,
+  options: ApiCallOptions = {}
+): Promise<void> => {
+  return apiRequest(
+    `/TimeOffRequest/${id}/status`,
+    {
+      method: "PUT",
+      body: JSON.stringify(statusData),
+    },
+    options
+  );
+};
+
+export const cancelTimeOffRequest = async (
+  id: number,
+  options: ApiCallOptions = {}
+): Promise<void> => {
+  return apiRequest(
+    `/TimeOffRequest/${id}/cancel`,
+    {
+      method: "PUT",
+    },
+    options
+  );
+};
+
+export const updateTimeOffRequest = async (
+  id: number,
+  requestData: CreateTimeOffRequestDto,
+  options: ApiCallOptions = {}
+): Promise<TimeOffRequest> => {
+  return apiRequest(
+    `/TimeOffRequest/${id}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(requestData),
+    },
+    options
+  );
+};
+
+export const deleteTimeOffRequest = async (
+  id: number,
+  options: ApiCallOptions = {}
+): Promise<void> => {
+  return apiRequest(
+    `/TimeOffRequest/${id}`,
+    {
+      method: "DELETE",
+    },
+    options
+  );
 };

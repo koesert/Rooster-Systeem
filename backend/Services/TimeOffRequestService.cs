@@ -186,6 +186,32 @@ public class TimeOffRequestService : ITimeOffRequestService
         _logger.LogInformation("Vrij aanvraag {RequestId} geannuleerd door werknemer {EmployeeId}", id, employeeId);
     }
 
+    public async Task DeleteRequestAsync(int id, int employeeId)
+    {
+        var request = await _context.TimeOffRequests
+            .FirstOrDefaultAsync(r => r.Id == id);
+
+        if (request == null)
+        {
+            throw new InvalidOperationException("Aanvraag niet gevonden");
+        }
+
+        if (request.EmployeeId != employeeId)
+        {
+            throw new InvalidOperationException("Je kunt alleen je eigen aanvragen verwijderen");
+        }
+
+        if (request.Status != TimeOffStatus.Pending)
+        {
+            throw new InvalidOperationException("Alleen aanvragen met status 'Pending' kunnen worden verwijderd");
+        }
+
+        _context.TimeOffRequests.Remove(request);
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Vrij aanvraag {Id} verwijderd door werknemer {EmployeeId}", id, employeeId);
+    }
+
     public async Task<bool> HasOverlappingRequestsAsync(int employeeId, DateTime startDate, DateTime endDate, int? excludeRequestId = null)
     {
         var query = _context.TimeOffRequests
@@ -220,5 +246,66 @@ public class TimeOffRequestService : ITimeOffRequestService
             CreatedAt = request.CreatedAt.ToString("dd-MM-yyyy"),
             UpdatedAt = request.UpdatedAt.ToString("dd-MM-yyyy")
         };
+    }
+
+    public async Task<TimeOffRequest> UpdateRequestAsync(int id, int employeeId, CreateTimeOffRequestDto dto)
+    {
+        var request = await _context.TimeOffRequests.FindAsync(id);
+
+        if (request == null)
+        {
+            throw new InvalidOperationException("Aanvraag niet gevonden");
+        }
+
+        // Check access: alleen eigen aanvragen kunnen worden bewerkt
+        if (request.EmployeeId != employeeId)
+        {
+            throw new InvalidOperationException("Je kunt alleen je eigen aanvragen bewerken");
+        }
+
+        // Alleen pending aanvragen kunnen worden bewerkt
+        if (request.Status != TimeOffStatus.Pending)
+        {
+            throw new InvalidOperationException("Alleen aanvragen met status 'Aangevraagd' kunnen worden bewerkt");
+        }
+
+        // Parse the date strings
+        var startDate = DateTimeExtensions.ParseAsUtc(dto.StartDate, "dd-MM-yyyy");
+        var endDate = DateTimeExtensions.ParseAsUtc(dto.EndDate, "dd-MM-yyyy");
+
+        // Validatie: einddatum moet na of gelijk aan startdatum zijn
+        if (endDate < startDate)
+        {
+            throw new InvalidOperationException("Einddatum moet na of gelijk aan startdatum zijn");
+        }
+
+        // Validatie: aanvraag moet minimaal 2 weken van tevoren
+        var today = DateTime.UtcNow.Date;
+        var minimumStartDate = today.AddDays(14);
+
+        if (startDate.Date < minimumStartDate)
+        {
+            throw new InvalidOperationException("Vrij moet minimaal 2 weken van tevoren worden aangevraagd");
+        }
+
+        // Check voor overlappende aanvragen (exclusief huidige aanvraag)
+        var hasOverlap = await HasOverlappingRequestsAsync(employeeId, startDate, endDate, id);
+        if (hasOverlap)
+        {
+            throw new InvalidOperationException("Je hebt al een vrij aanvraag voor deze periode");
+        }
+
+        // Update de aanvraag
+        request.StartDate = startDate.EnsureUtc();
+        request.EndDate = endDate.EnsureUtc();
+        request.Reason = dto.Reason;
+        request.UpdatedAt = DateTimeExtensions.UtcNow;
+
+        _context.TimeOffRequests.Update(request);
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Vrij aanvraag {Id} bijgewerkt voor werknemer {EmployeeId}", id, employeeId);
+
+        return request;
     }
 }
