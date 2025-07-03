@@ -1,51 +1,58 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { useError } from "@/contexts/ErrorContext";
-import { usePageTitle } from "@/hooks/usePageTitle";
 import { useModal } from "@/contexts/ModalContext";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import Sidebar from "@/components/Sidebar";
 import LoadingScreen from "@/components/LoadingScreen";
+import { formatDate } from "@/utils/dateUtils";
 import {
   ArrowLeft,
-  Calendar,
+  CalendarCheck,
   User,
+  Calendar,
   Clock,
+  FileText,
+  Edit,
+  Trash2,
+  AlertTriangle,
   CheckCircle,
   XCircle,
-  X,
-  Edit,
   MessageSquare,
-  AlertTriangle,
-  Check,
 } from "lucide-react";
-import {
-  TimeOffRequest,
-  TimeOffStatus,
-  UpdateTimeOffRequestStatusDto,
-  getTimeOffStatusText,
-  getTimeOffStatusColor,
-} from "@/types/timeoff";
 import * as api from "@/lib/api";
-import { fromInputDateFormat } from "@/utils/dateUtils";
+
+// Types voor vrij aanvragen
+interface TimeOffRequest {
+  id: number;
+  employeeId: number;
+  employeeName: string;
+  status: string;
+  reason: string;
+  startDate: string;
+  endDate: string;
+  approvedBy?: number;
+  approverName?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export default function TimeOffDetailPage() {
   const params = useParams();
   const requestId = parseInt(params.id as string);
-
-  usePageTitle("Dashboard - Vrij aanvraag details");
-
   const { user, isLoading, isManager } = useAuth();
-  const { showApiError } = useError();
-  const { showModal, showAlert, showConfirm, hideModal } = useModal();
+  const { showConfirm, showAlert } = useModal();
   const router = useRouter();
 
-  // State
   const [request, setRequest] = useState<TimeOffRequest | null>(null);
   const [isLoadingRequest, setIsLoadingRequest] = useState(true);
-  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  usePageTitle(
+    "Vrij aanvraag"
+  );
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -56,145 +63,203 @@ export default function TimeOffDetailPage() {
 
   // Load request data
   useEffect(() => {
-    if (user && requestId) {
+    if (user) {
       loadRequest();
     }
   }, [user, requestId]);
 
   const loadRequest = async () => {
+    setIsLoadingRequest(true);
+    setError(null);
     try {
-      setIsLoadingRequest(true);
-      const data = await api.getTimeOffRequestById(requestId);
-
-      // Check access: non-managers can only view their own requests
-      if (!isManager() && data.employeeId !== user?.id) {
-        router.push("/timeoff");
-        return;
+      const requestData = await api.getTimeOffRequestById(requestId, {
+        showErrors: false,
+      });
+      setRequest(requestData);
+    } catch (error: any) {
+      console.error("Error loading time off request:", error);
+      if (error.status === 404) {
+        setError("Vrij aanvraag niet gevonden");
+      } else if (error.status === 403) {
+        setError("Je hebt geen toegang tot deze vrij aanvraag");
+      } else {
+        setError(
+          "Er is een fout opgetreden bij het laden van de vrij aanvraag"
+        );
       }
-
-      setRequest(data);
-    } catch (error) {
-      showApiError(
-        error,
-        "Er is een fout opgetreden bij het laden van de aanvraag"
-      );
-      router.push("/timeoff");
     } finally {
       setIsLoadingRequest(false);
     }
   };
 
-  const handleUpdateStatus = async (newStatus: "Approved" | "Rejected") => {
-    if (!request || !isManager()) return;
-
-    const statusText = newStatus === "Approved" ? "goedkeuren" : "afkeuren";
-    showConfirm({
-      title: `Weet je zeker dat je deze aanvraag wilt ${statusText}?`,
-      message: "Deze actie kan niet ongedaan worden gemaakt.",
-      confirmText: `${newStatus === "Approved" ? "Goedkeuren" : "Afkeuren"}`,
-      variant: newStatus === "Approved" ? "success" : "danger",
-      onConfirm: async () => {
-        try {
-          setIsUpdatingStatus(true);
-
-          const statusData: UpdateTimeOffRequestStatusDto = { status: newStatus };
-          await api.updateTimeOffRequestStatus(request.id, statusData);
-
-          // Reload request to get updated data
-          await loadRequest();
-
-          showAlert({
-            title: "Succes",
-            message: `Aanvraag ${newStatus === "Approved" ? "goedgekeurd" : "afgekeurd"}`
-          });
-        } catch (error) {
-          showApiError(
-            error,
-            `Er is een fout opgetreden bij het ${statusText} van de aanvraag`
-          );
-        } finally {
-          setIsUpdatingStatus(false);
-        }
-      }
-    });
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "approved":
+        return {
+          bg: "bg-green-50",
+          border: "border-green-200",
+          text: "text-green-800",
+          icon: <CheckCircle className="h-5 w-5 text-green-600" />,
+        };
+      case "rejected":
+        return {
+          bg: "bg-red-50",
+          border: "border-red-200",
+          text: "text-red-800",
+          icon: <XCircle className="h-5 w-5 text-red-600" />,
+        };
+      case "pending":
+        return {
+          bg: "bg-yellow-50",
+          border: "border-yellow-200",
+          text: "text-yellow-800",
+          icon: <Clock className="h-5 w-5 text-yellow-600" />,
+        };
+      case "cancelled":
+        return {
+          bg: "bg-gray-50",
+          border: "border-gray-200",
+          text: "text-gray-800",
+          icon: <XCircle className="h-5 w-5 text-gray-600" />,
+        };
+      default:
+        return {
+          bg: "bg-gray-50",
+          border: "border-gray-200",
+          text: "text-gray-800",
+          icon: <Clock className="h-5 w-5 text-gray-600" />,
+        };
+    }
   };
 
-  const handleCancelRequest = async () => {
-    if (!request || request.employeeId !== user?.id) return;
+  const getStatusText = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "approved":
+        return "Goedgekeurd";
+      case "rejected":
+        return "Afgewezen";
+      case "pending":
+        return "In behandeling";
+      case "cancelled":
+        return "Geannuleerd";
+      default:
+        return status;
+    }
+  };
 
-    showConfirm({
-      title: "Weet je zeker dat je deze aanvraag wilt annuleren?",
-      message: "Deze actie kan niet ongedaan worden gemaakt.",
-      confirmText: "Annuleren",
-      variant: "danger",
-      onConfirm: async () => {
-        try {
-          setIsUpdatingStatus(true);
-          await api.cancelTimeOffRequest(request.id);
-
-          // Reload request to get updated data
-          await loadRequest();
-
-          showAlert({
-            title: "Succes",
-            message: "Aanvraag geannuleerd"
-          });
-        } catch (error) {
-          showApiError(
-            error,
-            "Er is een fout opgetreden bij het annuleren van de aanvraag"
-          );
-        } finally {
-          setIsUpdatingStatus(false);
-        }
-      }
+  const formatDateLong = (dateString: string): string => {
+    const [day, month, year] = dateString.split("-");
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    return date.toLocaleDateString("nl-NL", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   };
 
   const handleEdit = () => {
+    // Managers can edit all requests, employees can only edit their own pending requests
     if (
-      request &&
-      request.status === TimeOffStatus.Pending &&
-      request.employeeId === user?.id
+      !isManager() &&
+      (request?.employeeId !== user?.id || request?.status !== "Pending")
     ) {
-      router.push(`/timeoff/edit/${request.id}`);
+      showAlert({
+        title: "Bewerken niet mogelijk",
+        message: isManager()
+          ? "Alleen managers kunnen alle vrij aanvragen bewerken."
+          : "Je kunt alleen je eigen aanvragen bewerken zolang ze nog niet behandeld zijn.",
+        confirmText: "OK",
+        icon: <AlertTriangle className="h-6 w-6 text-red-600" />,
+      });
+      return;
     }
+    router.push(`/timeoff/edit/${requestId}`);
   };
 
-  const getStatusIcon = (status: TimeOffStatus) => {
-    switch (status) {
-      case TimeOffStatus.Pending:
-        return <Clock className="h-6 w-6" />;
-      case TimeOffStatus.Approved:
-        return <CheckCircle className="h-6 w-6" />;
-      case TimeOffStatus.Rejected:
-        return <XCircle className="h-6 w-6" />;
-      case TimeOffStatus.Cancelled:
-        return <X className="h-6 w-6" />;
-      default:
-        return <AlertTriangle className="h-6 w-6" />;
+  const handleDelete = () => {
+    if (!request) return;
+
+    // Managers can delete all requests, employees can only delete their own pending requests
+    if (
+      !isManager() &&
+      (request?.employeeId !== user?.id || request?.status !== "Pending")
+    ) {
+      showAlert({
+        title: "Verwijderen niet mogelijk",
+        message: isManager()
+          ? "Alleen managers kunnen alle vrij aanvragen verwijderen."
+          : "Je kunt alleen je eigen aanvragen verwijderen zolang ze nog niet behandeld zijn.",
+        confirmText: "OK",
+        icon: <AlertTriangle className="h-6 w-6 text-red-600" />,
+      });
+      return;
     }
+
+    showConfirm({
+      title: "Vrij aanvraag verwijderen",
+      message: `Weet je zeker dat je de vrij aanvraag van "${request.employeeName}" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.`,
+      confirmText: "Ja, verwijderen",
+      cancelText: "Annuleren",
+      variant: "danger",
+      icon: <AlertTriangle className="h-6 w-6 text-red-600" />,
+      onConfirm: async () => {
+        try {
+          await api.deleteTimeOffRequest(request.id, { showErrors: true });
+
+          showAlert({
+            title: "Vrij aanvraag verwijderd",
+            message: `De vrij aanvraag van ${request.employeeName} is succesvol verwijderd.`,
+            confirmText: "OK",
+            icon: <CheckCircle className="h-6 w-6 text-green-600" />,
+          });
+
+          router.push("/timeoff");
+        } catch (error) {
+          console.error("Error deleting time off request:", error);
+        }
+      },
+    });
   };
 
   if (isLoading || isLoadingRequest) {
-    return <LoadingScreen message="Aanvraag laden" />;
+    return <LoadingScreen message="Vrij aanvraag laden" />;
   }
 
-  if (!user || !request) {
+  if (!user) {
     return null;
   }
 
-  const startDate = new Date(fromInputDateFormat(request.startDate));
-  const endDate = new Date(fromInputDateFormat(request.endDate));
-  const dayCount =
-    Math.ceil(
-      (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
-    ) + 1;
-  const canEdit =
-    request.status === TimeOffStatus.Pending && request.employeeId === user?.id;
-  const canCancel =
-    request.status === TimeOffStatus.Pending && request.employeeId === user?.id;
-  const canManage = isManager() && request.status === TimeOffStatus.Pending;
+  if (error || !request) {
+    return (
+      <div
+        className="flex min-h-screen"
+        style={{
+          background: "linear-gradient(135deg, #e8eef2 0%, #f5f7fa 100%)",
+        }}
+      >
+        <Sidebar />
+        <main className="layout-main-content overflow-y-auto">
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8 text-center">
+              <AlertTriangle className="h-16 w-16 mx-auto mb-4 text-red-600" />
+              <h1 className="text-2xl font-bold mb-4 text-gray-900">
+                {error || "Vrij aanvraag niet gevonden"}
+              </h1>
+              <button
+                onClick={() => router.push("/timeoff")}
+                className="px-6 py-3 bg-gray-600 text-white rounded-xl font-semibold hover:bg-gray-700 transition-colors cursor-pointer"
+              >
+                Terug naar vrij aanvragen
+              </button>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  const statusInfo = getStatusColor(request.status);
 
   return (
     <div
@@ -225,11 +290,11 @@ export default function TimeOffDetailPage() {
               ></div>
 
               <div className="relative z-10">
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
                     <button
                       onClick={() => router.push("/timeoff")}
-                      className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200"
+                      className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200 cursor-pointer"
                       title="Terug naar vrij aanvragen"
                     >
                       <ArrowLeft
@@ -244,11 +309,11 @@ export default function TimeOffDetailPage() {
                           "linear-gradient(135deg, #d5896f, #d5896f90)",
                       }}
                     >
-                      <Calendar className="h-8 w-8 text-white" />
+                      <CalendarCheck className="h-8 w-8 text-white" />
                     </div>
                     <div>
                       <h1
-                        className="text-4xl font-bold max-[500px]:text-2xl"
+                        className="text-4xl font-bold"
                         style={{
                           background:
                             "linear-gradient(135deg, #120309, #67697c)",
@@ -256,83 +321,31 @@ export default function TimeOffDetailPage() {
                           WebkitTextFillColor: "transparent",
                         }}
                       >
-                        Vrij aanvraag #{request.id}
+                        Vrij aanvraag
                       </h1>
                     </div>
                   </div>
 
-                  {/* Action Buttons */}
-                  <div className="flex items-center space-x-2">
-                    {canEdit && (
-                      <button
-                        onClick={handleEdit}
-                        className="flex items-center space-x-2 px-4 py-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors duration-200"
-                        disabled={isUpdatingStatus}
-                      >
-                        <Edit
-                          className="h-4 w-4"
-                          style={{ color: "#d5896f" }}
-                        />
-                        <span
-                          className="text-sm font-medium max-[700px]:hidden"
-                          style={{ color: "#d5896f" }}
+                  {(isManager() || (request?.employeeId === user?.id && request?.status === "Pending")) && (
+                    <div className="flex flex-col space-y-2">
+                      {(isManager() || (request?.employeeId === user?.id && request?.status === "Pending")) && (
+                        <button
+                          onClick={handleEdit}
+                          className="flex items-center justify-center space-x-2 max-[500px]:space-x-0 px-4 max-[500px]:px-3 py-2 rounded-lg bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors cursor-pointer"
                         >
-                          Bewerken
-                        </span>
-                      </button>
-                    )}
-
-                    {canCancel && (
-                      <button
-                        onClick={handleCancelRequest}
-                        className="flex items-center space-x-2 px-4 py-2 rounded-xl border border-red-200 hover:bg-red-50 transition-colors duration-200"
-                        disabled={isUpdatingStatus}
-                      >
-                        <X className="h-4 w-4 text-red-500" />
-                        <span className="text-sm font-medium text-red-500 max-[700px]:hidden">
-                          Annuleren
-                        </span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Status Badge */}
-                <div className="flex items-center space-x-3 mb-6">
-                  <div
-                    className="flex items-center space-x-2 px-4 py-2 rounded-xl"
-                    style={{
-                      backgroundColor: `${getTimeOffStatusColor(
-                        request.status as TimeOffStatus
-                      )}20`,
-                      border: `1px solid ${getTimeOffStatusColor(
-                        request.status as TimeOffStatus
-                      )}40`,
-                    }}
-                  >
-                    <div
-                      style={{
-                        color: getTimeOffStatusColor(
-                          request.status as TimeOffStatus
-                        ),
-                      }}
-                    >
-                      {getStatusIcon(request.status as TimeOffStatus)}
-                    </div>
-                    <span
-                      className="font-semibold"
-                      style={{
-                        color: getTimeOffStatusColor(
-                          request.status as TimeOffStatus
-                        ),
-                      }}
-                    >
-                      {getTimeOffStatusText(request.status as TimeOffStatus)}
-                    </span>
-                  </div>
-                  {request.approverName && (
-                    <div className="text-sm" style={{ color: "#67697c" }}>
-                      door {request.approverName}
+                          <Edit className="h-4 w-4" />
+                          <span className="max-[500px]:hidden">Bewerken</span>
+                        </button>
+                      )}
+                      {isManager() && (
+                        <button
+                          onClick={handleDelete}
+                          className="flex items-center justify-center space-x-2 max-[500px]:space-x-0 px-4 max-[500px]:px-3 py-2 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="max-[500px]:hidden">Verwijderen</span>
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -340,236 +353,187 @@ export default function TimeOffDetailPage() {
             </div>
           </div>
 
-          {/* Main Content */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Left Column - Request Details */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Employee Info */}
-              <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-6">
-                <div className="flex items-center space-x-3 mb-4">
-                  <div
-                    className="p-2 rounded-lg"
-                    style={{
-                      background: "linear-gradient(135deg, #d5896f, #d5896f90)",
-                    }}
-                  >
-                    <User className="h-5 w-5 text-white" />
-                  </div>
-                  <h3
-                    className="text-lg font-semibold"
-                    style={{ color: "#120309" }}
-                  >
-                    Medewerker informatie
-                  </h3>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="font-medium" style={{ color: "#67697c" }}>
-                      Naam:
-                    </span>
-                    <span style={{ color: "#120309" }}>
-                      {request.employeeName}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-medium" style={{ color: "#67697c" }}>
-                      Aangemaakt:
-                    </span>
-                    <span style={{ color: "#120309" }}>
-                      {request.createdAt}
-                    </span>
-                  </div>
-                  {request.updatedAt !== request.createdAt && (
-                    <div className="flex justify-between">
-                      <span
-                        className="font-medium"
-                        style={{ color: "#67697c" }}
-                      >
-                        Laatst bijgewerkt:
-                      </span>
-                      <span style={{ color: "#120309" }}>
-                        {request.updatedAt}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Period Details */}
-              <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-6">
-                <div className="flex items-center space-x-3 mb-4">
-                  <div
-                    className="p-2 rounded-lg"
-                    style={{
-                      background: "linear-gradient(135deg, #d5896f, #d5896f90)",
-                    }}
-                  >
-                    <Calendar className="h-5 w-5 text-white" />
-                  </div>
-                  <h3
-                    className="text-lg font-semibold"
-                    style={{ color: "#120309" }}
-                  >
-                    Periode details
-                  </h3>
-                </div>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <span
-                        className="block text-sm font-medium mb-1"
-                        style={{ color: "#67697c" }}
-                      >
-                        Startdatum
-                      </span>
-                      <div
-                        className="text-lg font-semibold"
-                        style={{ color: "#120309" }}
-                      >
-                        {request.startDate}
-                      </div>
-                    </div>
-                    <div>
-                      <span
-                        className="block text-sm font-medium mb-1"
-                        style={{ color: "#67697c" }}
-                      >
-                        Einddatum
-                      </span>
-                      <div
-                        className="text-lg font-semibold"
-                        style={{ color: "#120309" }}
-                      >
-                        {request.endDate}
-                      </div>
-                    </div>
-                  </div>
-                  <div
-                    className="p-4 rounded-xl"
-                    style={{ backgroundColor: "#d5896f10" }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span
-                        className="font-medium"
-                        style={{ color: "#67697c" }}
-                      >
-                        Totaal aantal dagen:
-                      </span>
-                      <span
-                        className="text-xl font-bold"
-                        style={{ color: "#d5896f" }}
-                      >
-                        {dayCount} {dayCount === 1 ? "dag" : "dagen"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Reason */}
-              <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-6">
-                <div className="flex items-center space-x-3 mb-4">
-                  <div
-                    className="p-2 rounded-lg"
-                    style={{
-                      background: "linear-gradient(135deg, #d5896f, #d5896f90)",
-                    }}
-                  >
-                    <MessageSquare className="h-5 w-5 text-white" />
-                  </div>
-                  <h3
-                    className="text-lg font-semibold"
-                    style={{ color: "#120309" }}
-                  >
-                    Reden
-                  </h3>
-                </div>
+          {/* Request Details */}
+          <div className="space-y-6">
+            {/* Status Section */}
+            <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-6">
+              <div className="flex items-center space-x-4">
                 <div
-                  className="p-4 rounded-xl bg-gray-50 whitespace-pre-wrap"
-                  style={{ color: "#120309" }}
+                  className={`p-4 rounded-xl ${statusInfo.bg} ${statusInfo.border} border-2`}
                 >
-                  {request.reason}
+                  {statusInfo.icon}
+                </div>
+                <div>
+                  <h2
+                    className="text-xl font-semibold"
+                    style={{ color: "#120309" }}
+                  >
+                    Status:{" "}
+                    <span className={statusInfo.text}>
+                      {getStatusText(request.status)}
+                    </span>
+                  </h2>
+                  {request.approverName && (
+                    <p className="text-sm mt-1" style={{ color: "#67697c" }}>
+                      {request.status.toLowerCase() === "approved"
+                        ? "Goedgekeurd"
+                        : "Behandeld"}{" "}
+                      door: {request.approverName}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Right Column - Manager Actions */}
-            {canManage && (
-              <div className="space-y-6">
-                <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-6">
-                  <h3
-                    className="text-lg font-semibold mb-4"
+            {/* Request Information */}
+            <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-6">
+              <h3
+                className="text-xl font-semibold mb-6"
+                style={{ color: "#120309" }}
+              >
+                Aanvraag informatie
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Employee Info */}
+                <div
+                  className="p-4 rounded-xl"
+                  style={{
+                    background: "linear-gradient(135deg, #e8eef240, #e8eef220)",
+                  }}
+                >
+                  <div className="flex items-center space-x-3 mb-2">
+                    <User className="h-5 w-5" style={{ color: "#d5896f" }} />
+                    <p
+                      className="text-sm font-medium"
+                      style={{ color: "#67697c" }}
+                    >
+                      Medewerker
+                    </p>
+                  </div>
+                  <p
+                    className="text-lg font-semibold"
                     style={{ color: "#120309" }}
                   >
-                    Manager acties
-                  </h3>
-                  <div className="space-y-3">
-                    <button
-                      onClick={() => handleUpdateStatus("Approved")}
-                      disabled={isUpdatingStatus}
-                      className="w-full flex items-center justify-center space-x-2 py-3 px-4 rounded-xl text-white font-medium transition-all duration-200 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                      style={{
-                        background: isUpdatingStatus
-                          ? "#10b98180"
-                          : "linear-gradient(135deg, #10b981, #059669)",
-                      }}
-                    >
-                      <CheckCircle className="h-5 w-5" />
-                      <span>
-                        {isUpdatingStatus ? "Verwerken..." : "Goedkeuren"}
-                      </span>
-                    </button>
+                    {request.employeeName}
+                  </p>
+                </div>
 
-                    <button
-                      onClick={() => handleUpdateStatus("Rejected")}
-                      disabled={isUpdatingStatus}
-                      className="w-full flex items-center justify-center space-x-2 py-3 px-4 rounded-xl text-white font-medium transition-all duration-200 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                      style={{
-                        background: isUpdatingStatus
-                          ? "#ef444480"
-                          : "linear-gradient(135deg, #ef4444, #dc2626)",
-                      }}
+                {/* Period Info */}
+                <div
+                  className="p-4 rounded-xl"
+                  style={{
+                    background: "linear-gradient(135deg, #e8eef240, #e8eef220)",
+                  }}
+                >
+                  <div className="flex items-center space-x-3 mb-2">
+                    <Calendar
+                      className="h-5 w-5"
+                      style={{ color: "#d5896f" }}
+                    />
+                    <p
+                      className="text-sm font-medium"
+                      style={{ color: "#67697c" }}
                     >
-                      <XCircle className="h-5 w-5" />
-                      <span>
-                        {isUpdatingStatus ? "Verwerken..." : "Afkeuren"}
-                      </span>
-                    </button>
+                      Periode
+                    </p>
                   </div>
-
-                  <div className="mt-4 p-3 rounded-xl bg-blue-50">
-                    <p className="text-sm" style={{ color: "#1e40af" }}>
-                      <strong>Let op:</strong> Deze actie kan niet ongedaan
-                      worden gemaakt. De medewerker zal op de hoogte worden
-                      gesteld van de beslissing.
+                  <div className="space-y-1">
+                    <p
+                      className="text-lg font-semibold"
+                      style={{ color: "#120309" }}
+                    >
+                      {formatDateLong(request.startDate)}
+                    </p>
+                    <p className="text-sm" style={{ color: "#67697c" }}>
+                      tot
+                    </p>
+                    <p
+                      className="text-lg font-semibold"
+                      style={{ color: "#120309" }}
+                    >
+                      {formatDateLong(request.endDate)}
                     </p>
                   </div>
                 </div>
-              </div>
-            )}
 
-            {/* Info Panel for Non-Managers */}
-            {!canManage && request.status === TimeOffStatus.Pending && (
-              <div className="space-y-6">
-                <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-6">
-                  <h3
-                    className="text-lg font-semibold mb-4"
-                    style={{ color: "#120309" }}
-                  >
-                    Status informatie
-                  </h3>
-                  <div className="p-4 rounded-xl bg-orange-50">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Clock className="h-5 w-5 text-orange-500" />
-                      <span className="font-medium text-orange-800">
-                        In behandeling
-                      </span>
-                    </div>
-                    <p className="text-sm text-orange-700">
-                      Je aanvraag wordt beoordeeld door een manager. Je krijgt
-                      bericht zodra er een beslissing is genomen.
+                {/* Created Date */}
+                <div
+                  className="p-4 rounded-xl"
+                  style={{
+                    background: "linear-gradient(135deg, #e8eef240, #e8eef220)",
+                  }}
+                >
+                  <div className="flex items-center space-x-3 mb-2">
+                    <Clock className="h-5 w-5" style={{ color: "#d5896f" }} />
+                    <p
+                      className="text-sm font-medium"
+                      style={{ color: "#67697c" }}
+                    >
+                      Aangemaakt op
                     </p>
                   </div>
+                  <p
+                    className="text-lg font-semibold"
+                    style={{ color: "#120309" }}
+                  >
+                    {formatDateLong(request.createdAt)}
+                  </p>
+                </div>
+
+                {/* Last Updated */}
+                <div
+                  className="p-4 rounded-xl"
+                  style={{
+                    background: "linear-gradient(135deg, #e8eef240, #e8eef220)",
+                  }}
+                >
+                  <div className="flex items-center space-x-3 mb-2">
+                    <Clock className="h-5 w-5" style={{ color: "#d5896f" }} />
+                    <p
+                      className="text-sm font-medium"
+                      style={{ color: "#67697c" }}
+                    >
+                      Laatst bijgewerkt
+                    </p>
+                  </div>
+                  <p
+                    className="text-lg font-semibold"
+                    style={{ color: "#120309" }}
+                  >
+                    {formatDateLong(request.updatedAt)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Comments Section */}
+            {request.reason && (
+              <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-6">
+                <div className="flex items-center space-x-3 mb-4">
+                  <MessageSquare
+                    className="h-6 w-6"
+                    style={{ color: "#d5896f" }}
+                  />
+                  <h3
+                    className="text-xl font-semibold"
+                    style={{ color: "#120309" }}
+                  >
+                    Opmerkingen
+                  </h3>
+                </div>
+                <div
+                  className="p-4 rounded-xl"
+                  style={{
+                    background: "linear-gradient(135deg, #e8eef240, #e8eef220)",
+                  }}
+                >
+                  <p
+                    className="text-base leading-relaxed"
+                    style={{ color: "#120309" }}
+                  >
+                    {request.reason}
+                  </p>
                 </div>
               </div>
             )}

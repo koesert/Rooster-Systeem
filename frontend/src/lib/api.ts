@@ -18,12 +18,6 @@ import {
   DateRangeInfo,
   UpdateWeekAvailability,
 } from "@/types/availability";
-import {
-  TimeOffRequest,
-  CreateTimeOffRequestDto,
-  UpdateTimeOffRequestStatusDto,
-  TimeOffRequestFilter,
-} from "@/types/timeoff";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
@@ -544,8 +538,42 @@ export const getAvailabilityDateRange = async (
   return apiRequest("/availability/date-range", {}, options);
 };
 
-// TimeOff API functions
-export const getAllTimeOffRequests = async (
+// Time Off Request API functions
+import {
+  TimeOffRequest,
+  CreateTimeOffRequestDto,
+  UpdateTimeOffRequestStatusDto,
+  UpdateTimeOffRequestAsManagerDto,
+  TimeOffRequestFilter,
+  TimeOffStatus,
+} from "../types/timeoff";
+
+// Internal API interface that matches backend response
+interface TimeOffRequestApiResponse {
+  id: number;
+  employeeId: number;
+  employeeName: string;
+  status: string; // Backend returns string, we'll convert to enum
+  reason: string;
+  startDate: string;
+  endDate: string;
+  approvedBy?: number;
+  approverName?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Convert API response to typed interface
+const convertTimeOffRequest = (
+  apiResponse: TimeOffRequestApiResponse
+): TimeOffRequest => {
+  return {
+    ...apiResponse,
+    status: apiResponse.status as TimeOffStatus,
+  };
+};
+
+export const getTimeOffRequests = async (
   filter?: TimeOffRequestFilter,
   options: ApiCallOptions = {}
 ): Promise<TimeOffRequest[]> => {
@@ -560,30 +588,57 @@ export const getAllTimeOffRequests = async (
   }
 
   const queryString = params.toString();
-  const url = `/TimeOffRequest${queryString ? `?${queryString}` : ""}`;
+  const url = `/timeoffrequest${queryString ? `?${queryString}` : ""}`;
 
-  return apiRequest(url, {}, options);
+  const apiResponses: TimeOffRequestApiResponse[] = await apiRequest(
+    url,
+    {},
+    options
+  );
+  return apiResponses.map(convertTimeOffRequest);
 };
 
 export const getTimeOffRequestById = async (
   id: number,
   options: ApiCallOptions = {}
 ): Promise<TimeOffRequest> => {
-  return apiRequest(`/TimeOffRequest/${id}`, {}, options);
+  const apiResponse: TimeOffRequestApiResponse = await apiRequest(
+    `/timeoffrequest/${id}`,
+    {},
+    options
+  );
+  return convertTimeOffRequest(apiResponse);
 };
 
 export const createTimeOffRequest = async (
   requestData: CreateTimeOffRequestDto,
   options: ApiCallOptions = {}
 ): Promise<TimeOffRequest> => {
-  return apiRequest(
-    "/TimeOffRequest",
+  const apiResponse: TimeOffRequestApiResponse = await apiRequest(
+    "/timeoffrequest",
     {
       method: "POST",
       body: JSON.stringify(requestData),
     },
     options
   );
+  return convertTimeOffRequest(apiResponse);
+};
+
+export const updateTimeOffRequest = async (
+  id: number,
+  requestData: CreateTimeOffRequestDto,
+  options: ApiCallOptions = {}
+): Promise<TimeOffRequest> => {
+  const apiResponse: TimeOffRequestApiResponse = await apiRequest(
+    `/timeoffrequest/${id}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(requestData),
+    },
+    options
+  );
+  return convertTimeOffRequest(apiResponse);
 };
 
 export const updateTimeOffRequestStatus = async (
@@ -592,7 +647,7 @@ export const updateTimeOffRequestStatus = async (
   options: ApiCallOptions = {}
 ): Promise<void> => {
   return apiRequest(
-    `/TimeOffRequest/${id}/status`,
+    `/timeoffrequest/${id}/status`,
     {
       method: "PUT",
       body: JSON.stringify(statusData),
@@ -606,24 +661,9 @@ export const cancelTimeOffRequest = async (
   options: ApiCallOptions = {}
 ): Promise<void> => {
   return apiRequest(
-    `/TimeOffRequest/${id}/cancel`,
+    `/timeoffrequest/${id}/cancel`,
     {
-      method: "PUT",
-    },
-    options
-  );
-};
-
-export const updateTimeOffRequest = async (
-  id: number,
-  requestData: CreateTimeOffRequestDto,
-  options: ApiCallOptions = {}
-): Promise<TimeOffRequest> => {
-  return apiRequest(
-    `/TimeOffRequest/${id}`,
-    {
-      method: "PUT",
-      body: JSON.stringify(requestData),
+      method: "POST",
     },
     options
   );
@@ -634,10 +674,26 @@ export const deleteTimeOffRequest = async (
   options: ApiCallOptions = {}
 ): Promise<void> => {
   return apiRequest(
-    `/TimeOffRequest/${id}`,
+    `/timeoffrequest/${id}`,
     {
       method: "DELETE",
     },
     options
   );
+};
+
+export const updateTimeOffRequestAsManager = async (
+  id: number,
+  requestData: UpdateTimeOffRequestAsManagerDto,
+  options: ApiCallOptions = {}
+): Promise<TimeOffRequest> => {
+  const apiResponse: TimeOffRequestApiResponse = await apiRequest(
+    `/timeoffrequest/${id}/manager`,
+    {
+      method: "PUT",
+      body: JSON.stringify(requestData),
+    },
+    options
+  );
+  return convertTimeOffRequest(apiResponse);
 };

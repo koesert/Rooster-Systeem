@@ -29,6 +29,13 @@ export interface UpdateTimeOffRequestStatusDto {
   status: "Approved" | "Rejected";
 }
 
+export interface UpdateTimeOffRequestAsManagerDto {
+  reason: string;
+  startDate: string; // DD-MM-YYYY format
+  endDate: string; // DD-MM-YYYY format
+  status: "Pending" | "Approved" | "Rejected" | "Cancelled";
+}
+
 export interface TimeOffRequestFilter {
   employeeId?: number;
   status?: string;

@@ -16,6 +16,8 @@ import {
   MessageSquare,
   AlertTriangle,
   Clock,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 import {
   TimeOffRequest,
@@ -31,7 +33,7 @@ export default function EditTimeOffPage() {
 
   usePageTitle("Dashboard - Vrij aanvraag bewerken");
 
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isManager } = useAuth();
   const { showApiError } = useError();
   const { showAlert, showConfirm } = useModal();
   const router = useRouter();
@@ -47,6 +49,9 @@ export default function EditTimeOffPage() {
     startDate: "",
     endDate: "",
   });
+  const [selectedStatus, setSelectedStatus] = useState<TimeOffStatus>(
+    TimeOffStatus.Pending
+  );
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // Redirect if not authenticated
@@ -68,16 +73,18 @@ export default function EditTimeOffPage() {
       setIsLoadingRequest(true);
       const data = await api.getTimeOffRequestById(requestId);
 
-      // Check access: users can only edit their own pending requests
-      if (data.employeeId !== user?.id) {
+      // Check access: users can only edit their own pending requests, but managers can edit all requests
+      if (!isManager() && data.employeeId !== user?.id) {
         router.push("/timeoff");
         return;
       }
 
-      if (data.status !== TimeOffStatus.Pending) {
+      // Only restrict status for non-managers
+      if (!isManager() && data.status !== TimeOffStatus.Pending) {
         showAlert({
           title: "Bewerken niet mogelijk",
-          message: "Alleen aanvragen met status 'Aangevraagd' kunnen worden bewerkt"
+          message:
+            "Alleen aanvragen met status 'Aangevraagd' kunnen worden bewerkt",
         });
         router.push(`/timeoff/${requestId}`);
         return;
@@ -91,6 +98,7 @@ export default function EditTimeOffPage() {
         startDate: toInputDateFormat(data.startDate),
         endDate: toInputDateFormat(data.endDate),
       });
+      setSelectedStatus(data.status);
     } catch (error) {
       showApiError(
         error,
@@ -100,6 +108,50 @@ export default function EditTimeOffPage() {
     } finally {
       setIsLoadingRequest(false);
     }
+  };
+
+  // Status utility functions
+  const getStatusInfo = (status: TimeOffStatus) => {
+    switch (status) {
+      case TimeOffStatus.Approved:
+        return {
+          bg: "bg-green-50",
+          border: "border-green-200",
+          text: "text-green-700",
+          icon: <CheckCircle className="h-4 w-4 text-green-500" />,
+          label: "Goedgekeurd",
+        };
+      case TimeOffStatus.Rejected:
+        return {
+          bg: "bg-red-50",
+          border: "border-red-200",
+          text: "text-red-700",
+          icon: <XCircle className="h-4 w-4 text-red-500" />,
+          label: "Afgekeurd",
+        };
+      case TimeOffStatus.Cancelled:
+        return {
+          bg: "bg-gray-50",
+          border: "border-gray-200",
+          text: "text-gray-700",
+          icon: <XCircle className="h-4 w-4 text-gray-500" />,
+          label: "Geannuleerd",
+        };
+      case TimeOffStatus.Pending:
+      default:
+        return {
+          bg: "bg-orange-50",
+          border: "border-orange-200",
+          text: "text-orange-700",
+          icon: <Clock className="h-4 w-4 text-orange-500" />,
+          label: "Aangevraagd",
+        };
+    }
+  };
+
+  // Get current display status (selected by manager or original status)
+  const getCurrentDisplayStatus = (): TimeOffStatus => {
+    return isManager() ? selectedStatus : (request?.status || TimeOffStatus.Pending);
   };
 
   const validateForm = (): boolean => {
@@ -134,12 +186,16 @@ export default function EditTimeOffPage() {
         errors.endDate = "Maximaal 8 weken (56 dagen) aanvragen toegestaan";
       }
 
-      // Check minimum 2 weeks in advance
-      const today = new Date();
-      const minStartDate = new Date(today.getTime() + 14 * 24 * 60 * 60 * 1000);
-      if (startDate < minStartDate) {
-        errors.startDate =
-          "Vrij moet minimaal 2 weken van tevoren worden aangevraagd";
+      // Check minimum 2 weeks in advance (only for non-managers)
+      if (!isManager()) {
+        const today = new Date();
+        const minStartDate = new Date(
+          today.getTime() + 14 * 24 * 60 * 60 * 1000
+        );
+        if (startDate < minStartDate) {
+          errors.startDate =
+            "Vrij moet minimaal 2 weken van tevoren worden aangevraagd";
+        }
       }
     }
 
@@ -157,19 +213,37 @@ export default function EditTimeOffPage() {
     try {
       setIsSubmitting(true);
 
-      const requestData: CreateTimeOffRequestDto = {
-        reason: formData.reason.trim(),
-        startDate: fromInputDateFormat(formData.startDate),
-        endDate: fromInputDateFormat(formData.endDate),
-      };
+      if (isManager()) {
+        // Managers can update everything including status in one call
+        const managerRequestData = {
+          reason: formData.reason.trim(),
+          startDate: fromInputDateFormat(formData.startDate),
+          endDate: fromInputDateFormat(formData.endDate),
+          status: selectedStatus as "Pending" | "Approved" | "Rejected" | "Cancelled",
+        };
 
-      // Update the existing request
-      await api.updateTimeOffRequest(request.id, requestData);
+        await api.updateTimeOffRequestAsManager(request.id, managerRequestData);
+        
+        showAlert({
+          title: "Succes",
+          message: "Aanvraag succesvol bijgewerkt door manager",
+        });
+      } else {
+        // Employees can only update basic information (no status)
+        const requestData: CreateTimeOffRequestDto = {
+          reason: formData.reason.trim(),
+          startDate: fromInputDateFormat(formData.startDate),
+          endDate: fromInputDateFormat(formData.endDate),
+        };
 
-      showAlert({
-        title: "Succes",
-        message: "Aanvraag succesvol bijgewerkt"
-      });
+        await api.updateTimeOffRequest(request.id, requestData);
+        
+        showAlert({
+          title: "Succes",
+          message: "Aanvraag succesvol bijgewerkt",
+        });
+      }
+
       router.push("/timeoff");
     } catch (error) {
       showApiError(
@@ -186,17 +260,18 @@ export default function EditTimeOffPage() {
 
     showConfirm({
       title: "Aanvraag verwijderen",
-      message: "Weet je zeker dat je deze verlofaanvraag wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+      message:
+        "Weet je zeker dat je deze verlofaanvraag wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
       confirmText: "Verwijderen",
       cancelText: "Annuleren",
       onConfirm: async () => {
         try {
           setIsSubmitting(true);
           await api.deleteTimeOffRequest(request.id);
-          
+
           showAlert({
             title: "Succes",
-            message: "Aanvraag succesvol verwijderd"
+            message: "Aanvraag succesvol verwijderd",
           });
           router.push("/timeoff");
         } catch (error) {
@@ -207,7 +282,7 @@ export default function EditTimeOffPage() {
         } finally {
           setIsSubmitting(false);
         }
-      }
+      },
     });
   };
 
@@ -290,12 +365,14 @@ export default function EditTimeOffPage() {
                   </div>
 
                   {/* Status Badge */}
-                  <div className="flex items-center space-x-2 max-[500px]:space-x-0 px-4 py-2 rounded-xl bg-orange-50 border border-orange-200 max-[500px]:px-2">
-                    <Clock className="h-4 w-4 text-orange-500" />
-                    <span className="text-sm font-medium text-orange-700 max-[500px]:hidden">
-                      Aangevraagd
-                    </span>
-                  </div>
+                  {request && (
+                    <div className={`flex items-center border border-green-300 space-x-2 max-[500px]:space-x-0 px-4 py-2 rounded-xl ${getStatusInfo(getCurrentDisplayStatus()).bg} ${getStatusInfo(getCurrentDisplayStatus()).border} max-[500px]:px-2`}>
+                      {getStatusInfo(getCurrentDisplayStatus()).icon}
+                      <span className={`text-sm font-medium ${getStatusInfo(getCurrentDisplayStatus()).text} max-[500px]:hidden`}>
+                        {getStatusInfo(getCurrentDisplayStatus()).label}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -358,6 +435,32 @@ export default function EditTimeOffPage() {
                   )}
                 </div>
               </div>
+
+              {/* Status - Only for managers */}
+              {isManager() && (
+                <div>
+                  <label
+                    className="block text-sm font-medium mb-2"
+                    style={{ color: "#120309" }}
+                  >
+                    Status
+                  </label>
+                  <select
+                    value={selectedStatus}
+                    onChange={(e) =>
+                      setSelectedStatus(e.target.value as TimeOffStatus)
+                    }
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all duration-200"
+                    style={{ color: "#120309" }}
+                    disabled={isSubmitting}
+                  >
+                    <option value={TimeOffStatus.Pending}>Aangevraagd</option>
+                    <option value={TimeOffStatus.Approved}>Goedgekeurd</option>
+                    <option value={TimeOffStatus.Rejected}>Afgekeurd</option>
+                    <option value={TimeOffStatus.Cancelled}>Geannuleerd</option>
+                  </select>
+                </div>
+              )}
 
               {/* Reason */}
               <div>

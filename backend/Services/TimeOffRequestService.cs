@@ -196,12 +196,22 @@ public class TimeOffRequestService : ITimeOffRequestService
             throw new InvalidOperationException("Aanvraag niet gevonden");
         }
 
-        if (request.EmployeeId != employeeId)
+        // Check access: employees can only delete their own requests, managers can delete any
+        var currentEmployee = await _context.Employees.FindAsync(employeeId);
+        if (currentEmployee == null)
+        {
+            throw new InvalidOperationException("Werknemer niet gevonden");
+        }
+
+        var isManager = currentEmployee.Role == Role.Manager;
+
+        if (!isManager && request.EmployeeId != employeeId)
         {
             throw new InvalidOperationException("Je kunt alleen je eigen aanvragen verwijderen");
         }
 
-        if (request.Status != TimeOffStatus.Pending)
+        // Only pending requests can be deleted by employees, managers can delete any status
+        if (!isManager && request.Status != TimeOffStatus.Pending)
         {
             throw new InvalidOperationException("Alleen aanvragen met status 'Pending' kunnen worden verwijderd");
         }
@@ -209,7 +219,60 @@ public class TimeOffRequestService : ITimeOffRequestService
         _context.TimeOffRequests.Remove(request);
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Vrij aanvraag {Id} verwijderd door werknemer {EmployeeId}", id, employeeId);
+        _logger.LogInformation("Vrij aanvraag {Id} verwijderd door {Role} {EmployeeId}", id, isManager ? "manager" : "werknemer", employeeId);
+    }
+
+    public async Task<TimeOffRequest> UpdateRequestAsManagerAsync(int id, UpdateTimeOffRequestAsManagerDto dto, string userRole)
+    {
+        if (userRole != "Manager")
+        {
+            throw new InvalidOperationException("Alleen managers kunnen alle aanvragen bewerken");
+        }
+
+        var request = await _context.TimeOffRequests.FindAsync(id);
+
+        if (request == null)
+        {
+            throw new InvalidOperationException("Aanvraag niet gevonden");
+        }
+
+        // Parse the date strings
+        var startDate = DateTimeExtensions.ParseAsUtc(dto.StartDate, "dd-MM-yyyy");
+        var endDate = DateTimeExtensions.ParseAsUtc(dto.EndDate, "dd-MM-yyyy");
+
+        // Validatie: einddatum moet na of gelijk aan startdatum zijn
+        if (endDate < startDate)
+        {
+            throw new InvalidOperationException("Einddatum moet na of gelijk aan startdatum zijn");
+        }
+
+        // Managers don't have the 2-week advance requirement
+        // Check voor overlappende aanvragen (exclusief huidige aanvraag)
+        var hasOverlap = await HasOverlappingRequestsAsync(request.EmployeeId, startDate, endDate, id);
+        if (hasOverlap)
+        {
+            throw new InvalidOperationException("Deze medewerker heeft al een vrij aanvraag voor deze periode");
+        }
+
+        // Parse and validate status
+        if (!Enum.TryParse<TimeOffStatus>(dto.Status, out var status))
+        {
+            throw new InvalidOperationException($"Ongeldige status: {dto.Status}");
+        }
+
+        // Update de aanvraag
+        request.StartDate = startDate.EnsureUtc();
+        request.EndDate = endDate.EnsureUtc();
+        request.Reason = dto.Reason;
+        request.Status = status;
+        request.UpdatedAt = DateTimeExtensions.UtcNow;
+
+        _context.TimeOffRequests.Update(request);
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Vrij aanvraag {Id} bijgewerkt door manager", id);
+
+        return request;
     }
 
     public async Task<bool> HasOverlappingRequestsAsync(int employeeId, DateTime startDate, DateTime endDate, int? excludeRequestId = null)
@@ -257,14 +320,22 @@ public class TimeOffRequestService : ITimeOffRequestService
             throw new InvalidOperationException("Aanvraag niet gevonden");
         }
 
-        // Check access: alleen eigen aanvragen kunnen worden bewerkt
-        if (request.EmployeeId != employeeId)
+        // Check access: employees can only edit their own requests, managers can edit any
+        var currentEmployee = await _context.Employees.FindAsync(employeeId);
+        if (currentEmployee == null)
+        {
+            throw new InvalidOperationException("Werknemer niet gevonden");
+        }
+
+        var isManager = currentEmployee.Role == Role.Manager;
+        
+        if (!isManager && request.EmployeeId != employeeId)
         {
             throw new InvalidOperationException("Je kunt alleen je eigen aanvragen bewerken");
         }
 
-        // Alleen pending aanvragen kunnen worden bewerkt
-        if (request.Status != TimeOffStatus.Pending)
+        // Only pending requests can be edited by employees, managers can edit any status
+        if (!isManager && request.Status != TimeOffStatus.Pending)
         {
             throw new InvalidOperationException("Alleen aanvragen met status 'Aangevraagd' kunnen worden bewerkt");
         }
@@ -279,20 +350,23 @@ public class TimeOffRequestService : ITimeOffRequestService
             throw new InvalidOperationException("Einddatum moet na of gelijk aan startdatum zijn");
         }
 
-        // Validatie: aanvraag moet minimaal 2 weken van tevoren
-        var today = DateTime.UtcNow.Date;
-        var minimumStartDate = today.AddDays(14);
-
-        if (startDate.Date < minimumStartDate)
+        // Validatie: aanvraag moet minimaal 2 weken van tevoren (only for employees, not managers)
+        if (!isManager)
         {
-            throw new InvalidOperationException("Vrij moet minimaal 2 weken van tevoren worden aangevraagd");
+            var today = DateTime.UtcNow.Date;
+            var minimumStartDate = today.AddDays(14);
+
+            if (startDate.Date < minimumStartDate)
+            {
+                throw new InvalidOperationException("Vrij moet minimaal 2 weken van tevoren worden aangevraagd");
+            }
         }
 
         // Check voor overlappende aanvragen (exclusief huidige aanvraag)
-        var hasOverlap = await HasOverlappingRequestsAsync(employeeId, startDate, endDate, id);
+        var hasOverlap = await HasOverlappingRequestsAsync(request.EmployeeId, startDate, endDate, id);
         if (hasOverlap)
         {
-            throw new InvalidOperationException("Je hebt al een vrij aanvraag voor deze periode");
+            throw new InvalidOperationException("Deze medewerker heeft al een vrij aanvraag voor deze periode");
         }
 
         // Update de aanvraag
@@ -304,7 +378,7 @@ public class TimeOffRequestService : ITimeOffRequestService
         _context.TimeOffRequests.Update(request);
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Vrij aanvraag {Id} bijgewerkt voor werknemer {EmployeeId}", id, employeeId);
+        _logger.LogInformation("Vrij aanvraag {Id} bijgewerkt door {Role} {EmployeeId}", id, isManager ? "manager" : "werknemer", employeeId);
 
         return request;
     }

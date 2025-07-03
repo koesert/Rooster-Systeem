@@ -7,6 +7,7 @@ public interface ITimeOffRequestService
 {
     Task<TimeOffRequest> CreateRequestAsync(int employeeId, CreateTimeOffRequestDto dto);
     Task<TimeOffRequest> UpdateRequestAsync(int id, int employeeId, CreateTimeOffRequestDto dto);
+    Task<TimeOffRequest> UpdateRequestAsManagerAsync(int id, UpdateTimeOffRequestAsManagerDto dto, string userRole);
     Task<IEnumerable<TimeOffRequestResponseDto>> GetAllRequestsAsync(TimeOffRequestFilterDto? filter = null);
     Task<TimeOffRequestResponseDto?> GetRequestByIdAsync(int id);
     Task<IEnumerable<TimeOffRequestResponseDto>> GetRequestsByEmployeeAsync(int employeeId);
