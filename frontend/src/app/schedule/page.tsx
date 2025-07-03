@@ -325,7 +325,7 @@ export default function SchedulePage() {
           onClick={() => handleShiftClick(shift)}
           onMouseEnter={() => setHoveredShiftId(shift.id)}
           onMouseLeave={() => setHoveredShiftId(null)}
-          className={`absolute cursor-pointer rounded p-2 text-xs ${colors.bg} ${colors.border} ${colors.text} border transition-all duration-200`}
+          className={`absolute cursor-pointer rounded p-2 text-xs ${colors.bg} ${colors.border} ${colors.text} border transition-all duration-200 overflow-hidden`}
           style={{
             left: `${leftPosition}%`,
             width: `${laneWidth - 1}%`, // Small gap between lanes
@@ -873,38 +873,66 @@ export default function SchedulePage() {
 
                           {/* Shift summary */}
                           <div className="space-y-1">
-                            {dayShifts.slice(0, 2).map(shift => {
-                              const colors = getShiftColor(shift.shiftType);
-                              return (
-                                <div
-                                  key={shift.id}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleShiftClick(shift);
-                                  }}
-                                  className={`text-xs p-1 rounded cursor-pointer hover:opacity-80 transition-opacity ${colors.bg} ${colors.text}`}
-                                >
+                            {/* Show detailed shift info on larger screens */}
+                            <div className="min-[700px]:block hidden">
+                              {dayShifts.slice(0, 2).map(shift => {
+                                const colors = getShiftColor(shift.shiftType);
+                                return (
                                   <div
-                                    className="font-medium"
-                                    style={{
-                                      lineHeight: '1.2',
-                                      wordBreak: 'break-word',
-                                      overflowWrap: 'break-word',
-                                      whiteSpace: 'normal'
+                                    key={shift.id}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleShiftClick(shift);
                                     }}
+                                    className={`text-xs p-1 rounded cursor-pointer hover:opacity-80 transition-opacity ${colors.bg} ${colors.text}`}
                                   >
-                                    {formatTime(shift.startTime)} {selectedEmployee ? shift.shiftTypeName : shift.employeeName}
+                                    <div
+                                      className="font-medium"
+                                      style={{
+                                        lineHeight: '1.2',
+                                        wordBreak: 'break-word',
+                                        overflowWrap: 'break-word',
+                                        whiteSpace: 'normal'
+                                      }}
+                                    >
+                                      {formatTime(shift.startTime)} {shift.shiftTypeName}
+                                    </div>
                                   </div>
+                                );
+                              })}
+                              {dayShifts.length > 2 && (
+                                <div className="text-xs text-center p-1 rounded bg-gray-100 text-gray-600 font-medium">
+                                  +{dayShifts.length - 2} meer
                                 </div>
-                              );
-                            })}
-                            {dayShifts.length > 2 && (
-                              <div className="text-xs text-center p-1 rounded bg-gray-100 text-gray-600 font-medium">
-                                +{dayShifts.length - 2} meer
-                              </div>
-                            )}
-                          </div>
+                              )}
+                            </div>
 
+                            {/* Show simple dots on smaller screens */}
+                            <div className="min-[700px]:hidden flex flex-wrap gap-1">
+                              {dayShifts.slice(0, 4).map(shift => {
+                                const colors = getShiftColor(shift.shiftType);
+                                return (
+                                  <div
+                                    key={shift.id}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleShiftClick(shift);
+                                    }}
+                                    className={`w-5 h-5 rounded-full cursor-pointer hover:scale-110 transition-transform border border-green-300 ${colors.bg}`}
+                                    title={`${formatTime(shift.startTime)} - ${shift.shiftTypeName}`}
+                                  />
+                                );
+                              })}
+                              {dayShifts.length > 4 && (
+                                <div
+                                  className="w-5 h-5 rounded-full bg-gray-400 border border-green-300 flex items-center justify-center"
+                                  title={`+${dayShifts.length - 4} meer shifts`}
+                                >
+                                  <span className="text-[6px] text-white font-bold">+</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       );
                     });
