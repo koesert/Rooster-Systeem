@@ -654,7 +654,10 @@ export default function SchedulePage() {
             {/* View Type Tabs */}
             <div className="bg-white/80 backdrop-blur-lg rounded-xl shadow-lg border border-white/20 p-1 flex">
               <button
-                onClick={() => setViewType('day')}
+                onClick={() => {
+                  setCurrentDate(new Date()); // Always go to today
+                  setViewType('day');
+                }}
                 className={`px-6 py-2 rounded-lg font-medium transition-all duration-200 ${viewType === 'day'
                   ? 'bg-gradient-to-r from-[#d5896f] to-[#d5896f90] text-white shadow-md'
                   : 'text-gray-600 hover:text-gray-900 cursor-pointer'
