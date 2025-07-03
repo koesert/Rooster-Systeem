@@ -7,11 +7,11 @@
  * Formats a Date object or date string to DD-MM-YYYY string
  */
 export const formatDate = (date: Date | string): string => {
-  if (!date) return '';
+  if (!date) return "";
 
   let dateObj: Date;
 
-  if (typeof date === 'string') {
+  if (typeof date === "string") {
     // Check if it's already in DD-MM-YYYY format
     const ddmmyyyyRegex = /^(\d{2})-(\d{2})-(\d{4})$/;
     const match = date.match(ddmmyyyyRegex);
@@ -28,11 +28,11 @@ export const formatDate = (date: Date | string): string => {
   }
 
   if (isNaN(dateObj.getTime())) {
-    return '';
+    return "";
   }
 
-  const day = dateObj.getDate().toString().padStart(2, '0');
-  const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+  const day = dateObj.getDate().toString().padStart(2, "0");
+  const month = (dateObj.getMonth() + 1).toString().padStart(2, "0");
   const year = dateObj.getFullYear();
 
   return `${day}-${month}-${year}`;
@@ -53,9 +53,11 @@ export const parseDate = (dateString: string): Date | null => {
     const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
 
     // Validate the date is correct (handles invalid dates like 31-02-2023)
-    if (date.getDate() === parseInt(day) &&
+    if (
+      date.getDate() === parseInt(day) &&
       date.getMonth() === parseInt(month) - 1 &&
-      date.getFullYear() === parseInt(year)) {
+      date.getFullYear() === parseInt(year)
+    ) {
       return date;
     }
   }
@@ -69,15 +71,15 @@ export const parseDate = (dateString: string): Date | null => {
  * Converts a Date to YYYY-MM-DD format for HTML date inputs
  */
 export const toInputDateFormat = (date: Date | string): string => {
-  const dateObj = typeof date === 'string' ? parseDate(date) : date;
+  const dateObj = typeof date === "string" ? parseDate(date) : date;
 
   if (!dateObj || isNaN(dateObj.getTime())) {
-    return '';
+    return "";
   }
 
   const year = dateObj.getFullYear();
-  const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
-  const day = dateObj.getDate().toString().padStart(2, '0');
+  const month = (dateObj.getMonth() + 1).toString().padStart(2, "0");
+  const day = dateObj.getDate().toString().padStart(2, "0");
 
   return `${year}-${month}-${day}`;
 };
@@ -86,10 +88,10 @@ export const toInputDateFormat = (date: Date | string): string => {
  * Converts YYYY-MM-DD format (from HTML date inputs) to DD-MM-YYYY
  */
 export const fromInputDateFormat = (inputDate: string): string => {
-  if (!inputDate) return '';
+  if (!inputDate) return "";
 
   const date = new Date(inputDate);
-  if (isNaN(date.getTime())) return '';
+  if (isNaN(date.getTime())) return "";
 
   return formatDate(date);
 };
@@ -115,7 +117,9 @@ export const isValidDateFormat = (dateString: string): boolean => {
   const [, day, month, year] = match;
   const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
 
-  return date.getDate() === parseInt(day) &&
+  return (
+    date.getDate() === parseInt(day) &&
     date.getMonth() === parseInt(month) - 1 &&
-    date.getFullYear() === parseInt(year);
+    date.getFullYear() === parseInt(year)
+  );
 };

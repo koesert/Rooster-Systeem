@@ -2,7 +2,7 @@
 export enum ShiftType {
   Schoonmaak = 0,
   Bedienen = 1,
-  SchoonmaakBedienen = 2
+  SchoonmaakBedienen = 2,
 }
 
 // Shift interfaces

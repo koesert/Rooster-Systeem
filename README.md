@@ -24,6 +24,7 @@ Het Rooster-Systeem is een volledig functionele webapplicatie die restaurantmana
 ## 🛠️ Technologie Stack
 
 ### Backend
+
 - **Framework**: ASP.NET Core 8.0
 - **Database**: SQLite met Entity Framework Core
 - **Authenticatie**: JWT Bearer Tokens
@@ -31,6 +32,7 @@ Het Rooster-Systeem is een volledig functionele webapplicatie die restaurantmana
 - **API**: RESTful API met Swagger documentatie
 
 ### Frontend
+
 - **Framework**: Next.js 15.3 met React 19
 - **Styling**: Tailwind CSS 4.0
 - **Icons**: Lucide React
@@ -40,6 +42,7 @@ Het Rooster-Systeem is een volledig functionele webapplicatie die restaurantmana
 ## 🚀 Installatie & Setup
 
 ### Vereisten
+
 - .NET 8.0 SDK
 - Node.js 18+ en npm/yarn
 - Git
@@ -47,27 +50,32 @@ Het Rooster-Systeem is een volledig functionele webapplicatie die restaurantmana
 ### Backend Setup
 
 1. **Clone de repository**
+
    ```bash
    git clone <repository-url>
    cd Rooster-Systeem
    ```
 
 2. **Navigeer naar backend directory**
+
    ```bash
    cd backend
    ```
 
 3. **Installeer dependencies**
+
    ```bash
    dotnet restore
    ```
 
 4. **Database setup**
+
    ```bash
    dotnet ef database update
    ```
 
 5. **Start de backend server**
+
    ```bash
    dotnet run
    ```
@@ -77,16 +85,19 @@ Het Rooster-Systeem is een volledig functionele webapplicatie die restaurantmana
 ### Frontend Setup
 
 1. **Open nieuwe terminal en navigeer naar frontend**
+
    ```bash
    cd frontend
    ```
 
 2. **Installeer dependencies**
+
    ```bash
    npm install
    ```
 
 3. **Start de development server**
+
    ```bash
    npm run dev
    ```
@@ -96,14 +107,17 @@ Het Rooster-Systeem is een volledig functionele webapplicatie die restaurantmana
 ## 🔧 Configuratie
 
 ### Database
+
 - **Standaard**: SQLite database in `backend/Data/restaurant_roster.db`
 - **Connection String**: Configureerbaar in `appsettings.json`
 
 ### JWT Settings
+
 - **Development**: Automatisch geconfigureerd
 - **Production**: Configureer secure keys in appsettings
 
 ### Default Admin Account
+
 - **Username**: `admin`
 - **Password**: `Admin123!`
 - **Role**: Manager
@@ -136,11 +150,13 @@ Rooster-Systeem/
 ## 🔐 API Endpoints
 
 ### Authentication
+
 - `POST /api/auth/login` - Inloggen
 - `POST /api/auth/logout` - Uitloggen
 - `POST /api/auth/refresh` - Token vernieuwen
 
 ### Employees
+
 - `GET /api/employee` - Alle medewerkers (Manager only)
 - `GET /api/employee/{id}` - Specifieke medewerker
 - `GET /api/employee/profile` - Eigen profiel
@@ -150,6 +166,7 @@ Rooster-Systeem/
 - `DELETE /api/employee/{id}` - Verwijder medewerker (Manager only)
 
 ### Shifts (In ontwikkeling)
+
 - `GET /api/shift` - Alle shifts
 - `POST /api/shift` - Nieuwe shift
 - `PUT /api/shift/{id}` - Update shift
@@ -167,6 +184,7 @@ Rooster-Systeem/
 ## 📅 Datum Formaat
 
 Het systeem gebruikt consistent **DD-MM-YYYY** formaat voor alle datums:
+
 - **Frontend Display**: Alle datums getoond in DD-MM-YYYY
 - **Backend API**: JSON responses in DD-MM-YYYY formaat
 - **Database**: DateTime objects met automatische conversie

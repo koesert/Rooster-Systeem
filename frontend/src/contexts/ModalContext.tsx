@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode } from "react";
 
 export interface ModalConfig {
-  type: 'confirm' | 'alert' | 'custom';
+  type: "confirm" | "alert" | "custom";
   title: string;
   message?: string;
   content?: ReactNode;
   confirmText?: string;
   cancelText?: string;
-  confirmVariant?: 'primary' | 'danger' | 'success';
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  confirmVariant?: "primary" | "danger" | "success";
+  size?: "sm" | "md" | "lg" | "xl";
   showCancel?: boolean;
   icon?: ReactNode;
   onConfirm?: () => void | Promise<void>;
@@ -27,7 +27,7 @@ interface ModalContextType {
     message: string;
     confirmText?: string;
     cancelText?: string;
-    variant?: 'primary' | 'danger' | 'success';
+    variant?: "primary" | "danger" | "success";
     icon?: ReactNode;
     onConfirm?: () => void | Promise<void>;
     onCancel?: () => void;
@@ -46,12 +46,14 @@ const ModalContext = createContext<ModalContextType | undefined>(undefined);
 export const useModal = () => {
   const context = useContext(ModalContext);
   if (context === undefined) {
-    throw new Error('useModal must be used within a ModalProvider');
+    throw new Error("useModal must be used within a ModalProvider");
   }
   return context;
 };
 
-export const ModalProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const ModalProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [config, setConfig] = useState<ModalConfig | null>(null);
 
@@ -70,22 +72,22 @@ export const ModalProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     message: string;
     confirmText?: string;
     cancelText?: string;
-    variant?: 'primary' | 'danger' | 'success';
+    variant?: "primary" | "danger" | "success";
     icon?: ReactNode;
     onConfirm?: () => void | Promise<void>;
     onCancel?: () => void;
   }) => {
     showModal({
-      type: 'confirm',
+      type: "confirm",
       title: options.title,
       message: options.message,
-      confirmText: options.confirmText || 'Bevestigen',
-      cancelText: options.cancelText || 'Annuleren',
-      confirmVariant: options.variant || 'primary',
+      confirmText: options.confirmText || "Bevestigen",
+      cancelText: options.cancelText || "Annuleren",
+      confirmVariant: options.variant || "primary",
       showCancel: true,
       icon: options.icon,
       onConfirm: options.onConfirm,
-      onCancel: options.onCancel
+      onCancel: options.onCancel,
     });
   };
 
@@ -97,13 +99,13 @@ export const ModalProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     onConfirm?: () => void;
   }) => {
     showModal({
-      type: 'alert',
+      type: "alert",
       title: options.title,
       message: options.message,
-      confirmText: options.confirmText || 'OK',
+      confirmText: options.confirmText || "OK",
       showCancel: false,
       icon: options.icon,
-      onConfirm: options.onConfirm
+      onConfirm: options.onConfirm,
     });
   };
 
@@ -117,8 +119,6 @@ export const ModalProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
   return (
-    <ModalContext.Provider value={value}>
-      {children}
-    </ModalContext.Provider>
+    <ModalContext.Provider value={value}>{children}</ModalContext.Provider>
   );
 };

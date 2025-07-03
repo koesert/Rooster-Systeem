@@ -1,7 +1,7 @@
 export enum Role {
   Werknemer = 0,
   ShiftLeider = 1,
-  Manager = 2
+  Manager = 2,
 }
 
 export interface Employee {
@@ -55,7 +55,10 @@ export interface RefreshTokenRequest {
 
 export interface AuthContextType {
   user: Employee | null;
-  login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (
+    username: string,
+    password: string,
+  ) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   isLoading: boolean;
   justLoggedIn: boolean;

@@ -1,4 +1,4 @@
-import { ShiftType, Shift } from '@/types/shift';
+import { ShiftType, Shift } from "@/types/shift";
 
 // Time configuration constants
 export const SCHEDULE_START_HOUR = 12; // 12:00
@@ -9,16 +9,34 @@ export const HOURS_IN_SCHEDULE = SCHEDULE_END_HOUR - SCHEDULE_START_HOUR;
 /**
  * Get color scheme for different shift types
  */
-export const getShiftColor = (shiftType: ShiftType): { bg: string; border: string; text: string } => {
+export const getShiftColor = (
+  shiftType: ShiftType,
+): { bg: string; border: string; text: string } => {
   switch (shiftType) {
     case ShiftType.Schoonmaak: // Schoonmaak
-      return { bg: 'bg-blue-100', border: 'border-blue-300', text: 'text-blue-900' };
+      return {
+        bg: "bg-blue-100",
+        border: "border-blue-300",
+        text: "text-blue-900",
+      };
     case ShiftType.Bedienen: // Bedienen
-      return { bg: 'bg-green-100', border: 'border-green-300', text: 'text-green-900' };
+      return {
+        bg: "bg-green-100",
+        border: "border-green-300",
+        text: "text-green-900",
+      };
     case ShiftType.SchoonmaakBedienen: // Schoonmaak & Bedienen
-      return { bg: 'bg-purple-100', border: 'border-purple-300', text: 'text-purple-900' };
+      return {
+        bg: "bg-purple-100",
+        border: "border-purple-300",
+        text: "text-purple-900",
+      };
     default:
-      return { bg: 'bg-gray-100', border: 'border-gray-300', text: 'text-gray-900' };
+      return {
+        bg: "bg-gray-100",
+        border: "border-gray-300",
+        text: "text-gray-900",
+      };
   }
 };
 
@@ -33,7 +51,7 @@ export const formatTime = (time: string): string => {
  * Convert time string to position percentage for timeline
  */
 export const timeToPosition = (time: string): number => {
-  const [hours, minutes] = time.split(':').map(Number);
+  const [hours, minutes] = time.split(":").map(Number);
   let totalMinutes = hours * 60 + minutes;
 
   // Handle midnight case (00:00 should be treated as 24:00 for positioning)
@@ -49,11 +67,15 @@ export const timeToPosition = (time: string): number => {
 /**
  * Calculate shift width as percentage for timeline display
  */
-export const calculateShiftWidth = (startTime: string, endTime: string | null, isOpenEnded: boolean): number => {
+export const calculateShiftWidth = (
+  startTime: string,
+  endTime: string | null,
+  isOpenEnded: boolean,
+): number => {
   if (isOpenEnded || !endTime) {
     // Open ended shifts go until 22:00 (10 PM)
     const startPos = timeToPosition(startTime);
-    const endPos = timeToPosition('22:00:00');
+    const endPos = timeToPosition("22:00:00");
     return Math.max(endPos - startPos, 5); // Minimum 5% width
   }
 
@@ -63,7 +85,7 @@ export const calculateShiftWidth = (startTime: string, endTime: string | null, i
   // Handle shifts that cross midnight or go beyond our schedule
   if (endPos <= startPos) {
     // If end time is before start time or at start time, extend to end of schedule
-    return Math.max(timeToPosition('22:00:00') - startPos, 5); // Minimum 5% width for visibility
+    return Math.max(timeToPosition("22:00:00") - startPos, 5); // Minimum 5% width for visibility
   }
 
   return Math.max(endPos - startPos, 5); // Minimum 5% width for visibility
@@ -106,16 +128,24 @@ export const getDaysInMonth = (date: Date): Date[] => {
 /**
  * Calculate horizontal lanes for overlapping shifts
  */
-export const calculateShiftLanes = (shifts: Shift[]): Array<Shift & { lane: number; totalLanes: number }> => {
+export const calculateShiftLanes = (
+  shifts: Shift[],
+): Array<Shift & { lane: number; totalLanes: number }> => {
   if (shifts.length === 0) return [];
 
   // Sort shifts by start time
-  const sortedShifts = [...shifts].sort((a, b) => a.startTime.localeCompare(b.startTime));
+  const sortedShifts = [...shifts].sort((a, b) =>
+    a.startTime.localeCompare(b.startTime),
+  );
 
   const lanesData: Array<Shift & { lane: number; totalLanes: number }> = [];
-  const lanes: Array<{ endTime: string; isOpenEnded: boolean; shiftId: number }> = [];
+  const lanes: Array<{
+    endTime: string;
+    isOpenEnded: boolean;
+    shiftId: number;
+  }> = [];
 
-  sortedShifts.forEach(shift => {
+  sortedShifts.forEach((shift) => {
     // Find the first available lane (check for time overlap)
     let assignedLane = -1;
 
@@ -132,34 +162,39 @@ export const calculateShiftLanes = (shifts: Shift[]): Array<Shift & { lane: numb
     // If no lane is available, create a new one
     if (assignedLane === -1) {
       assignedLane = lanes.length;
-      lanes.push({ endTime: '', isOpenEnded: false, shiftId: -1 });
+      lanes.push({ endTime: "", isOpenEnded: false, shiftId: -1 });
     }
 
     // Update the lane with current shift info
-    const endTime = shift.isOpenEnded ? '22:00:00' : (shift.endTime || '22:00:00');
+    const endTime = shift.isOpenEnded
+      ? "22:00:00"
+      : shift.endTime || "22:00:00";
     lanes[assignedLane] = {
       endTime: endTime,
       isOpenEnded: shift.isOpenEnded,
-      shiftId: shift.id
+      shiftId: shift.id,
     };
 
     lanesData.push({
       ...shift,
       lane: assignedLane,
-      totalLanes: lanes.length
+      totalLanes: lanes.length,
     });
   });
 
   // Update all shifts with the final total lanes count
   const maxLanes = lanes.length;
-  return lanesData.map(shift => ({ ...shift, totalLanes: maxLanes }));
+  return lanesData.map((shift) => ({ ...shift, totalLanes: maxLanes }));
 };
 
 /**
  * Check if a shift should be rendered in a specific time slot
  */
-export const shouldRenderShiftInTimeSlot = (shift: Shift, timeSlot: string): boolean => {
-  const [timeHour, timeMinute] = timeSlot.split(':').map(Number);
+export const shouldRenderShiftInTimeSlot = (
+  shift: Shift,
+  timeSlot: string,
+): boolean => {
+  const [timeHour, timeMinute] = timeSlot.split(":").map(Number);
   let timeSlotMinutes = timeHour * 60 + timeMinute;
 
   // Handle midnight (00:00) as 24:00 for comparison
@@ -167,7 +202,7 @@ export const shouldRenderShiftInTimeSlot = (shift: Shift, timeSlot: string): boo
     timeSlotMinutes = 24 * 60;
   }
 
-  const [startHour, startMinute] = shift.startTime.split(':').map(Number);
+  const [startHour, startMinute] = shift.startTime.split(":").map(Number);
   let startMinutes = startHour * 60 + startMinute;
 
   // Handle midnight in start time
@@ -180,7 +215,7 @@ export const shouldRenderShiftInTimeSlot = (shift: Shift, timeSlot: string): boo
     // Open ended shifts go until 22:00
     endMinutes = 22 * 60;
   } else if (shift.endTime) {
-    const [endHour, endMin] = shift.endTime.split(':').map(Number);
+    const [endHour, endMin] = shift.endTime.split(":").map(Number);
     endMinutes = endHour * 60 + endMin;
 
     // Handle midnight in end time
@@ -199,7 +234,7 @@ export const shouldRenderShiftInTimeSlot = (shift: Shift, timeSlot: string): boo
  * Calculate how many time slots a shift spans
  */
 export const calculateShiftDurationInSlots = (shift: Shift): number => {
-  const [startHour, startMinute] = shift.startTime.split(':').map(Number);
+  const [startHour, startMinute] = shift.startTime.split(":").map(Number);
   let startMinutes = startHour * 60 + startMinute;
 
   // Handle midnight in start time
@@ -212,7 +247,7 @@ export const calculateShiftDurationInSlots = (shift: Shift): number => {
     // Open ended shifts go until 22:00
     endMinutes = 22 * 60;
   } else if (shift.endTime) {
-    const [endHour, endMin] = shift.endTime.split(':').map(Number);
+    const [endHour, endMin] = shift.endTime.split(":").map(Number);
     endMinutes = endHour * 60 + endMin;
 
     // Handle midnight in end time
@@ -233,12 +268,17 @@ export const calculateShiftDurationInSlots = (shift: Shift): number => {
  * @param timeSlots - Array of time slots (e.g., ['12:00', '13:00', ...])
  * @returns Pixel position from top of the grid
  */
-export const calculateShiftTopPosition = (startTime: string, timeSlots: string[]): number => {
-  const [startHour, startMinute] = startTime.split(':').map(Number);
+export const calculateShiftTopPosition = (
+  startTime: string,
+  timeSlots: string[],
+): number => {
+  const [startHour, startMinute] = startTime.split(":").map(Number);
 
   // Find the time slot that contains this shift's start hour
-  const shiftHourFormatted = `${startHour.toString().padStart(2, '0')}:00`;
-  const startTimeIndex = timeSlots.findIndex(slot => slot === shiftHourFormatted);
+  const shiftHourFormatted = `${startHour.toString().padStart(2, "0")}:00`;
+  const startTimeIndex = timeSlots.findIndex(
+    (slot) => slot === shiftHourFormatted,
+  );
 
   if (startTimeIndex === -1) return 0;
 
@@ -255,7 +295,7 @@ export const calculateShiftTopPosition = (startTime: string, timeSlots: string[]
  * @returns Pixel height for the shift block
  */
 export const calculateShiftHeight = (shift: Shift): number => {
-  const [startHour, startMinute] = shift.startTime.split(':').map(Number);
+  const [startHour, startMinute] = shift.startTime.split(":").map(Number);
   let startMinutes = startHour * 60 + startMinute;
 
   // Handle midnight in start time
@@ -268,7 +308,7 @@ export const calculateShiftHeight = (shift: Shift): number => {
     // Open ended shifts go until 22:00
     endMinutes = 22 * 60;
   } else if (shift.endTime) {
-    const [endHour, endMin] = shift.endTime.split(':').map(Number);
+    const [endHour, endMin] = shift.endTime.split(":").map(Number);
     endMinutes = endHour * 60 + endMin;
 
     // Handle midnight in end time
@@ -299,9 +339,9 @@ export const generateTimeSlots = (): string[] => {
   const timeSlots: string[] = [];
   for (let hour = SCHEDULE_START_HOUR; hour < SCHEDULE_END_HOUR; hour++) {
     const displayHour = hour === 24 ? 0 : hour; // Convert 24 to 0 for display
-    timeSlots.push(`${displayHour.toString().padStart(2, '0')}:00`);
+    timeSlots.push(`${displayHour.toString().padStart(2, "0")}:00`);
   }
   // Add the final hour (00:00)
-  timeSlots.push('00:00');
+  timeSlots.push("00:00");
   return timeSlots;
 };
