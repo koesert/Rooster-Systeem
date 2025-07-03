@@ -466,56 +466,87 @@ export default function AvailabilityPage() {
 
                 <div className="space-y-4">
                   {weekAvailabilities.map(
-                    (week: WeekAvailability, weekIndex: number) => (
-                      <div
-                        key={weekIndex}
-                        className={`p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer hover:bg-gray-50 ${
-                          weekIndex === currentWeekIndex
-                            ? "border-blue-300 bg-blue-50"
-                            : "border-gray-200 bg-white"
-                        }`}
-                        onClick={() => setCurrentWeekIndex(weekIndex)}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h4 className="font-semibold text-gray-900">
-                              Week {getWeekNumber(week.weekStart)}
-                            </h4>
-                            <p className="text-sm text-gray-600">
-                              {formatWeekRange(week.weekStart)}
-                            </p>
+                    (week: WeekAvailability, weekIndex: number) => {
+                      // Filter days that have notes
+                      const daysWithNotes = week.days.filter(day => day.notes && day.notes.trim() !== '');
+                      
+                      return (
+                        <div
+                          key={weekIndex}
+                          className={`p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer hover:bg-gray-50 ${
+                            weekIndex === currentWeekIndex
+                              ? "border-blue-300 bg-blue-50"
+                              : "border-gray-200 bg-white"
+                          }`}
+                          onClick={() => setCurrentWeekIndex(weekIndex)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h4 className="font-semibold text-gray-900">
+                                Week {getWeekNumber(week.weekStart)}
+                              </h4>
+                              <p className="text-sm text-gray-600">
+                                {formatWeekRange(week.weekStart)}
+                              </p>
+                            </div>
+
+                            <div className="flex space-x-1">
+                              {week.days.map(
+                                (day: DayAvailability, dayIndex: number) => (
+                                  <div
+                                    key={dayIndex}
+                                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                                      day.isAvailable === true
+                                        ? "bg-green-100 border-green-300"
+                                        : day.isAvailable === false
+                                          ? "bg-red-100 border-red-300"
+                                          : "bg-gray-100 border-gray-300"
+                                    }`}
+                                    title={`${day.dayOfWeek}: ${getAvailabilityText(day.isAvailable)}`}
+                                  >
+                                    {day.isAvailable === true && (
+                                      <CheckCircle className="h-3 w-3 text-green-600" />
+                                    )}
+                                    {day.isAvailable === false && (
+                                      <XCircle className="h-3 w-3 text-red-600" />
+                                    )}
+                                    {day.isAvailable === null && (
+                                      <Minus className="h-3 w-3 text-gray-400" />
+                                    )}
+                                  </div>
+                                ),
+                              )}
+                            </div>
                           </div>
 
-                          <div className="flex space-x-1">
-                            {week.days.map(
-                              (day: DayAvailability, dayIndex: number) => (
-                                <div
-                                  key={dayIndex}
-                                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                                    day.isAvailable === true
-                                      ? "bg-green-100 border-green-300"
-                                      : day.isAvailable === false
-                                        ? "bg-red-100 border-red-300"
-                                        : "bg-gray-100 border-gray-300"
-                                  }`}
-                                  title={`${day.dayOfWeek}: ${getAvailabilityText(day.isAvailable)}`}
-                                >
-                                  {day.isAvailable === true && (
-                                    <CheckCircle className="h-3 w-3 text-green-600" />
-                                  )}
-                                  {day.isAvailable === false && (
-                                    <XCircle className="h-3 w-3 text-red-600" />
-                                  )}
-                                  {day.isAvailable === null && (
-                                    <Minus className="h-3 w-3 text-gray-400" />
-                                  )}
-                                </div>
-                              ),
-                            )}
-                          </div>
+                          {/* Display notes if any day has notes */}
+                          {daysWithNotes.length > 0 && (
+                            <div className="mt-4 pt-4 border-t border-gray-200">
+                              <h5 className="text-sm font-medium text-gray-700 mb-3">
+                                Notities:
+                              </h5>
+                              <div className="space-y-2">
+                                {daysWithNotes.map((day, index) => (
+                                  <div
+                                    key={index}
+                                    className="bg-gray-50 rounded-lg p-3 border border-gray-200"
+                                  >
+                                    <div className="flex items-start space-x-2">
+                                      <span className="text-sm font-medium text-gray-700 capitalize min-w-[80px]">
+                                        {day.dayOfWeek}:
+                                      </span>
+                                      <span className="text-sm text-gray-600 flex-1">
+                                        {day.notes}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    ),
+                      );
+                    }
                   )}
                 </div>
               </div>

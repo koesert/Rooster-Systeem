@@ -36,6 +36,7 @@ export default function CreateAvailabilityPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingAvailability, setIsLoadingAvailability] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saveAndGoToNextWeek, setSaveAndGoToNextWeek] = useState(false);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -212,8 +213,15 @@ export default function CreateAvailabilityPage() {
 
       await api.updateMyWeekAvailability(updateData);
 
-      // Success! Redirect back to availability page
-      router.push("/availability");
+      // Check if we should go to next week or back to availability page
+      if (saveAndGoToNextWeek && selectedWeekIndex < 3) {
+        // Go to next week
+        setSelectedWeekIndex((prev) => prev + 1);
+        setSaveAndGoToNextWeek(false); // Reset checkbox
+      } else {
+        // Success! Redirect back to availability page
+        router.push("/availability");
+      }
     } catch (error: unknown) {
       console.error("Error saving availability:", error);
 
@@ -513,6 +521,29 @@ export default function CreateAvailabilityPage() {
                       </div>
                     </div>
                   ))}
+                </div>
+
+                {/* Save and Next Week Option */}
+                <div className="border-t border-gray-200/50 pt-6">
+                  <label className="flex items-center space-x-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={saveAndGoToNextWeek}
+                      onChange={(e) => setSaveAndGoToNextWeek(e.target.checked)}
+                      disabled={selectedWeekIndex >= 3}
+                      className="h-4 w-4 text-[#d5896f] border-gray-300 rounded focus:ring-[#d5896f] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                    <span 
+                      className={`text-sm font-medium ${selectedWeekIndex >= 3 ? 'text-gray-400' : 'text-gray-700'}`}
+                    >
+                      Opslaan en naar volgende week
+                    </span>
+                  </label>
+                  {selectedWeekIndex >= 3 && (
+                    <p className="text-xs text-gray-500 mt-1 ml-7">
+                      Je kunt maximaal 4 weken vooruit plannen
+                    </p>
+                  )}
                 </div>
 
                 {/* Form Actions */}
