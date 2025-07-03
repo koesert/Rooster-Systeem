@@ -148,13 +148,6 @@ public class ShiftService : IShiftService
         // Validate business rules
         await ValidateShiftAsync(shiftDto.EmployeeId, shiftDto.Date, shiftDto.StartTime, shiftDto.EndTime, shiftDto.IsOpenEnded);
 
-        // Check for overlapping shifts
-        var hasOverlap = await HasOverlappingShiftsAsync(shiftDto.EmployeeId, shiftDto.Date, shiftDto.StartTime, shiftDto.EndTime);
-        if (hasOverlap)
-        {
-            throw new InvalidOperationException("Deze medewerker heeft al een overlappende shift op deze datum en tijd");
-        }
-
         var shift = new Shift
         {
             EmployeeId = shiftDto.EmployeeId,
@@ -192,13 +185,6 @@ public class ShiftService : IShiftService
 
         // Validate business rules
         await ValidateShiftAsync(shiftDto.EmployeeId, shiftDto.Date, shiftDto.StartTime, shiftDto.EndTime, shiftDto.IsOpenEnded);
-
-        // Check for overlapping shifts (excluding current shift)
-        var hasOverlap = await HasOverlappingShiftsAsync(shiftDto.EmployeeId, shiftDto.Date, shiftDto.StartTime, shiftDto.EndTime, id);
-        if (hasOverlap)
-        {
-            throw new InvalidOperationException("Deze medewerker heeft al een overlappende shift op deze datum en tijd");
-        }
 
         // Update shift properties
         shift.EmployeeId = shiftDto.EmployeeId;

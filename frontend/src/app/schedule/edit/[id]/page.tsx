@@ -6,9 +6,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import Sidebar from '@/components/Sidebar';
 import LoadingScreen from '@/components/LoadingScreen';
-import { Edit, User, Calendar, Clock, Type, FileText, ArrowLeft, Save, X, AlertTriangle } from 'lucide-react';
+import { Edit, User, Calendar, Clock, Type, FileText, ArrowLeft, Save, X, AlertTriangle, CheckCircle, XCircle, Minus, CalendarCheck } from 'lucide-react';
 import { UpdateShiftRequest, ShiftType, Shift } from '@/types/shift';
 import { Employee } from '@/types/auth';
+import { WeekAvailability } from '@/types/availability';
 import * as api from '@/lib/api';
 import { toInputDateFormat, fromInputDateFormat } from '@/utils/dateUtils';
 
@@ -43,6 +44,11 @@ export default function EditShiftPage() {
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
+  // Availability state
+  const [employeeAvailability, setEmployeeAvailability] = useState<WeekAvailability | null>(null);
+  const [isLoadingAvailability, setIsLoadingAvailability] = useState(false);
+  const [currentWeekStart, setCurrentWeekStart] = useState<string>('');
+
   // Redirect if not authenticated or no access
   useEffect(() => {
     if (!isLoading && !user) {
@@ -59,6 +65,22 @@ export default function EditShiftPage() {
       loadEmployees();
     }
   }, [user, isManager, shiftId]);
+
+  // Load availability when employee or week changes
+  useEffect(() => {
+    if (formData.employeeId && formData.employeeId !== 0 && formData.date) {
+      const newWeekStart = getWeekStart(formData.date);
+      // Always load availability when employee changes, or when week changes
+      if (newWeekStart !== currentWeekStart || employeeAvailability?.employeeId !== formData.employeeId) {
+        setCurrentWeekStart(newWeekStart);
+        loadEmployeeAvailability(formData.employeeId, newWeekStart);
+      }
+    } else {
+      // Reset availability when no employee is selected
+      setEmployeeAvailability(null);
+      setCurrentWeekStart('');
+    }
+  }, [formData.employeeId, formData.date, currentWeekStart, employeeAvailability?.employeeId]);
 
   const loadShiftData = async () => {
     setIsLoadingShift(true);
@@ -107,12 +129,45 @@ export default function EditShiftPage() {
     }
   };
 
+  const getWeekStart = (dateString: string): string => {
+    // Parse DD-MM-YYYY format
+    const [day, month, year] = dateString.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+
+    // Get Monday of this week
+    const dayOfWeek = date.getDay();
+    const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const monday = new Date(date);
+    monday.setDate(date.getDate() + daysToMonday);
+
+    // Format as DD-MM-YYYY
+    const formattedDay = monday.getDate().toString().padStart(2, '0');
+    const formattedMonth = (monday.getMonth() + 1).toString().padStart(2, '0');
+    const formattedYear = monday.getFullYear().toString();
+
+    return `${formattedDay}-${formattedMonth}-${formattedYear}`;
+  };
+
+  const loadEmployeeAvailability = async (employeeId: number, weekStart: string) => {
+    setIsLoadingAvailability(true);
+    try {
+      const availability = await api.getEmployeeWeekAvailability(employeeId, weekStart);
+      setEmployeeAvailability(availability);
+    } catch (error: unknown) {
+      console.error('Error loading employee availability:', error);
+      // Don't show error for availability - it's not critical for shift editing
+      setEmployeeAvailability(null);
+    } finally {
+      setIsLoadingAvailability(false);
+    }
+  };
+
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
 
     // Employee validation
     if (!formData.employeeId || formData.employeeId === 0) {
-      errors.employeeId = 'Medewerker selecteren';
+      errors.employeeId = 'Selecteer een medewerker';
     }
 
     // Date validation
@@ -227,9 +282,7 @@ export default function EditShiftPage() {
       let errorMessage = 'Er is een fout opgetreden bij het bijwerken van de shift';
 
       if (error.status === 400) {
-        if (error.message.includes('overlapping') || error.message.includes('overlap')) {
-          errorMessage = 'Deze medewerker heeft al een overlappende shift op deze datum en tijd';
-        } else if (error.errors) {
+        if (error.errors) {
           // Handle validation errors from backend
           const errorDetails = Object.entries(error.errors)
             .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
@@ -252,6 +305,59 @@ export default function EditShiftPage() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const getAvailabilityIcon = (isAvailable?: boolean | null) => {
+    if (isAvailable === true) {
+      return <CheckCircle className="h-5 w-5 text-green-600" />;
+    } else if (isAvailable === false) {
+      return <XCircle className="h-5 w-5 text-red-600" />;
+    } else {
+      return <Minus className="h-5 w-5 text-gray-400" />;
+    }
+  };
+
+  const getAvailabilityText = (isAvailable?: boolean | null) => {
+    if (isAvailable === true) return 'Beschikbaar';
+    if (isAvailable === false) return 'Niet beschikbaar';
+    return 'Niet opgegeven';
+  };
+
+  const getAvailabilityColor = (isAvailable?: boolean | null) => {
+    if (isAvailable === true) return '#dcfce7'; // green-100
+    if (isAvailable === false) return '#fee2e2'; // red-100
+    return '#f3f4f6'; // gray-100
+  };
+
+  const getDayName = (dateString: string): string => {
+    const [day, month, year] = dateString.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    const dayNames = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag'];
+    return dayNames[date.getDay()];
+  };
+
+  const formatDisplayDate = (dateString: string): string => {
+    const [day, month, year] = dateString.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    const monthNames = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
+    return `${day} ${monthNames[date.getMonth()]}`;
+  };
+
+  const getWeekNumber = (dateString: string): number => {
+    const [day, month, year] = dateString.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+
+    // ISO week number calculation
+    const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+    const dayOfYear = Math.floor((date.getTime() - firstDayOfYear.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+    const dayOfWeek = firstDayOfYear.getDay() === 0 ? 7 : firstDayOfYear.getDay(); // Monday = 1, Sunday = 7
+
+    return Math.ceil((dayOfYear + dayOfWeek - 1) / 7);
+  };
+
+  const getSelectedEmployeeName = (): string => {
+    const employee = employees.find(emp => emp.id === formData.employeeId);
+    return employee ? employee.fullName : '';
   };
 
   if (isLoading || isLoadingShift || isLoadingEmployees) {
@@ -290,7 +396,7 @@ export default function EditShiftPage() {
       <Sidebar />
 
       <main className="layout-main-content overflow-y-auto">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           {/* Header Section */}
           <div className="mb-8">
             <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8 relative overflow-hidden">
@@ -322,336 +428,417 @@ export default function EditShiftPage() {
             </div>
           </div>
 
-          {/* Form Section */}
-          <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8">
-            <form onSubmit={handleSubmit} className="space-y-8">
-              {/* General Error */}
-              {error && (
-                <div className="p-4 bg-red-50/80 backdrop-blur-sm border border-red-200/50 rounded-xl text-red-700 text-center font-medium">
-                  {error}
-                </div>
-              )}
-
-              {/* Employee and Date */}
-              <div>
-                <h3 className="text-xl font-semibold mb-6" style={{ color: '#120309' }}>
-                  Planning details
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Employee Selection */}
-                  <div>
-                    <label htmlFor="employeeId" className="block text-sm font-semibold mb-2" style={{ color: '#120309' }}>
-                      Medewerker <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <User className="h-5 w-5" style={{ color: '#67697c' }} />
-                      </div>
-                      <select
-                        id="employeeId"
-                        value={formData.employeeId}
-                        onChange={(e) => handleInputChange('employeeId', parseInt(e.target.value))}
-                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.employeeId ? 'border-red-300' : 'border-gray-200'}`}
-                        style={{ color: '#120309' }}
-                        disabled={isSubmitting}
-                        onFocus={(e) => {
-                          if (!fieldErrors.employeeId) {
-                            const target = e.target as HTMLSelectElement;
-                            target.style.boxShadow = '0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)';
-                            target.style.borderColor = '#d5896f';
-                          }
-                        }}
-                        onBlur={(e) => {
-                          const target = e.target as HTMLSelectElement;
-                          target.style.boxShadow = '';
-                          target.style.borderColor = fieldErrors.employeeId ? '#fca5a5' : '#d1d5db';
-                        }}
-                      >
-                        <option value={0}>Medewerker selecteren</option>
-                        {employees.map((employee) => (
-                          <option key={employee.id} value={employee.id}>
-                            {employee.fullName}
-                          </option>
-                        ))}
-                      </select>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Form Section */}
+            <div className="lg:col-span-2">
+              <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8">
+                <form onSubmit={handleSubmit} className="space-y-8">
+                  {/* General Error */}
+                  {error && (
+                    <div className="p-4 bg-red-50/80 backdrop-blur-sm border border-red-200/50 rounded-xl text-red-700 text-center font-medium">
+                      {error}
                     </div>
-                    {fieldErrors.employeeId && (
-                      <p className="mt-2 text-sm text-red-600">{fieldErrors.employeeId}</p>
-                    )}
-                  </div>
-
-                  {/* Date */}
-                  <div>
-                    <label htmlFor="date" className="block text-sm font-semibold mb-2" style={{ color: '#120309' }}>
-                      Datum <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Calendar className="h-5 w-5" style={{ color: '#67697c' }} />
-                      </div>
-                      <input
-                        id="date"
-                        type="date"
-                        value={toInputDateFormat(formData.date)}
-                        onChange={(e) => handleInputChange('date', e.target.value)}
-                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.date ? 'border-red-300' : 'border-gray-200'}`}
-                        style={{ color: '#120309' }}
-                        disabled={isSubmitting}
-                        onFocus={(e) => {
-                          if (!fieldErrors.date) {
-                            const target = e.target as HTMLInputElement;
-                            target.style.boxShadow = '0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)';
-                            target.style.borderColor = '#d5896f';
-                          }
-                        }}
-                        onBlur={(e) => {
-                          const target = e.target as HTMLInputElement;
-                          target.style.boxShadow = '';
-                          target.style.borderColor = fieldErrors.date ? '#fca5a5' : '#d1d5db';
-                        }}
-                      />
-                    </div>
-                    {fieldErrors.date && (
-                      <p className="mt-2 text-sm text-red-600">{fieldErrors.date}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Time Settings */}
-              <div>
-                <h3 className="text-xl font-semibold mb-6" style={{ color: '#120309' }}>
-                  Tijd instellingen
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Start Time */}
-                  <div>
-                    <label htmlFor="startTime" className="block text-sm font-semibold mb-2" style={{ color: '#120309' }}>
-                      Starttijd <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Clock className="h-5 w-5" style={{ color: '#67697c' }} />
-                      </div>
-                      <input
-                        id="startTime"
-                        type="time"
-                        value={formData.startTime}
-                        onChange={(e) => handleInputChange('startTime', e.target.value)}
-                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.startTime ? 'border-red-300' : 'border-gray-200'}`}
-                        style={{ color: '#120309' }}
-                        disabled={isSubmitting}
-                        min="12:00"
-                        max="23:59"
-                        onFocus={(e) => {
-                          if (!fieldErrors.startTime) {
-                            const target = e.target as HTMLInputElement;
-                            target.style.boxShadow = '0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)';
-                            target.style.borderColor = '#d5896f';
-                          }
-                        }}
-                        onBlur={(e) => {
-                          const target = e.target as HTMLInputElement;
-                          target.style.boxShadow = '';
-                          target.style.borderColor = fieldErrors.startTime ? '#fca5a5' : '#d1d5db';
-                        }}
-                      />
-                    </div>
-                    {fieldErrors.startTime && (
-                      <p className="mt-2 text-sm text-red-600">{fieldErrors.startTime}</p>
-                    )}
-                    <p className="mt-2 text-xs" style={{ color: '#67697c' }}>
-                      Tussen 12:00 en 23:59
-                    </p>
-                  </div>
-
-                  {/* End Time */}
-                  <div>
-                    <label htmlFor="endTime" className="block text-sm font-semibold mb-2" style={{ color: '#120309' }}>
-                      Eindtijd {!formData.isOpenEnded && <span className="text-red-500">*</span>}
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Clock className="h-5 w-5" style={{ color: formData.isOpenEnded ? '#9ca3af' : '#67697c' }} />
-                      </div>
-                      <input
-                        id="endTime"
-                        type="time"
-                        value={formData.endTime || ''}
-                        onChange={(e) => handleInputChange('endTime', e.target.value)}
-                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none transition-all duration-300 ${formData.isOpenEnded
-                          ? 'bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200'
-                          : fieldErrors.endTime
-                            ? 'border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
-                            : 'border-gray-200 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
-                          }`}
-                        style={{ color: formData.isOpenEnded ? '#9ca3af' : '#120309' }}
-                        disabled={formData.isOpenEnded || isSubmitting}
-                        onFocus={(e) => {
-                          if (!formData.isOpenEnded && !fieldErrors.endTime) {
-                            const target = e.target as HTMLInputElement;
-                            target.style.boxShadow = '0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)';
-                            target.style.borderColor = '#d5896f';
-                          }
-                        }}
-                        onBlur={(e) => {
-                          if (!formData.isOpenEnded) {
-                            const target = e.target as HTMLInputElement;
-                            target.style.boxShadow = '';
-                            target.style.borderColor = fieldErrors.endTime ? '#fca5a5' : '#d1d5db';
-                          }
-                        }}
-                      />
-                    </div>
-                    {fieldErrors.endTime && (
-                      <p className="mt-2 text-sm text-red-600">{fieldErrors.endTime}</p>
-                    )}
-                    <p className="mt-2 text-xs" style={{ color: '#67697c' }}>
-                      Tussen 12:01 en 00:00 (of open einde)
-                    </p>
-                  </div>
-                </div>
-
-                {/* Open Ended Checkbox */}
-                <div className="mt-6">
-                  <label className="flex items-center space-x-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.isOpenEnded}
-                      onChange={(e) => {
-                        handleInputChange('isOpenEnded', e.target.checked);
-                        if (e.target.checked) {
-                          handleInputChange('endTime', null);
-                        } else {
-                          handleInputChange('endTime', '18:00');
-                        }
-                      }}
-                      className="w-5 h-5 rounded border-gray-300 focus:ring-2 focus:ring-orange-500"
-                      style={{ accentColor: '#d5896f' }}
-                      disabled={isSubmitting}
-                    />
-                    <span className="text-sm font-medium" style={{ color: '#120309' }}>
-                      Open einde (werkt tot sluitingstijd)
-                    </span>
-                  </label>
-                </div>
-              </div>
-
-              {/* Shift Type and Notes */}
-              <div>
-                <h3 className="text-xl font-semibold mb-6" style={{ color: '#120309' }}>
-                  Shift details
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Shift Type */}
-                  <div>
-                    <label htmlFor="shiftType" className="block text-sm font-semibold mb-2" style={{ color: '#120309' }}>
-                      Type shift <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Type className="h-5 w-5" style={{ color: '#67697c' }} />
-                      </div>
-                      <select
-                        id="shiftType"
-                        value={formData.shiftType}
-                        onChange={(e) => handleInputChange('shiftType', parseInt(e.target.value) as ShiftType)}
-                        className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg"
-                        style={{ color: '#120309' }}
-                        disabled={isSubmitting}
-                        onFocus={(e) => {
-                          const target = e.target as HTMLSelectElement;
-                          target.style.boxShadow = '0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)';
-                          target.style.borderColor = '#d5896f';
-                        }}
-                        onBlur={(e) => {
-                          const target = e.target as HTMLSelectElement;
-                          target.style.boxShadow = '';
-                          target.style.borderColor = '#d1d5db';
-                        }}
-                      >
-                        <option value={ShiftType.Schoonmaak}>Schoonmaak</option>
-                        <option value={ShiftType.Bedienen}>Bedienen</option>
-                        <option value={ShiftType.SchoonmaakBedienen}>Schoonmaak & Bedienen</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Notes */}
-                  <div>
-                    <label htmlFor="notes" className="block text-sm font-semibold mb-2" style={{ color: '#120309' }}>
-                      Notities <span className="text-gray-500">(optioneel)</span>
-                    </label>
-                    <div className="relative">
-                      <div className="absolute top-3 left-0 pl-4 flex items-start pointer-events-none">
-                        <FileText className="h-5 w-5" style={{ color: '#67697c' }} />
-                      </div>
-                      <textarea
-                        id="notes"
-                        value={formData.notes || ''}
-                        onChange={(e) => handleInputChange('notes', e.target.value)}
-                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg resize-none ${fieldErrors.notes ? 'border-red-300' : 'border-gray-200'}`}
-                        style={{ color: '#120309' }}
-                        placeholder="Eventuele opmerkingen..."
-                        rows={3}
-                        maxLength={500}
-                        disabled={isSubmitting}
-                        onFocus={(e) => {
-                          if (!fieldErrors.notes) {
-                            const target = e.target as HTMLTextAreaElement;
-                            target.style.boxShadow = '0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)';
-                            target.style.borderColor = '#d5896f';
-                          }
-                        }}
-                        onBlur={(e) => {
-                          const target = e.target as HTMLTextAreaElement;
-                          target.style.boxShadow = '';
-                          target.style.borderColor = fieldErrors.notes ? '#fca5a5' : '#d1d5db';
-                        }}
-                      />
-                    </div>
-                    {fieldErrors.notes && (
-                      <p className="mt-2 text-sm text-red-600">{fieldErrors.notes}</p>
-                    )}
-                    <p className="mt-2 text-xs" style={{ color: '#67697c' }}>
-                      {formData.notes?.length || 0}/500 tekens
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Form Actions */}
-              <div className="flex items-center justify-between space-x-4 pt-6 border-t border-gray-200/50">
-                <button
-                  type="button"
-                  onClick={() => router.back()}
-                  disabled={isSubmitting}
-                  className="flex items-center space-x-2 max-[500px]:space-x-0 px-6 py-3 max-[500px]:px-3 rounded-xl border border-gray-300 text-gray-700 font-semibold transition-all duration-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  <X className="h-5 w-5" />
-                  <span className="max-[500px]:hidden">Annuleren</span>
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex items-center space-x-2 px-6 py-3 rounded-xl text-white font-semibold transition-all duration-300 hover:shadow-lg hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                  style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                      <span>Opslaan...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-5 w-5" />
-                      <span>Opslaan</span>
-                    </>
                   )}
-                </button>
+
+                  {/* Employee and Date */}
+                  <div>
+                    <h3 className="text-xl font-semibold mb-6" style={{ color: '#120309' }}>
+                      Planning details
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Employee Selection */}
+                      <div>
+                        <label htmlFor="employeeId" className="block text-sm font-semibold mb-2" style={{ color: '#120309' }}>
+                          Medewerker <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <User className="h-5 w-5" style={{ color: '#67697c' }} />
+                          </div>
+                          <select
+                            id="employeeId"
+                            value={formData.employeeId}
+                            onChange={(e) => handleInputChange('employeeId', parseInt(e.target.value))}
+                            className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.employeeId ? 'border-red-300' : 'border-gray-200'}`}
+                            style={{ color: '#120309' }}
+                            disabled={isSubmitting}
+                            onFocus={(e) => {
+                              if (!fieldErrors.employeeId) {
+                                const target = e.target as HTMLSelectElement;
+                                target.style.boxShadow = '0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)';
+                                target.style.borderColor = '#d5896f';
+                              }
+                            }}
+                            onBlur={(e) => {
+                              const target = e.target as HTMLSelectElement;
+                              target.style.boxShadow = '';
+                              target.style.borderColor = fieldErrors.employeeId ? '#fca5a5' : '#d1d5db';
+                            }}
+                          >
+                            <option value={0}>Medewerker selecteren</option>
+                            {employees.map((employee) => (
+                              <option key={employee.id} value={employee.id}>
+                                {employee.fullName}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        {fieldErrors.employeeId && (
+                          <p className="mt-2 text-sm text-red-600">{fieldErrors.employeeId}</p>
+                        )}
+                      </div>
+
+                      {/* Date */}
+                      <div>
+                        <label htmlFor="date" className="block text-sm font-semibold mb-2" style={{ color: '#120309' }}>
+                          Datum <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <Calendar className="h-5 w-5" style={{ color: '#67697c' }} />
+                          </div>
+                          <input
+                            id="date"
+                            type="date"
+                            value={toInputDateFormat(formData.date)}
+                            onChange={(e) => handleInputChange('date', e.target.value)}
+                            className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.date ? 'border-red-300' : 'border-gray-200'}`}
+                            style={{ color: '#120309' }}
+                            disabled={isSubmitting}
+                            onFocus={(e) => {
+                              if (!fieldErrors.date) {
+                                const target = e.target as HTMLInputElement;
+                                target.style.boxShadow = '0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)';
+                                target.style.borderColor = '#d5896f';
+                              }
+                            }}
+                            onBlur={(e) => {
+                              const target = e.target as HTMLInputElement;
+                              target.style.boxShadow = '';
+                              target.style.borderColor = fieldErrors.date ? '#fca5a5' : '#d1d5db';
+                            }}
+                          />
+                        </div>
+                        {fieldErrors.date && (
+                          <p className="mt-2 text-sm text-red-600">{fieldErrors.date}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Time Settings */}
+                  <div>
+                    <h3 className="text-xl font-semibold mb-6" style={{ color: '#120309' }}>
+                      Tijd instellingen
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Start Time */}
+                      <div>
+                        <label htmlFor="startTime" className="block text-sm font-semibold mb-2" style={{ color: '#120309' }}>
+                          Starttijd <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <Clock className="h-5 w-5" style={{ color: '#67697c' }} />
+                          </div>
+                          <input
+                            id="startTime"
+                            type="time"
+                            value={formData.startTime}
+                            onChange={(e) => handleInputChange('startTime', e.target.value)}
+                            className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.startTime ? 'border-red-300' : 'border-gray-200'}`}
+                            style={{ color: '#120309' }}
+                            disabled={isSubmitting}
+                            min="12:00"
+                            max="23:59"
+                            onFocus={(e) => {
+                              if (!fieldErrors.startTime) {
+                                const target = e.target as HTMLInputElement;
+                                target.style.boxShadow = '0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)';
+                                target.style.borderColor = '#d5896f';
+                              }
+                            }}
+                            onBlur={(e) => {
+                              const target = e.target as HTMLInputElement;
+                              target.style.boxShadow = '';
+                              target.style.borderColor = fieldErrors.startTime ? '#fca5a5' : '#d1d5db';
+                            }}
+                          />
+                        </div>
+                        {fieldErrors.startTime && (
+                          <p className="mt-2 text-sm text-red-600">{fieldErrors.startTime}</p>
+                        )}
+                        <p className="mt-2 text-xs" style={{ color: '#67697c' }}>
+                          Tussen 12:00 en 23:59
+                        </p>
+                      </div>
+
+                      {/* End Time */}
+                      <div>
+                        <label htmlFor="endTime" className="block text-sm font-semibold mb-2" style={{ color: '#120309' }}>
+                          Eindtijd {!formData.isOpenEnded && <span className="text-red-500">*</span>}
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <Clock className="h-5 w-5" style={{ color: formData.isOpenEnded ? '#9ca3af' : '#67697c' }} />
+                          </div>
+                          <input
+                            id="endTime"
+                            type="time"
+                            value={formData.endTime || ''}
+                            onChange={(e) => handleInputChange('endTime', e.target.value)}
+                            className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none transition-all duration-300 ${formData.isOpenEnded
+                              ? 'bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200'
+                              : fieldErrors.endTime
+                                ? 'border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
+                                : 'border-gray-200 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg'
+                              }`}
+                            style={{ color: formData.isOpenEnded ? '#9ca3af' : '#120309' }}
+                            disabled={formData.isOpenEnded || isSubmitting}
+                            onFocus={(e) => {
+                              if (!formData.isOpenEnded && !fieldErrors.endTime) {
+                                const target = e.target as HTMLInputElement;
+                                target.style.boxShadow = '0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)';
+                                target.style.borderColor = '#d5896f';
+                              }
+                            }}
+                            onBlur={(e) => {
+                              if (!formData.isOpenEnded) {
+                                const target = e.target as HTMLInputElement;
+                                target.style.boxShadow = '';
+                                target.style.borderColor = fieldErrors.endTime ? '#fca5a5' : '#d1d5db';
+                              }
+                            }}
+                          />
+                        </div>
+                        {fieldErrors.endTime && (
+                          <p className="mt-2 text-sm text-red-600">{fieldErrors.endTime}</p>
+                        )}
+                        <p className="mt-2 text-xs" style={{ color: '#67697c' }}>
+                          Tussen 12:01 en 00:00 (of open einde)
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Open Ended Checkbox */}
+                    <div className="mt-6">
+                      <label className="flex items-center space-x-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.isOpenEnded}
+                          onChange={(e) => {
+                            handleInputChange('isOpenEnded', e.target.checked);
+                            if (e.target.checked) {
+                              handleInputChange('endTime', null);
+                            } else {
+                              handleInputChange('endTime', '18:00');
+                            }
+                          }}
+                          className="w-5 h-5 rounded border-gray-300 focus:ring-2 focus:ring-orange-500"
+                          style={{ accentColor: '#d5896f' }}
+                          disabled={isSubmitting}
+                        />
+                        <span className="text-sm font-medium" style={{ color: '#120309' }}>
+                          Open einde (werkt tot sluitingstijd)
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Shift Type and Notes */}
+                  <div>
+                    <h3 className="text-xl font-semibold mb-6" style={{ color: '#120309' }}>
+                      Shift details
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Shift Type */}
+                      <div>
+                        <label htmlFor="shiftType" className="block text-sm font-semibold mb-2" style={{ color: '#120309' }}>
+                          Type shift <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <Type className="h-5 w-5" style={{ color: '#67697c' }} />
+                          </div>
+                          <select
+                            id="shiftType"
+                            value={formData.shiftType}
+                            onChange={(e) => handleInputChange('shiftType', parseInt(e.target.value) as ShiftType)}
+                            className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg"
+                            style={{ color: '#120309' }}
+                            disabled={isSubmitting}
+                            onFocus={(e) => {
+                              const target = e.target as HTMLSelectElement;
+                              target.style.boxShadow = '0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)';
+                              target.style.borderColor = '#d5896f';
+                            }}
+                            onBlur={(e) => {
+                              const target = e.target as HTMLSelectElement;
+                              target.style.boxShadow = '';
+                              target.style.borderColor = '#d1d5db';
+                            }}
+                          >
+                            <option value={ShiftType.Schoonmaak}>Schoonmaak</option>
+                            <option value={ShiftType.Bedienen}>Bedienen</option>
+                            <option value={ShiftType.SchoonmaakBedienen}>Schoonmaak & Bedienen</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Notes */}
+                      <div>
+                        <label htmlFor="notes" className="block text-sm font-semibold mb-2" style={{ color: '#120309' }}>
+                          Notities <span className="text-gray-500">(optioneel)</span>
+                        </label>
+                        <div className="relative">
+                          <div className="absolute top-3 left-0 pl-4 flex items-start pointer-events-none">
+                            <FileText className="h-5 w-5" style={{ color: '#67697c' }} />
+                          </div>
+                          <textarea
+                            id="notes"
+                            value={formData.notes || ''}
+                            onChange={(e) => handleInputChange('notes', e.target.value)}
+                            className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg resize-none ${fieldErrors.notes ? 'border-red-300' : 'border-gray-200'}`}
+                            style={{ color: '#120309' }}
+                            placeholder="Eventuele opmerkingen..."
+                            rows={3}
+                            maxLength={500}
+                            disabled={isSubmitting}
+                            onFocus={(e) => {
+                              if (!fieldErrors.notes) {
+                                const target = e.target as HTMLTextAreaElement;
+                                target.style.boxShadow = '0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)';
+                                target.style.borderColor = '#d5896f';
+                              }
+                            }}
+                            onBlur={(e) => {
+                              const target = e.target as HTMLTextAreaElement;
+                              target.style.boxShadow = '';
+                              target.style.borderColor = fieldErrors.notes ? '#fca5a5' : '#d1d5db';
+                            }}
+                          />
+                        </div>
+                        {fieldErrors.notes && (
+                          <p className="mt-2 text-sm text-red-600">{fieldErrors.notes}</p>
+                        )}
+                        <p className="mt-2 text-xs" style={{ color: '#67697c' }}>
+                          {formData.notes?.length || 0}/500 tekens
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Form Actions */}
+                  <div className="flex items-center justify-between space-x-4 pt-6 border-t border-gray-200/50">
+                    <button
+                      type="button"
+                      onClick={() => router.back()}
+                      disabled={isSubmitting}
+                      className="flex items-center space-x-2 max-[500px]:space-x-0 px-6 py-3 max-[500px]:px-3 rounded-xl border border-gray-300 text-gray-700 font-semibold transition-all duration-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                      <X className="h-5 w-5" />
+                      <span className="max-[500px]:hidden">Annuleren</span>
+                    </button>
+
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="flex items-center space-x-2 px-6 py-3 rounded-xl text-white font-semibold transition-all duration-300 hover:shadow-lg hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                      style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                          <span>Opslaan...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Save className="h-5 w-5" />
+                          <span>Opslaan</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
               </div>
-            </form>
+            </div>
+
+            {/* Employee Availability Section */}
+            <div className="lg:col-span-1">
+              <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-6">
+                <div className="flex items-center space-x-3 mb-6">
+                  <div className="p-2 rounded-lg" style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}>
+                    <CalendarCheck className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold" style={{ color: '#120309' }}>
+                      Beschikbaarheid
+                    </h3>
+                    {getSelectedEmployeeName() && (
+                      <p className="text-sm" style={{ color: '#67697c' }}>
+                        {getSelectedEmployeeName()}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {!formData.employeeId || formData.employeeId === 0 ? (
+                  <div className="text-center py-8">
+                    <User className="h-12 w-12 mx-auto mb-3" style={{ color: '#67697c' }} />
+                    <p className="text-sm" style={{ color: '#67697c' }}>
+                      Selecteer eerst een medewerker om hun beschikbaarheid te bekijken
+                    </p>
+                  </div>
+                ) : isLoadingAvailability ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto"></div>
+                    <p className="text-sm mt-3" style={{ color: '#67697c' }}>
+                      Beschikbaarheid laden...
+                    </p>
+                  </div>
+                ) : employeeAvailability ? (
+                  <div className="space-y-3">
+                    <div className="text-xs font-medium mb-4" style={{ color: '#67697c' }}>
+                      Week {getWeekNumber(employeeAvailability.weekStart)}
+                    </div>
+                    {employeeAvailability.days.map((day, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-3 rounded-xl border border-gray-200 transition-all duration-200"
+                        style={{ backgroundColor: getAvailabilityColor(day.isAvailable) }}
+                      >
+                        <div className="flex items-center space-x-3">
+                          {getAvailabilityIcon(day.isAvailable)}
+                          <div>
+                            <div className="text-sm font-medium" style={{ color: '#120309' }}>
+                              {getDayName(day.date)}
+                            </div>
+                            <div className="text-xs" style={{ color: '#67697c' }}>
+                              {formatDisplayDate(day.date)} • {getAvailabilityText(day.isAvailable)}
+                            </div>
+                          </div>
+                        </div>
+                        {day.notes && (
+                          <div className="text-xs max-w-20 truncate" style={{ color: '#67697c' }} title={day.notes}>
+                            {day.notes}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Minus className="h-12 w-12 mx-auto mb-3" style={{ color: '#67697c' }} />
+                    <p className="text-sm" style={{ color: '#67697c' }}>
+                      Geen beschikbaarheid gevonden voor deze week
+                    </p>
+                    <p className="text-xs mt-2" style={{ color: '#67697c' }}>
+                      De medewerker heeft nog geen beschikbaarheid ingesteld
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </main>
