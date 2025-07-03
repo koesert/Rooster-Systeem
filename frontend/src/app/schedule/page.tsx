@@ -525,10 +525,10 @@ export default function SchedulePage() {
                   hideModal();
                   setTimeout(() => handleEditShift(shift), 150);
                 }}
-                className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors cursor-pointer"
+                className="flex-1 flex items-center justify-center space-x-2 max-[500px]:space-x-0 px-4 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors cursor-pointer"
               >
                 <Edit className="h-4 w-4" />
-                <span>Bewerken</span>
+                <span className="max-[400px]:hidden">Bewerken</span>
               </button>
               <button
                 onClick={() => {
@@ -536,10 +536,10 @@ export default function SchedulePage() {
                   hideModal();
                   setTimeout(() => handleDeleteShift(shift), 150);
                 }}
-                className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors cursor-pointer"
+                className="flex-1 flex items-center justify-center space-x-2 max-[500px]:space-x-0 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors cursor-pointer"
               >
                 <Trash2 className="h-4 w-4" />
-                <span>Verwijderen</span>
+                <span className="max-[400px]:hidden">Verwijderen</span>
               </button>
             </div>
           )}
@@ -600,7 +600,7 @@ export default function SchedulePage() {
                   {isManager() && (
                     <button
                       onClick={handleAddShift}
-                      className="flex items-center space-x-2 px-3 py-3 min-[425px]:px-6 rounded-xl text-white font-semibold transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer"
+                      className="flex items-center space-x-2 max-[424px]:space-x-0 px-3 py-3 min-[425px]:px-6 rounded-xl text-white font-semibold transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer"
                       style={{ background: 'linear-gradient(135deg, #d5896f, #d5896f90)' }}
                     >
                       <Plus className="h-5 w-5" />

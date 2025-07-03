@@ -276,9 +276,7 @@ export default function ProfileEditPage() {
               <div>
                 <h3 className="text-xl font-semibold mb-6" style={{ color: '#120309' }}>
                   Persoonlijke informatie
-                  {isManager() ? (
-                    <span className="text-sm font-normal ml-2" style={{ color: '#d5896f' }}>(bewerkbaar)</span>
-                  ) : (
+                  {!isManager() && (
                     <span className="text-sm font-normal ml-2" style={{ color: '#67697c' }}>(alleen-lezen)</span>
                   )}
                 </h3>
@@ -385,7 +383,9 @@ export default function ProfileEditPage() {
               <div>
                 <h3 className="text-xl font-semibold mb-6" style={{ color: '#120309' }}>
                   Account informatie
-                  <span className="text-sm font-normal ml-2" style={{ color: '#d5896f' }}>(bewerkbaar)</span>
+                  {!isManager() && (
+                    <span className="text-sm font-normal ml-2" style={{ color: '#d5896f' }}>(bewerkbaar)</span>
+                  )}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Username */}
@@ -458,7 +458,7 @@ export default function ProfileEditPage() {
                         className={`w-full pl-12 pr-12 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.password ? 'border-red-300' : 'border-gray-200'
                           }`}
                         style={{ color: '#120309' }}
-                        placeholder="Laat leeg voor geen wijzigingen"
+                        placeholder="Wachtwoord"
                         onFocus={(e) => {
                           if (!fieldErrors.password) {
                             const target = e.target as HTMLInputElement;
@@ -556,9 +556,7 @@ export default function ProfileEditPage() {
               <div>
                 <h3 className="text-xl font-semibold mb-6" style={{ color: '#120309' }}>
                   {isManager() ? 'Functie & gegevens' : 'Gegevens'}
-                  {isManager() ? (
-                    <span className="text-sm font-normal ml-2" style={{ color: '#d5896f' }}>(bewerkbaar)</span>
-                  ) : (
+                  {!isManager() && (
                     <span className="text-sm font-normal ml-2" style={{ color: '#67697c' }}>(alleen-lezen)</span>
                   )}
                 </h3>
@@ -702,15 +700,15 @@ export default function ProfileEditPage() {
               </div>
 
               {/* Form Actions */}
-              <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200/50">
+              <div className="flex items-center justify-between space-x-4 pt-6 border-t border-gray-200/50">
                 <button
                   type="button"
                   onClick={() => router.push('/profile')}
                   disabled={isSubmitting}
-                  className="flex items-center space-x-2 px-6 py-3 rounded-xl border border-gray-300 text-gray-700 font-semibold transition-all duration-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  className="flex items-center space-x-2 max-[500px]:space-x-0 px-6 py-3 max-[500px]:px-3 rounded-xl border border-gray-300 text-gray-700 font-semibold transition-all duration-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   <X className="h-5 w-5" />
-                  <span>Annuleren</span>
+                  <span className="max-[500px]:hidden">Annuleren</span>
                 </button>
 
                 <button
@@ -727,7 +725,7 @@ export default function ProfileEditPage() {
                   ) : (
                     <>
                       <Save className="h-5 w-5" />
-                      <span>Wijzigingen opslaan</span>
+                      <span>Opslaan</span>
                     </>
                   )}
                 </button>

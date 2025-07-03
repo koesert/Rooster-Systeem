@@ -110,16 +110,16 @@ export default function Sidebar() {
       },
       allowedRoles: ['all'] // All users can view their availability
     },
-    {
-      name: 'Vrij vragen',
-      icon: CalendarCheck,
-      path: '/timeoff',
-      onClick: () => {
-        router.push('/timeoff');
-        setIsMobileMenuOpen(false);
-      },
-      allowedRoles: ['all'] // All users can view their time off requests
-    }
+    // {
+    //   name: 'Vrij vragen',
+    //   icon: CalendarCheck,
+    //   path: '/timeoff',
+    //   onClick: () => {
+    //     router.push('/timeoff');
+    //     setIsMobileMenuOpen(false);
+    //   },
+    //   allowedRoles: ['all'] // All users can view their time off requests
+    // }
   ];
 
   // Only add employee management for managers
