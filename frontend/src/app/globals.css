@@ -53,18 +53,24 @@ body {
   }
 
   /* Make view type tabs fit content only */
-  .layout-main-content .mb-6.flex.items-center.justify-between > div:first-child {
+  .layout-main-content
+    .mb-6.flex.items-center.justify-between
+    > div:first-child {
     width: auto !important;
     align-self: center !important;
   }
 
   /* Adjust navigation controls */
-  .layout-main-content .mb-6.flex.items-center.justify-between > div:last-child {
+  .layout-main-content
+    .mb-6.flex.items-center.justify-between
+    > div:last-child {
     justify-content: center !important;
   }
 
   /* Make employee selection full width */
-  .layout-main-content .mb-6.flex.items-center.justify-between > div:nth-child(2) {
+  .layout-main-content
+    .mb-6.flex.items-center.justify-between
+    > div:nth-child(2) {
     justify-content: center !important;
   }
 
@@ -127,8 +133,12 @@ body {
 /* Mobile schedule adjustments */
 @media (max-width: 768px) {
   /* Shorter day names for week view */
-  .layout-main-content .grid.grid-cols-8 .text-lg.font-medium.text-gray-600.capitalize,
-  .layout-main-content .grid.grid-cols-7 .text-lg.font-medium.text-gray-700.capitalize {
+  .layout-main-content
+    .grid.grid-cols-8
+    .text-lg.font-medium.text-gray-600.capitalize,
+  .layout-main-content
+    .grid.grid-cols-7
+    .text-lg.font-medium.text-gray-700.capitalize {
     font-size: 0.75rem !important;
   }
 
@@ -160,7 +170,7 @@ body {
 
 @media (max-width: 400px) {
   .layout-main-content h1 {
-    font-size: 1.0rem;
+    font-size: 1rem;
     /* Smaller h1 text on mobile */
   }
 }
