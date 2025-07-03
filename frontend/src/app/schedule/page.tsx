@@ -839,8 +839,8 @@ export default function SchedulePage() {
                     return (
                       <div key={day} className="bg-gray-50 p-4 max-[500px]:p-2 text-center">
                         <p className="text-lg font-medium text-gray-700 capitalize">
-                          <span className="hidden md:inline">{day}</span>
-                          <span className="md:hidden">{shortDay}</span>
+                          <span className="hidden lg:inline">{day}</span>
+                          <span className="lg:hidden">{shortDay}</span>
                         </p>
                       </div>
                     );
@@ -887,7 +887,7 @@ export default function SchedulePage() {
                                       e.stopPropagation();
                                       handleShiftClick(shift);
                                     }}
-                                    className={`text-xs p-1 rounded cursor-pointer hover:opacity-80 transition-opacity ${colors.bg} ${colors.text}`}
+                                    className={`text-xs p-1 border border-green-300 m-1 rounded cursor-pointer hover:opacity-80 transition-opacity ${colors.bg} ${colors.text}`}
                                   >
                                     <div
                                       className="font-medium"
