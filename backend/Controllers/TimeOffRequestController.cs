@@ -52,6 +52,69 @@ public class TimeOffRequestController : ControllerBase
     }
 
     /// <summary>
+    /// Update een bestaande vrij aanvraag
+    /// Employees kunnen alleen eigen pending aanvragen bewerken (zonder status)
+    /// Managers kunnen alle aanvragen bewerken (met status via /manager endpoint)
+    /// </summary>
+    [HttpPut("{id}")]
+    [Authorize(Policy = "AllRoles")]
+    public async Task<ActionResult<TimeOffRequestResponseDto>> UpdateRequest(int id, [FromBody] CreateTimeOffRequestDto dto)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var currentRole = GetCurrentUserRole();
+            var employeeId = GetCurrentEmployeeId();
+
+            // Both managers and employees can use this endpoint, but managers should use the manager endpoint for status changes
+            var request = await _timeOffRequestService.UpdateRequestAsync(id, employeeId, dto);
+            var response = await _timeOffRequestService.GetRequestByIdAsync(request.Id);
+
+            return Ok(response);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Fout bij bijwerken vrij aanvraag {Id}", id);
+            return StatusCode(500, new { message = "Er is een fout opgetreden bij het bijwerken van de aanvraag" });
+        }
+    }
+
+    /// <summary>
+    /// Verwijdert een vrij aanvraag
+    /// Employees kunnen alleen eigen pending aanvragen verwijderen
+    /// Managers kunnen alle aanvragen verwijderen
+    /// </summary>
+    [HttpDelete("{id}")]
+    [Authorize(Policy = "AllRoles")]
+    public async Task<ActionResult> DeleteRequest(int id)
+    {
+        try
+        {
+            var employeeId = GetCurrentEmployeeId();
+            await _timeOffRequestService.DeleteRequestAsync(id, employeeId);
+
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Fout bij verwijderen vrij aanvraag {Id}", id);
+            return StatusCode(500, new { message = "Er is een fout opgetreden bij het verwijderen van de aanvraag" });
+        }
+    }
+
+    /// <summary>
     /// Haalt alle vrij aanvragen op (managers zien alles, werknemers alleen eigen aanvragen)
     /// </summary>
     [HttpGet]
@@ -166,6 +229,37 @@ public class TimeOffRequestController : ControllerBase
         {
             _logger.LogError(ex, "Fout bij annuleren vrij aanvraag {Id}", id);
             return StatusCode(500, new { message = "Er is een fout opgetreden bij het annuleren van de aanvraag" });
+        }
+    }
+
+    /// <summary>
+    /// Update een vrij aanvraag als manager (inclusief status wijziging)
+    /// </summary>
+    [HttpPut("{id}/manager")]
+    [Authorize(Policy = "ManagerOnly")]
+    public async Task<ActionResult<TimeOffRequestResponseDto>> UpdateRequestAsManager(int id, [FromBody] UpdateTimeOffRequestAsManagerDto dto)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var currentRole = GetCurrentUserRole();
+            var request = await _timeOffRequestService.UpdateRequestAsManagerAsync(id, dto, currentRole);
+            var response = await _timeOffRequestService.GetRequestByIdAsync(request.Id);
+
+            return Ok(response);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Fout bij bijwerken vrij aanvraag {Id} door manager", id);
+            return StatusCode(500, new { message = "Er is een fout opgetreden bij het bijwerken van de aanvraag" });
         }
     }
 

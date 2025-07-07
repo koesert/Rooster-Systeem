@@ -80,6 +80,7 @@ export default function EditShiftPage() {
       loadShiftData();
       loadEmployees();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, isManager, shiftId]);
 
   // Load availability when employee or week changes

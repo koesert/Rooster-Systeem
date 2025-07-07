@@ -44,3 +44,20 @@ public class TimeOffRequestFilterDto
     public string? FromDate { get; set; } // DD-MM-YYYY format
     public string? ToDate { get; set; } // DD-MM-YYYY format
 }
+
+public class UpdateTimeOffRequestAsManagerDto
+{
+    [Required(ErrorMessage = "Reden is verplicht")]
+    [MaxLength(500, ErrorMessage = "Reden mag maximaal 500 karakters zijn")]
+    public string Reason { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Startdatum is verplicht")]
+    public string StartDate { get; set; } = string.Empty; // DD-MM-YYYY format
+
+    [Required(ErrorMessage = "Einddatum is verplicht")]
+    public string EndDate { get; set; } = string.Empty; // DD-MM-YYYY format
+
+    [Required(ErrorMessage = "Status is verplicht")]
+    [RegularExpression("^(Pending|Approved|Rejected|Cancelled)$", ErrorMessage = "Status moet 'Pending', 'Approved', 'Rejected' of 'Cancelled' zijn")]
+    public string Status { get; set; } = string.Empty;
+}

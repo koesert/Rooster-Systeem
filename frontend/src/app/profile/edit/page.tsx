@@ -227,12 +227,13 @@ export default function ProfileEditPage() {
 
       // Success! Go back to profile page
       router.push("/profile");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error updating profile:", error);
 
       // Handle specific field validation errors
-      if (error.status === 400) {
+      if (error && typeof error === 'object' && 'status' in error && 'message' in error && error.status === 400) {
         if (
+          typeof error.message === 'string' &&
           error.message.includes("Username") &&
           error.message.includes("already exists")
         ) {
