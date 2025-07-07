@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useError } from "@/contexts/ErrorContext";
@@ -80,6 +80,7 @@ export default function HomePage() {
       loadShifts();
       loadAvailability();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   // Clear justLoggedIn when component unmounts
@@ -91,7 +92,7 @@ export default function HomePage() {
     };
   }, [justLoggedIn, clearJustLoggedIn]);
 
-  const loadShifts = async () => {
+  const loadShifts = useCallback(async () => {
     setIsLoadingShifts(true);
     try {
       const startDate = new Date(currentDate);
@@ -104,24 +105,24 @@ export default function HomePage() {
         endDate.toISOString().split("T")[0],
       );
       setShifts(shiftsData);
-    } catch (error: any) {
+    } catch (error: unknown) {
       showApiError(error, "Fout bij het laden van shifts");
     } finally {
       setIsLoadingShifts(false);
     }
-  };
+  }, [currentDate, showApiError]); // Dependencies for useCallback
 
-  const loadAvailability = async () => {
+  const loadAvailability = useCallback(async () => {
     setIsLoadingAvailability(true);
     try {
       const availability = await api.getMyAvailability();
       setWeekAvailabilities(availability);
-    } catch (error: any) {
+    } catch (error: unknown) {
       showApiError(error, "Fout bij het laden van beschikbaarheid");
     } finally {
       setIsLoadingAvailability(false);
     }
-  };
+  }, [showApiError]); // Dependencies for useCallback
 
   // Shift click handler (copied from schedule page)
   const handleShiftClick = (shift: Shift) => {
@@ -250,7 +251,7 @@ export default function HomePage() {
             confirmText: "OK",
             icon: <CheckCircle className="h-6 w-6 text-green-600" />,
           });
-        } catch (error: any) {
+        } catch (error: unknown) {
           showApiError(error, "Fout bij het verwijderen van de shift");
         }
       },

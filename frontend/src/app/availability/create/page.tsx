@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useError } from "@/contexts/ErrorContext";
@@ -50,7 +50,7 @@ export default function CreateAvailabilityPage() {
     initializeFormData();
   }, [selectedWeekIndex]);
 
-  const initializeFormData = async () => {
+  const initializeFormData = useCallback(async () => {
     setIsLoadingAvailability(true);
     const startOfWeek = getSelectedWeekStart();
     const weekStartString = formatDateString(startOfWeek);
@@ -100,7 +100,7 @@ export default function CreateAvailabilityPage() {
     } finally {
       setIsLoadingAvailability(false);
     }
-  };
+  }, [selectedWeekIndex]); // Dependencies for useCallback
 
   const initializeDefaultFormData = () => {
     const startOfWeek = getSelectedWeekStart();
@@ -159,19 +159,6 @@ export default function CreateAvailabilityPage() {
     return `${dayName.charAt(0).toUpperCase() + dayName.slice(1)} ${day}-${month}`;
   };
 
-  const getWeekDisplayText = (): string => {
-    const startOfWeek = getSelectedWeekStart();
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 6);
-
-    const startDay = String(startOfWeek.getDate()).padStart(2, "0");
-    const startMonth = String(startOfWeek.getMonth() + 1).padStart(2, "0");
-    const endDay = String(endOfWeek.getDate()).padStart(2, "0");
-    const endMonth = String(endOfWeek.getMonth() + 1).padStart(2, "0");
-
-    return `Week ${startDay}-${startMonth} t/m ${endDay}-${endMonth}`;
-  };
-
   const getWeekNumber = (): number => {
     const startOfWeek = getSelectedWeekStart();
     const startOfYear = new Date(startOfWeek.getFullYear(), 0, 1);
@@ -191,7 +178,7 @@ export default function CreateAvailabilityPage() {
   const updateDayAvailability = (
     dayIndex: number,
     field: keyof UpdateDayAvailability,
-    value: any,
+    value: string | boolean,
   ) => {
     setFormData((prev) =>
       prev.map((day, index) =>

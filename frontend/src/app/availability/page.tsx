@@ -66,7 +66,7 @@ export default function AvailabilityPage() {
     if (user && isManager()) {
       loadEmployees();
     }
-  }, [user, isManager]);
+  }, [user]);
 
   // Load availability data
   useEffect(() => {
@@ -80,7 +80,7 @@ export default function AvailabilityPage() {
     try {
       const employeeList = await api.getEmployees();
       setEmployees(employeeList);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error loading employees:", error);
       showApiError(error, "Fout bij het laden van medewerkers");
     } finally {
@@ -103,7 +103,7 @@ export default function AvailabilityPage() {
       }
 
       setWeekAvailabilities(availability);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error loading availability:", error);
       setError("Kon beschikbaarheid niet laden");
       showApiError(error, "Fout bij het laden van beschikbaarheid");
