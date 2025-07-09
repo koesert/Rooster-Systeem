@@ -16,6 +16,7 @@ export interface Shift {
   shiftType: ShiftType;
   shiftTypeName: string;
   isOpenEnded: boolean;
+  isStandby: boolean;
   notes: string | null;
   timeRange: string;
   durationInHours: number | null;
@@ -30,6 +31,7 @@ export interface CreateShiftRequest {
   endTime: string | null;
   shiftType: ShiftType;
   isOpenEnded: boolean;
+  isStandby: boolean;
   notes?: string;
 }
 
@@ -40,6 +42,7 @@ export interface UpdateShiftRequest {
   endTime: string | null;
   shiftType: ShiftType;
   isOpenEnded: boolean;
+  isStandby: boolean;
   notes?: string;
 }
 
