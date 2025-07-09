@@ -51,6 +51,7 @@ export default function EditShiftPage() {
     endTime: "18:00",
     shiftType: ShiftType.Bedienen,
     isOpenEnded: false,
+    isStandby: false,
     notes: "",
   });
 
@@ -123,6 +124,7 @@ export default function EditShiftPage() {
         endTime: shiftData.endTime ? shiftData.endTime.substring(0, 5) : null,
         shiftType: shiftData.shiftType,
         isOpenEnded: shiftData.isOpenEnded,
+        isStandby: shiftData.isStandby,
         notes: shiftData.notes || "",
       });
     } catch (error: any) {
@@ -845,58 +847,83 @@ export default function EditShiftPage() {
                       Shift details
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Shift Type */}
-                      <div>
-                        <label
-                          htmlFor="shiftType"
-                          className="block text-sm font-semibold mb-2"
-                          style={{ color: "#120309" }}
-                        >
-                          Type shift <span className="text-red-500">*</span>
-                        </label>
-                        <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                            <Type
-                              className="h-5 w-5"
-                              style={{ color: "#67697c" }}
-                            />
-                          </div>
-                          <select
-                            id="shiftType"
-                            value={formData.shiftType}
-                            onChange={(e) =>
-                              handleInputChange(
-                                "shiftType",
-                                parseInt(e.target.value) as ShiftType,
-                              )
-                            }
-                            className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg"
+                      {/* Left Column: Shift Type and Standby */}
+                      <div className="space-y-6">
+                        {/* Shift Type */}
+                        <div>
+                          <label
+                            htmlFor="shiftType"
+                            className="block text-sm font-semibold mb-2"
                             style={{ color: "#120309" }}
-                            disabled={isSubmitting}
-                            onFocus={(e) => {
-                              const target = e.target as HTMLSelectElement;
-                              target.style.boxShadow =
-                                "0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)";
-                              target.style.borderColor = "#d5896f";
-                            }}
-                            onBlur={(e) => {
-                              const target = e.target as HTMLSelectElement;
-                              target.style.boxShadow = "";
-                              target.style.borderColor = "#d1d5db";
-                            }}
                           >
-                            <option value={ShiftType.Schoonmaak}>
-                              Schoonmaak
-                            </option>
-                            <option value={ShiftType.Bedienen}>Bedienen</option>
-                            <option value={ShiftType.SchoonmaakBedienen}>
-                              Schoonmaak & Bedienen
-                            </option>
-                          </select>
+                            Type shift <span className="text-red-500">*</span>
+                          </label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                              <Type
+                                className="h-5 w-5"
+                                style={{ color: "#67697c" }}
+                              />
+                            </div>
+                            <select
+                              id="shiftType"
+                              value={formData.shiftType}
+                              onChange={(e) =>
+                                handleInputChange(
+                                  "shiftType",
+                                  parseInt(e.target.value) as ShiftType,
+                                )
+                              }
+                              className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg"
+                              style={{ color: "#120309" }}
+                              disabled={isSubmitting}
+                              onFocus={(e) => {
+                                const target = e.target as HTMLSelectElement;
+                                target.style.boxShadow =
+                                  "0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)";
+                                target.style.borderColor = "#d5896f";
+                              }}
+                              onBlur={(e) => {
+                                const target = e.target as HTMLSelectElement;
+                                target.style.boxShadow = "";
+                                target.style.borderColor = "#d1d5db";
+                              }}
+                            >
+                              <option value={ShiftType.Schoonmaak}>
+                                Schoonmaak
+                              </option>
+                              <option value={ShiftType.Bedienen}>Bedienen</option>
+                              <option value={ShiftType.SchoonmaakBedienen}>
+                                Schoonmaak & Bedienen
+                              </option>
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Standby Checkbox */}
+                        <div>
+                          <label className="flex items-center space-x-3 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={formData.isStandby}
+                              onChange={(e) =>
+                                handleInputChange("isStandby", e.target.checked)
+                              }
+                              className="w-5 h-5 rounded border-gray-300 focus:ring-2 focus:ring-orange-500"
+                              style={{ accentColor: "#d5896f" }}
+                              disabled={isSubmitting}
+                            />
+                            <span
+                              className="text-sm font-medium"
+                              style={{ color: "#120309" }}
+                            >
+                              Standby
+                            </span>
+                          </label>
                         </div>
                       </div>
 
-                      {/* Notes */}
+                      {/* Right Column: Notes */}
                       <div>
                         <label
                           htmlFor="notes"

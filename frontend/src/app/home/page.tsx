@@ -145,6 +145,9 @@ export default function HomePage() {
             {shift.isOpenEnded && (
               <span className="text-sm text-gray-600">Open einde</span>
             )}
+            {shift.isStandby && (
+              <span className="text-sm text-orange-600">Standby</span>
+            )}
           </div>
 
           <div className="grid grid-cols-1 gap-3">
@@ -356,6 +359,9 @@ export default function HomePage() {
           >
             {formatTime(shift.startTime)} -{" "}
             {shift.isOpenEnded ? "einde" : formatTime(shift.endTime!)}
+            {shift.isStandby && (
+              <div className="text-orange-600 text-xs mt-0.5">standby</div>
+            )}
             <div className="mt-0.5 text-xs opacity-70">
               {shift.shiftTypeName}
             </div>

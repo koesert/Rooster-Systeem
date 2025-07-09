@@ -384,6 +384,9 @@ export default function SchedulePage() {
           >
             {formatTime(shift.startTime)} -{" "}
             {shift.isOpenEnded ? "einde" : formatTime(shift.endTime!)}
+            {shift.isStandby && (
+              <div className="text-orange-600 text-xs mt-0.5">standby</div>
+            )}
             {((viewType === "day" && !selectedEmployeeId) ||
               selectedEmployeeId) && (
               <div className="mt-0.5 text-xs max-[500px]:text-[9px] opacity-70">
@@ -519,6 +522,9 @@ export default function SchedulePage() {
             >
               {shift.shiftTypeName}
             </div>
+            {shift.isStandby && (
+              <span className="text-sm text-orange-600">Standby</span>
+            )}
             {shift.isOpenEnded && (
               <span className="text-sm text-gray-600">Open einde</span>
             )}
@@ -1013,7 +1019,7 @@ export default function SchedulePage() {
                           {/* Shift summary */}
                           <div className="space-y-1">
                             {/* Show detailed shift info on larger screens */}
-                            <div className="min-[700px]:block hidden">
+                            <div className="min-[800px]:block hidden">
                               {dayShifts.slice(0, 2).map((shift) => {
                                 const colors = getShiftColor(shift.shiftType);
                                 return (
@@ -1036,6 +1042,9 @@ export default function SchedulePage() {
                                     >
                                       {formatTime(shift.startTime)}{" "}
                                       {shift.shiftTypeName}
+                                      {shift.isStandby && (
+                                        <div className="text-orange-600 text-xs mt-0.5">standby</div>
+                                      )}
                                     </div>
                                   </div>
                                 );
@@ -1048,7 +1057,7 @@ export default function SchedulePage() {
                             </div>
 
                             {/* Show simple dots on smaller screens */}
-                            <div className="min-[700px]:hidden flex flex-wrap gap-1">
+                            <div className="min-[800px]:hidden flex flex-wrap gap-1">
                               {dayShifts.slice(0, 4).map((shift) => {
                                 const colors = getShiftColor(shift.shiftType);
                                 return (
@@ -1058,9 +1067,13 @@ export default function SchedulePage() {
                                       e.stopPropagation();
                                       handleShiftClick(shift);
                                     }}
-                                    className={`w-5 h-5 rounded-full cursor-pointer hover:scale-110 transition-transform border border-green-300 ${colors.bg}`}
-                                    title={`${formatTime(shift.startTime)} - ${shift.shiftTypeName}`}
-                                  />
+                                    className={`w-5 h-5 rounded-full cursor-pointer hover:scale-110 transition-transform border border-green-300 ${colors.bg} relative flex items-center justify-center`}
+                                    title={`${formatTime(shift.startTime)} - ${shift.shiftTypeName}${shift.isStandby ? ' (standby)' : ''}`}
+                                  >
+                                    {shift.isStandby && (
+                                      <div className="w-1 h-1 rounded-full bg-orange-300 border border-orange-400"></div>
+                                    )}
+                                  </div>
                                 );
                               })}
                               {dayShifts.length > 4 && (
