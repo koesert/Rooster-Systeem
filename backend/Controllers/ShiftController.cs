@@ -30,7 +30,8 @@ public class ShiftController : ControllerBase
         [FromQuery] DateTime? endDate = null,
         [FromQuery] int? employeeId = null,
         [FromQuery] ShiftType? shiftType = null,
-        [FromQuery] bool? isOpenEnded = null)
+        [FromQuery] bool? isOpenEnded = null,
+        [FromQuery] bool? isStandby = null)
     {
         try
         {
@@ -40,7 +41,8 @@ public class ShiftController : ControllerBase
                 EndDate = endDate,
                 EmployeeId = employeeId,
                 ShiftType = shiftType,
-                IsOpenEnded = isOpenEnded
+                IsOpenEnded = isOpenEnded,
+                IsStandby = isStandby
             };
 
             var shifts = await _shiftService.GetAllShiftsAsync(filter);
@@ -99,7 +101,7 @@ public class ShiftController : ControllerBase
     }
 
     /// <summary>
-    /// Get current user's shifts
+    /// Get shifts for the current authenticated user
     /// </summary>
     [HttpGet("my-shifts")]
     public async Task<ActionResult<IEnumerable<ShiftResponseDto>>> GetMyShifts(
@@ -108,14 +110,13 @@ public class ShiftController : ControllerBase
     {
         try
         {
-            // Get current user's ID from JWT token
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int currentUserId))
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
             {
-                return Unauthorized("Ongeldige gebruikerstoken");
+                return Unauthorized("Gebruiker niet gevonden");
             }
 
-            var shifts = await _shiftService.GetShiftsByEmployeeAsync(currentUserId, startDate, endDate);
+            var shifts = await _shiftService.GetShiftsByEmployeeAsync(userId, startDate, endDate);
             return Ok(shifts);
         }
         catch (Exception ex)
@@ -126,15 +127,40 @@ public class ShiftController : ControllerBase
     }
 
     /// <summary>
+    /// Get shifts by date range
+    /// </summary>
+    [HttpGet("date-range")]
+    public async Task<ActionResult<IEnumerable<ShiftResponseDto>>> GetShiftsByDateRange(
+        [FromQuery] DateTime startDate,
+        [FromQuery] DateTime endDate)
+    {
+        try
+        {
+            if (startDate > endDate)
+            {
+                return BadRequest("Startdatum mag niet na einddatum liggen");
+            }
+
+            var shifts = await _shiftService.GetShiftsByDateRangeAsync(startDate, endDate);
+            return Ok(shifts);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving shifts by date range");
+            return StatusCode(500, "Er is een fout opgetreden bij het ophalen van de shifts");
+        }
+    }
+
+    /// <summary>
     /// Get week schedule
     /// </summary>
-    [HttpGet("schedule/week/{weekNumber}")]
+    [HttpGet("week/{weekNumber}")]
     public async Task<ActionResult<WeekScheduleDto>> GetWeekSchedule(string weekNumber)
     {
         try
         {
-            var schedule = await _shiftService.GetWeekScheduleAsync(weekNumber);
-            return Ok(schedule);
+            var weekSchedule = await _shiftService.GetWeekScheduleAsync(weekNumber);
+            return Ok(weekSchedule);
         }
         catch (ArgumentException ex)
         {
@@ -150,13 +176,13 @@ public class ShiftController : ControllerBase
     /// <summary>
     /// Get month schedule
     /// </summary>
-    [HttpGet("schedule/month/{monthYear}")]
+    [HttpGet("month/{monthYear}")]
     public async Task<ActionResult<MonthScheduleDto>> GetMonthSchedule(string monthYear)
     {
         try
         {
-            var schedule = await _shiftService.GetMonthScheduleAsync(monthYear);
-            return Ok(schedule);
+            var monthSchedule = await _shiftService.GetMonthScheduleAsync(monthYear);
+            return Ok(monthSchedule);
         }
         catch (ArgumentException ex)
         {
@@ -170,10 +196,10 @@ public class ShiftController : ControllerBase
     }
 
     /// <summary>
-    /// Get available employees for a specific time slot
+    /// Get available employees for a specific date and time
     /// </summary>
     [HttpGet("available-employees")]
-    [Authorize(Policy = "ManagerOnly")] // Only managers can check availability
+    [Authorize(Policy = "ManagerOnly")] // Only managers can see available employees
     public async Task<ActionResult<IEnumerable<EmployeeResponseDto>>> GetAvailableEmployees(
         [FromQuery] DateTime date,
         [FromQuery] TimeSpan startTime,
@@ -275,94 +301,6 @@ public class ShiftController : ControllerBase
         {
             _logger.LogError(ex, "Error occurred while deleting shift with ID {Id}", id);
             return StatusCode(500, "Er is een fout opgetreden bij het verwijderen van de shift");
-        }
-    }
-
-    /// <summary>
-    /// Check for overlapping shifts for an employee
-    /// </summary>
-    [HttpPost("check-overlap")]
-    [Authorize(Policy = "ManagerOnly")] // Only managers can check overlaps
-    public async Task<ActionResult<bool>> CheckOverlappingShifts([FromBody] CreateShiftDto request)
-    {
-        try
-        {
-            var hasOverlap = await _shiftService.HasOverlappingShiftsAsync(
-                request.EmployeeId,
-                request.Date,
-                request.StartTime,
-                request.EndTime);
-
-            return Ok(new { HasOverlap = hasOverlap });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while checking for overlapping shifts");
-            return StatusCode(500, "Er is een fout opgetreden bij het controleren van overlappende shifts");
-        }
-    }
-
-    /// <summary>
-    /// Get shift statistics for reporting
-    /// </summary>
-    [HttpGet("statistics")]
-    [Authorize(Policy = "ManagerOnly")] // Only managers can view statistics
-    public async Task<ActionResult> GetShiftStatistics(
-        [FromQuery] DateTime? startDate = null,
-        [FromQuery] DateTime? endDate = null)
-    {
-        try
-        {
-            // Default to current month if no dates provided
-            if (!startDate.HasValue || !endDate.HasValue)
-            {
-                var now = DateTime.UtcNow;
-                startDate = new DateTime(now.Year, now.Month, 1);
-                endDate = startDate.Value.AddMonths(1).AddDays(-1);
-            }
-
-            var filter = new ShiftFilterDto
-            {
-                StartDate = startDate,
-                EndDate = endDate
-            };
-
-            var shifts = await _shiftService.GetAllShiftsAsync(filter);
-            var shiftsList = shifts.ToList();
-
-            var statistics = new
-            {
-                TotalShifts = shiftsList.Count,
-                TotalHours = shiftsList.Where(s => s.DurationInHours.HasValue).Sum(s => s.DurationInHours!.Value),
-                OpenEndedShifts = shiftsList.Count(s => s.IsOpenEnded),
-                ShiftsByType = shiftsList.GroupBy(s => s.ShiftType)
-                    .Select(g => new
-                    {
-                        Type = _shiftService.GetShiftTypeName(g.Key),
-                        Count = g.Count(),
-                        TotalHours = g.Where(s => s.DurationInHours.HasValue).Sum(s => s.DurationInHours!.Value)
-                    }),
-                ShiftsByEmployee = shiftsList.GroupBy(s => s.EmployeeName)
-                    .Select(g => new
-                    {
-                        Employee = g.Key,
-                        Count = g.Count(),
-                        TotalHours = g.Where(s => s.DurationInHours.HasValue).Sum(s => s.DurationInHours!.Value)
-                    })
-                    .OrderByDescending(x => x.Count),
-                DateRange = new
-                {
-                    StartDate = startDate.Value,
-                    EndDate = endDate.Value
-                }
-            };
-
-            return Ok(statistics);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while retrieving shift statistics");
-            return StatusCode(500, "Er is een fout opgetreden bij het ophalen van shift statistieken");
         }
     }
 }

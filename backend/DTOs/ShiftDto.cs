@@ -28,6 +28,11 @@ public class CreateShiftDto
     public bool IsOpenEnded { get; set; } = false;
 
     /// <summary>
+    /// Indicates if this is a standby shift (employee doesn't necessarily have to come to work)
+    /// </summary>
+    public bool IsStandby { get; set; } = false;
+
+    /// <summary>
     /// Optional notes for the shift
     /// </summary>
     [MaxLength(500, ErrorMessage = "Notes cannot exceed 500 characters")]
@@ -59,6 +64,11 @@ public class UpdateShiftDto
     public bool IsOpenEnded { get; set; } = false;
 
     /// <summary>
+    /// Indicates if this is a standby shift (employee doesn't necessarily have to come to work)
+    /// </summary>
+    public bool IsStandby { get; set; } = false;
+
+    /// <summary>
     /// Optional notes for the shift
     /// </summary>
     [MaxLength(500, ErrorMessage = "Notes cannot exceed 500 characters")]
@@ -76,6 +86,7 @@ public class ShiftResponseDto
     public ShiftType ShiftType { get; set; }
     public string ShiftTypeName { get; set; } = string.Empty;
     public bool IsOpenEnded { get; set; }
+    public bool IsStandby { get; set; }
     public string? Notes { get; set; }
     public string TimeRange { get; set; } = string.Empty;
     public double? DurationInHours { get; set; }
@@ -106,4 +117,5 @@ public class ShiftFilterDto
     public int? EmployeeId { get; set; }
     public ShiftType? ShiftType { get; set; }
     public bool? IsOpenEnded { get; set; }
+    public bool? IsStandby { get; set; }
 }

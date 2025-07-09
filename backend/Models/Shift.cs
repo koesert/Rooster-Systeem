@@ -29,6 +29,11 @@ public class Shift
     public bool IsOpenEnded { get; set; } = false;
 
     /// <summary>
+    /// Indicates if this is a standby shift (employee doesn't necessarily have to come to work)
+    /// </summary>
+    public bool IsStandby { get; set; } = false;
+
+    /// <summary>
     /// Optional notes for the shift
     /// </summary>
     [MaxLength(500, ErrorMessage = "Notes cannot exceed 500 characters")]

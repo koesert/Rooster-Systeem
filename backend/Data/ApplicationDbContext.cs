@@ -117,6 +117,10 @@ public class ApplicationDbContext : DbContext
 				  .IsRequired()
 				  .HasDefaultValue(false);
 
+			entity.Property(s => s.IsStandby)
+				  .IsRequired()
+				  .HasDefaultValue(false);
+
 			entity.Property(s => s.Notes)
 				  .HasMaxLength(500);
 
@@ -140,15 +144,18 @@ public class ApplicationDbContext : DbContext
 			entity.HasIndex(s => s.Date)
 				  .HasDatabaseName("IX_Shifts_Date");
 
-			entity.HasIndex(s => new { s.EmployeeId, s.Date })
-				  .HasDatabaseName("IX_Shifts_EmployeeId_Date");
-
 			entity.HasIndex(s => s.ShiftType)
 				  .HasDatabaseName("IX_Shifts_ShiftType");
 
-			// Composite index for efficient date range queries
+			entity.HasIndex(s => s.IsStandby)
+				  .HasDatabaseName("IX_Shifts_IsStandby");
+
+			// Composite indexes for common query patterns
 			entity.HasIndex(s => new { s.Date, s.StartTime })
 				  .HasDatabaseName("IX_Shifts_Date_StartTime");
+
+			entity.HasIndex(s => new { s.EmployeeId, s.Date })
+				  .HasDatabaseName("IX_Shifts_EmployeeId_Date");
 		});
 
 		// Configure Availability entity
@@ -159,7 +166,7 @@ public class ApplicationDbContext : DbContext
 
 			entity.Property(a => a.Date)
 				  .IsRequired()
-				  .HasColumnType("DATE"); // Store only date part
+				  .HasColumnType("DATE");
 
 			entity.Property(a => a.IsAvailable)
 				  .IsRequired();
@@ -167,109 +174,82 @@ public class ApplicationDbContext : DbContext
 			entity.Property(a => a.Notes)
 				  .HasMaxLength(500);
 
-			// Auto-populate timestamps
 			entity.Property(a => a.CreatedAt)
 				  .HasDefaultValueSql("NOW()");
 
 			entity.Property(a => a.UpdatedAt)
 				  .HasDefaultValueSql("NOW()");
 
-			// Set up foreign key relationship with Employee
+			// Set up foreign key relationship
 			entity.HasOne(a => a.Employee)
-				  .WithMany() // Employee can have many availability records
+				  .WithMany()
 				  .HasForeignKey(a => a.EmployeeId)
-				  .OnDelete(DeleteBehavior.Cascade); // Delete availability when employee is deleted
+				  .OnDelete(DeleteBehavior.Cascade);
 
-			// Unique constraint: one availability record per employee per date
-			entity.HasIndex(a => new { a.EmployeeId, a.Date })
-				  .IsUnique()
-				  .HasDatabaseName("IX_Availability_EmployeeId_Date");
-
-			// Index for efficient date range queries
-			entity.HasIndex(a => a.Date)
-				  .HasDatabaseName("IX_Availability_Date");
-
+			// Indexes
 			entity.HasIndex(a => a.EmployeeId)
-				  .HasDatabaseName("IX_Availability_EmployeeId");
+				  .HasDatabaseName("IX_Availabilities_EmployeeId");
+
+			entity.HasIndex(a => a.Date)
+				  .HasDatabaseName("IX_Availabilities_Date");
+
+			// Composite index for common queries
+			entity.HasIndex(a => new { a.EmployeeId, a.Date })
+				  .HasDatabaseName("IX_Availabilities_EmployeeId_Date");
 		});
 
 		// Configure TimeOffRequest entity
 		modelBuilder.Entity<TimeOffRequest>(entity =>
 		{
-			entity.Property(t => t.EmployeeId)
+			entity.Property(tor => tor.EmployeeId)
 				  .IsRequired();
 
-			entity.Property(t => t.Status)
+			entity.Property(tor => tor.Status)
 				  .IsRequired()
 				  .HasConversion<int>();
 
-			entity.Property(t => t.Reason)
+			entity.Property(tor => tor.Reason)
 				  .IsRequired()
 				  .HasMaxLength(500);
 
-			entity.Property(t => t.StartDate)
+			entity.Property(tor => tor.StartDate)
 				  .IsRequired()
 				  .HasColumnType("DATE");
 
-			entity.Property(t => t.EndDate)
+			entity.Property(tor => tor.EndDate)
 				  .IsRequired()
 				  .HasColumnType("DATE");
 
-			entity.Property(t => t.ApprovedBy)
-				  .IsRequired(false);
-
-			// Auto-populate timestamps
-			entity.Property(t => t.CreatedAt)
+			entity.Property(tor => tor.CreatedAt)
 				  .HasDefaultValueSql("NOW()");
 
-			entity.Property(t => t.UpdatedAt)
+			entity.Property(tor => tor.UpdatedAt)
 				  .HasDefaultValueSql("NOW()");
 
 			// Set up foreign key relationships
-			entity.HasOne(t => t.Employee)
+			entity.HasOne(tor => tor.Employee)
 				  .WithMany()
-				  .HasForeignKey(t => t.EmployeeId)
+				  .HasForeignKey(tor => tor.EmployeeId)
 				  .OnDelete(DeleteBehavior.Cascade);
 
-			entity.HasOne(t => t.Approver)
+			entity.HasOne(tor => tor.Approver)
 				  .WithMany()
-				  .HasForeignKey(t => t.ApprovedBy)
+				  .HasForeignKey(tor => tor.ApprovedBy)
 				  .OnDelete(DeleteBehavior.SetNull);
 
-			// Indexes for efficient querying
-			entity.HasIndex(t => t.EmployeeId)
+			// Indexes
+			entity.HasIndex(tor => tor.EmployeeId)
 				  .HasDatabaseName("IX_TimeOffRequests_EmployeeId");
 
-			entity.HasIndex(t => t.Status)
+			entity.HasIndex(tor => tor.Status)
 				  .HasDatabaseName("IX_TimeOffRequests_Status");
 
-			entity.HasIndex(t => new { t.StartDate, t.EndDate })
-				  .HasDatabaseName("IX_TimeOffRequests_Dates");
-
-			entity.HasIndex(t => new { t.EmployeeId, t.Status })
+			// Composite indexes for common query patterns
+			entity.HasIndex(tor => new { tor.EmployeeId, tor.Status })
 				  .HasDatabaseName("IX_TimeOffRequests_EmployeeId_Status");
+
+			entity.HasIndex(tor => new { tor.StartDate, tor.EndDate })
+				  .HasDatabaseName("IX_TimeOffRequests_Dates");
 		});
-
-		// Seed default admin user for initial system access
-		// Password: "Admin123" (meets validation requirements)
-		var adminPasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123");
-		var utcNow = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Utc);
-		var birthDate = DateTime.SpecifyKind(new DateTime(1990, 1, 1), DateTimeKind.Utc);
-
-		modelBuilder.Entity<Employee>().HasData(
-			new Employee
-			{
-				Id = 1,
-				FirstName = "Admin",
-				LastName = "User",
-				Username = "admin",
-				PasswordHash = adminPasswordHash,
-				Role = Role.Manager,
-				HireDate = utcNow,
-				BirthDate = birthDate,
-				CreatedAt = utcNow,
-				UpdatedAt = utcNow
-			}
-		);
 	}
 }
