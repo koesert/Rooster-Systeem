@@ -50,6 +50,11 @@ public class ShiftService : IShiftService
             {
                 query = query.Where(s => s.IsOpenEnded == filter.IsOpenEnded.Value);
             }
+
+            if (filter.IsStandby.HasValue)
+            {
+                query = query.Where(s => s.IsStandby == filter.IsStandby.Value);
+            }
         }
 
         var shifts = await query
@@ -156,6 +161,7 @@ public class ShiftService : IShiftService
             EndTime = shiftDto.IsOpenEnded ? null : shiftDto.EndTime,
             ShiftType = shiftDto.ShiftType,
             IsOpenEnded = shiftDto.IsOpenEnded,
+            IsStandby = shiftDto.IsStandby,
             Notes = shiftDto.Notes,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
@@ -193,6 +199,7 @@ public class ShiftService : IShiftService
         shift.EndTime = shiftDto.IsOpenEnded ? null : shiftDto.EndTime;
         shift.ShiftType = shiftDto.ShiftType;
         shift.IsOpenEnded = shiftDto.IsOpenEnded;
+        shift.IsStandby = shiftDto.IsStandby;
         shift.Notes = shiftDto.Notes;
         shift.UpdatedAt = DateTime.UtcNow;
 
@@ -233,8 +240,16 @@ public class ShiftService : IShiftService
 
         foreach (var existingShift in existingShifts)
         {
-            // Check for time overlap
-            if (HasTimeOverlap(startTime, endTime, existingShift.StartTime, existingShift.EndTime, existingShift.IsOpenEnded))
+            // Skip overlap check for standby shifts as they don't guarantee work attendance
+            if (existingShift.IsStandby)
+                continue;
+
+            // For open-ended shifts, assume they go until end of day (23:59)
+            var existingEndTime = existingShift.IsOpenEnded ? new TimeSpan(23, 59, 59) : existingShift.EndTime;
+            var currentEndTime = endTime ?? new TimeSpan(23, 59, 59);
+
+            // Check for overlap: start before existing end AND end after existing start
+            if (startTime < existingEndTime && currentEndTime > existingShift.StartTime)
             {
                 return true;
             }
@@ -247,7 +262,7 @@ public class ShiftService : IShiftService
     {
         var shifts = await _context.Shifts
             .Include(s => s.Employee)
-            .Where(s => s.Date >= startDate.Date && s.Date <= endDate.Date)
+            .Where(s => s.Date >= startDate && s.Date <= endDate)
             .OrderBy(s => s.Date)
             .ToListAsync();
 
@@ -318,6 +333,7 @@ public class ShiftService : IShiftService
             ShiftType = shift.ShiftType,
             ShiftTypeName = GetShiftTypeName(shift.ShiftType),
             IsOpenEnded = shift.IsOpenEnded,
+            IsStandby = shift.IsStandby,
             Notes = shift.Notes,
             TimeRange = shift.TimeRange,
             DurationInHours = shift.DurationInHours,
@@ -328,70 +344,40 @@ public class ShiftService : IShiftService
 
     private async Task ValidateShiftAsync(int employeeId, DateTime date, TimeSpan startTime, TimeSpan? endTime, bool isOpenEnded)
     {
-        // Check if employee exists
-        var employee = await _employeeService.GetEmployeeByIdAsync(employeeId);
+        // Validate that employee exists
+        var employee = await _context.Employees.FindAsync(employeeId);
         if (employee == null)
         {
-            throw new InvalidOperationException("Medewerker niet gevonden");
+            throw new InvalidOperationException($"Medewerker met ID {employeeId} bestaat niet");
         }
 
-        // Validate times
-        if (!isOpenEnded)
+        // Validate date is not in the past (allow same day)
+        if (date.Date < DateTime.Today)
         {
-            if (endTime == null)
-            {
-                throw new InvalidOperationException("Eindtijd is verplicht voor niet-open shifts");
-            }
-
-            if (endTime <= startTime)
-            {
-                throw new InvalidOperationException("Eindtijd moet na de starttijd liggen");
-            }
-
-            // Check for reasonable shift duration (not more than 16 hours)
-            var duration = endTime.Value - startTime;
-            if (duration.TotalHours > 16)
-            {
-                throw new InvalidOperationException("Shift kan niet langer dan 16 uur duren");
-            }
+            throw new InvalidOperationException("Shift datum mag niet in het verleden liggen");
         }
 
-        // Validate business hours (assuming 06:00 - 02:00 next day)
-        if (startTime < TimeSpan.FromHours(6) && startTime > TimeSpan.FromHours(2))
+        // Validate time logic
+        if (!isOpenEnded && endTime != null && endTime <= startTime)
         {
-            throw new InvalidOperationException("Starttijd moet tussen 06:00 en 02:00 liggen");
+            throw new InvalidOperationException("Eindtijd moet na de starttijd liggen");
         }
-    }
 
-    private bool HasTimeOverlap(TimeSpan startTime1, TimeSpan? endTime1, TimeSpan startTime2, TimeSpan? endTime2, bool isOpenEnded2)
-    {
-        // Handle open-ended shifts
-        if (isOpenEnded2)
+        if (!isOpenEnded && endTime == null)
         {
-            // If existing shift is open-ended, any new shift starting after it would overlap
-            return startTime1 >= startTime2;
+            throw new InvalidOperationException("Eindtijd is verplicht voor shifts die niet open-ended zijn");
         }
 
-        if (endTime1 == null && endTime2 == null)
+        // Validate reasonable time ranges (6:00 - 23:59)
+        if (startTime < new TimeSpan(6, 0, 0) || startTime > new TimeSpan(23, 59, 0))
         {
-            // Both open-ended - always overlap
-            return true;
+            throw new InvalidOperationException("Starttijd moet tussen 06:00 en 23:59 liggen");
         }
 
-        if (endTime1 == null)
+        if (!isOpenEnded && endTime != null && (endTime < new TimeSpan(6, 0, 0) || endTime > new TimeSpan(23, 59, 0)))
         {
-            // First shift is open-ended
-            return startTime1 <= endTime2;
+            throw new InvalidOperationException("Eindtijd moet tussen 06:00 en 23:59 liggen");
         }
-
-        if (endTime2 == null)
-        {
-            // Second shift is open-ended (already handled above)
-            return startTime2 <= endTime1;
-        }
-
-        // Normal time overlap check
-        return startTime1 < endTime2 && endTime1 > startTime2;
     }
 
     private (int year, int week) ParseWeekNumber(string weekNumber)
@@ -400,12 +386,12 @@ public class ShiftService : IShiftService
         var parts = weekNumber.Split('-');
         if (parts.Length != 2 || !parts[1].StartsWith("W"))
         {
-            throw new ArgumentException("Invalid week format. Expected format: YYYY-WNN");
+            throw new ArgumentException("Invalid week format. Expected format: YYYY-WXX");
         }
 
         if (!int.TryParse(parts[0], out int year) || !int.TryParse(parts[1][1..], out int week))
         {
-            throw new ArgumentException("Invalid week format. Expected format: YYYY-WNN");
+            throw new ArgumentException("Invalid week format. Expected format: YYYY-WXX");
         }
 
         if (week < 1 || week > 53)
@@ -418,22 +404,19 @@ public class ShiftService : IShiftService
 
     private (DateTime weekStart, DateTime weekEnd) GetWeekDateRange(int year, int week)
     {
-        // ISO 8601 week calculation
+        // Get first day of year
         var jan1 = new DateTime(year, 1, 1);
-        var daysOffset = DayOfWeek.Thursday - jan1.DayOfWeek;
-        var firstThursday = jan1.AddDays(daysOffset);
-        var cal = CultureInfo.CurrentCulture.Calendar;
-        var firstWeek = cal.GetWeekOfYear(firstThursday, CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
 
-        var weekNum = week;
-        if (firstWeek == 1)
-        {
-            weekNum -= 1;
-        }
+        // Calculate the first day of the week according to ISO 8601
+        // Monday is the first day of the week
+        var daysOffset = DayOfWeek.Monday - jan1.DayOfWeek;
+        if (daysOffset > 0) daysOffset -= 7;
 
-        var result = firstThursday.AddDays(weekNum * 7);
-        var weekStart = result.AddDays(-3); // Monday of the week
-        var weekEnd = weekStart.AddDays(6); // Sunday of the week
+        var firstMonday = jan1.AddDays(daysOffset);
+
+        // Calculate week start (Monday) and end (Sunday)
+        var weekStart = firstMonday.AddDays((week - 1) * 7);
+        var weekEnd = weekStart.AddDays(6);
 
         return (weekStart, weekEnd);
     }

@@ -16,7 +16,7 @@ public class Availability
     public bool IsAvailable { get; set; }
 
     /// <summary>
-    /// Optional notes for manager (max 500 characters)
+    /// Optional notes for availability (max 500 characters)
     /// </summary>
     [MaxLength(500, ErrorMessage = "Notes cannot exceed 500 characters")]
     public string? Notes { get; set; }
