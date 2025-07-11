@@ -209,26 +209,6 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Ensure database is created and seeded on startup
-// This approach is acceptable for development but should use migrations in production
-using (var scope = app.Services.CreateScope())
-{
-    var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    try
-    {
-        // Only create database if it doesn't exist (preserves existing data)
-        await context.Database.EnsureCreatedAsync();
-
-        Console.WriteLine("Database geïnitialiseerd succesvol");
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Fout bij initialiseren database: {ex.Message}");
-        Console.WriteLine($"Connection string gebruikt: {connectionString.Replace("Password=", "Password=***")}");
-        throw; // Re-throw to prevent app from starting with broken database
-    }
-}
-
 // Configure the HTTP request pipeline.
 // Always enable Swagger for testing
 app.UseSwagger();
@@ -247,5 +227,45 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Automatische database migraties voor Railway deployment
+if (app.Environment.IsProduction())
+{
+    using (var scope = app.Services.CreateScope())
+    {
+        try
+        {
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            Console.WriteLine("Running database migrations on Railway...");
+            context.Database.Migrate();
+            Console.WriteLine("Database migrations completed successfully!");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Database migration failed: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            throw; // Stop the application if migration fails
+        }
+    }
+}
+else
+{
+    // Development: gebruik EnsureCreated voor lokale development
+    using (var scope = app.Services.CreateScope())
+    {
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        try
+        {
+            await context.Database.EnsureCreatedAsync();
+            Console.WriteLine("Local database geïnitialiseerd succesvol");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Fout bij initialiseren lokale database: {ex.Message}");
+            Console.WriteLine($"Connection string gebruikt: {connectionString.Replace("Password=", "Password=***")}");
+            throw;
+        }
+    }
+}
 
 app.Run();
