@@ -237,70 +237,93 @@ if (app.Environment.IsProduction())
         {
             var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-            // Check if there are pending migrations
-            var pendingMigrations = context.Database.GetPendingMigrations();
+            Console.WriteLine("Checking database state on Railway...");
 
-            if (pendingMigrations.Any())
+            // Check if database can connect
+            bool canConnect = context.Database.CanConnect();
+            Console.WriteLine($"Database connection: {(canConnect ? "OK" : "Failed")}");
+
+            if (!canConnect)
             {
-                Console.WriteLine($"Found {pendingMigrations.Count()} pending migrations on Railway:");
-                foreach (var migration in pendingMigrations)
-                {
-                    Console.WriteLine($"  - {migration}");
-                }
+                Console.WriteLine("Creating database...");
+                context.Database.EnsureCreated();
+                return;
+            }
 
-                Console.WriteLine("Running database migrations...");
-                context.Database.Migrate();
-                Console.WriteLine("Database migrations completed successfully!");
+            // Check if migrations history table exists
+            var historyTableExists = context.Database.SqlQueryRaw<int>(
+                "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = '__EFMigrationsHistory'"
+            ).FirstOrDefault() > 0;
+
+            Console.WriteLine($"Migrations history table exists: {historyTableExists}");
+
+            if (!historyTableExists)
+            {
+                Console.WriteLine("Creating migrations history table...");
+                // Create the migrations history table manually
+                context.Database.ExecuteSqlRaw(@"
+                    CREATE TABLE ""__EFMigrationsHistory"" (
+                        ""MigrationId"" character varying(150) NOT NULL,
+                        ""ProductVersion"" character varying(32) NOT NULL,
+                        CONSTRAINT ""PK___EFMigrationsHistory"" PRIMARY KEY (""MigrationId"")
+                    )
+                ");
+            }
+
+            // Get all migrations and check which are applied
+            var allMigrations = context.Database.GetMigrations().ToList();
+            var appliedMigrations = context.Database.GetAppliedMigrations().ToList();
+
+            Console.WriteLine($"Total migrations: {allMigrations.Count}");
+            Console.WriteLine($"Applied migrations: {appliedMigrations.Count}");
+
+            // Check if tables exist but migrations aren't recorded
+            var employeesTableExists = context.Database.SqlQueryRaw<int>(
+                "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'Employees'"
+            ).FirstOrDefault() > 0;
+
+            if (employeesTableExists && appliedMigrations.Count == 0)
+            {
+                Console.WriteLine("Tables exist but no migrations recorded. Marking all migrations as applied...");
+
+                // Insert all migrations into history table
+                foreach (var migration in allMigrations)
+                {
+                    Console.WriteLine($"  - Marking {migration} as applied");
+                    context.Database.ExecuteSqlRaw(
+                        "INSERT INTO \"__EFMigrationsHistory\" (\"MigrationId\", \"ProductVersion\") VALUES ({0}, {1})",
+                        migration, "8.0.0");
+                }
+                Console.WriteLine("All existing migrations marked as applied!");
             }
             else
             {
-                Console.WriteLine("No pending migrations found. Database is up to date.");
+                // Normal migration process
+                var pendingMigrations = context.Database.GetPendingMigrations().ToList();
+
+                if (pendingMigrations.Any())
+                {
+                    Console.WriteLine($"Found {pendingMigrations.Count} pending migrations:");
+                    foreach (var migration in pendingMigrations)
+                    {
+                        Console.WriteLine($"  - {migration}");
+                    }
+
+                    Console.WriteLine("Running pending migrations...");
+                    context.Database.Migrate();
+                    Console.WriteLine("Migrations completed successfully!");
+                }
+                else
+                {
+                    Console.WriteLine("No pending migrations. Database is up to date.");
+                }
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Database migration failed: {ex.Message}");
+            Console.WriteLine($"Database setup failed: {ex.Message}");
             Console.WriteLine($"Stack trace: {ex.StackTrace}");
-
-            // If the error is about existing relations, try to create migrations history manually
-            if (ex.Message.Contains("already exists"))
-            {
-                Console.WriteLine("Attempting to fix migrations history...");
-                try
-                {
-                    var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-                    // Ensure migrations history table exists
-                    context.Database.EnsureCreated();
-
-                    // Get all applied migrations and mark them as applied
-                    var allMigrations = context.Database.GetMigrations();
-                    var appliedMigrations = context.Database.GetAppliedMigrations();
-                    var missingMigrations = allMigrations.Except(appliedMigrations);
-
-                    if (missingMigrations.Any())
-                    {
-                        Console.WriteLine("Marking existing migrations as applied...");
-                        foreach (var migration in missingMigrations)
-                        {
-                            Console.WriteLine($"  - Marking {migration} as applied");
-                        }
-
-                        // This will add missing migration entries to __EFMigrationsHistory
-                        context.Database.Migrate();
-                        Console.WriteLine("Migrations history fixed successfully!");
-                    }
-                }
-                catch (Exception fixEx)
-                {
-                    Console.WriteLine($"Failed to fix migrations history: {fixEx.Message}");
-                    throw; // Still throw to prevent app from starting with broken state
-                }
-            }
-            else
-            {
-                throw; // Re-throw other types of errors
-            }
+            throw;
         }
     }
 }
