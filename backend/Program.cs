@@ -287,6 +287,42 @@ if (app.Environment.IsProduction())
                     Console.WriteLine("Continuing with existing database state...");
                 }
             }
+
+            // Ensure admin user exists for fresh databases
+            Console.WriteLine("Checking for admin user...");
+            var adminUser = await context.Employees.FirstOrDefaultAsync(e => e.Username == "admin");
+
+            if (adminUser == null)
+            {
+                Console.WriteLine("Admin user not found, creating default admin user...");
+
+                var utcNow = DateTime.UtcNow;
+                var birthDate = new DateTime(1990, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                var adminPasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123");
+
+                var newAdmin = new backend.Models.Employee
+                {
+                    FirstName = "Admin",
+                    LastName = "User",
+                    Username = "admin",
+                    PasswordHash = adminPasswordHash,
+                    Role = backend.Models.Role.Manager,
+                    HireDate = utcNow,
+                    BirthDate = birthDate,
+                    CreatedAt = utcNow,
+                    UpdatedAt = utcNow
+                };
+
+                context.Employees.Add(newAdmin);
+                await context.SaveChangesAsync();
+
+                Console.WriteLine("Default admin user created successfully!");
+                Console.WriteLine("Login credentials: username='admin', password='Admin123'");
+            }
+            else
+            {
+                Console.WriteLine("Admin user already exists.");
+            }
         }
         catch (Exception ex)
         {
