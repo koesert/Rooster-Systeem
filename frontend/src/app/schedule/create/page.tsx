@@ -106,13 +106,21 @@ export default function CreateShiftPage() {
     }
   }, [user, isManager]);
 
-  // Load shifts and availability when week changes
+  // Load shifts and availability when week changes or employees change
   useEffect(() => {
-    if (user && isManager()) {
+    if (user && isManager() && employees.length > 0) {
       loadWeekShifts();
       loadAllEmployeesAvailability();
     }
-  }, [currentWeekDate, user, isManager]);
+  }, [currentWeekDate, user, isManager, employees]);
+
+  // Initial load when employees are loaded
+  useEffect(() => {
+    if (user && isManager() && employees.length > 0) {
+      loadWeekShifts();
+      loadAllEmployeesAvailability();
+    }
+  }, [employees.length]);
 
   const loadEmployees = async () => {
     try {
@@ -207,8 +215,33 @@ export default function CreateShiftPage() {
     setIsSubmitting(true);
 
     try {
-      await api.createShift(formData);
-      router.push("/schedule");
+      // Format data for API - add seconds to times for TimeSpan conversion
+      const apiData = {
+        ...formData,
+        startTime: formData.startTime + ":00", // Add seconds for backend
+        endTime: formData.endTime ? formData.endTime + ":00" : null,
+        notes: formData.notes?.trim() || undefined,
+      };
+
+      await api.createShift(apiData);
+      
+      // Reset form
+      setFormData({
+        employeeId: employees.length > 0 ? employees[0].id : 0,
+        date: getCurrentDate(),
+        startTime: "12:00",
+        endTime: "18:00",
+        shiftType: ShiftType.Bedienen,
+        isOpenEnded: false,
+        isStandby: false,
+        notes: "",
+      });
+
+      // Reload data
+      loadWeekShifts();
+      loadAllEmployeesAvailability();
+      
+      setError(null);
     } catch (error: unknown) {
       console.error("Error creating shift:", error);
       setError("Er is een fout opgetreden bij het aanmaken van de shift");
@@ -251,6 +284,16 @@ export default function CreateShiftPage() {
     } catch (error: unknown) {
       console.error("Logout error:", error);
     }
+  };
+
+  // Check if date is today
+  const isToday = (date: Date): boolean => {
+    const today = new Date();
+    return (
+      date.getDate() === today.getDate() &&
+      date.getMonth() === today.getMonth() &&
+      date.getFullYear() === today.getFullYear()
+    );
   };
 
   // Shift rendering helpers
@@ -406,10 +449,10 @@ export default function CreateShiftPage() {
           </div>
         </div>
 
-        {/* Main Layout */}
+        {/* Side-by-side Layout */}
         <div className="grid grid-cols-12 gap-6">
           {/* Form Section - Left Side */}
-          <div className="col-span-12 lg:col-span-4">
+          <div className="col-span-12 lg:col-span-2">
             <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-6">
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* General Error */}
@@ -434,7 +477,6 @@ export default function CreateShiftPage() {
                     </div>
                     <select
                       id="employeeId"
-                      value={formData.employeeId}
                       onChange={(e) =>
                         handleInputChange(
                           "employeeId",
@@ -504,86 +546,83 @@ export default function CreateShiftPage() {
                   )}
                 </div>
 
-                {/* Times */}
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Start Time */}
-                  <div>
-                    <label
-                      htmlFor="startTime"
-                      className="block text-sm font-semibold mb-2"
-                      style={{ color: "#120309" }}
-                    >
-                      Start tijd <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Clock
-                          className="h-5 w-5"
-                          style={{ color: "#67697c" }}
-                        />
-                      </div>
-                      <input
-                        type="time"
-                        id="startTime"
-                        value={formData.startTime}
-                        onChange={(e) =>
-                          handleInputChange("startTime", e.target.value)
-                        }
-                        className={`w-full pl-12 pr-4 py-3 border rounded-xl text-gray-900 focus:outline-none focus:ring-2 transition-all duration-200 ${
-                          fieldErrors.startTime
-                            ? "border-red-300 bg-red-50/50 focus:ring-red-500/50"
-                            : "border-gray-200 bg-white/60 focus:ring-blue-500/50"
-                        }`}
-                        disabled={isSubmitting}
+                {/* Start Time */}
+                <div>
+                  <label
+                    htmlFor="startTime"
+                    className="block text-sm font-semibold mb-2"
+                    style={{ color: "#120309" }}
+                  >
+                    Start tijd <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <Clock
+                        className="h-5 w-5"
+                        style={{ color: "#67697c" }}
                       />
                     </div>
-                    {fieldErrors.startTime && (
-                      <p className="mt-2 text-sm text-red-600">
-                        {fieldErrors.startTime}
-                      </p>
-                    )}
+                    <input
+                      type="time"
+                      id="startTime"
+                      value={formData.startTime}
+                      onChange={(e) =>
+                        handleInputChange("startTime", e.target.value)
+                      }
+                      className={`w-full pl-12 pr-4 py-3 border rounded-xl text-gray-900 focus:outline-none focus:ring-2 transition-all duration-200 ${
+                        fieldErrors.startTime
+                          ? "border-red-300 bg-red-50/50 focus:ring-red-500/50"
+                          : "border-gray-200 bg-white/60 focus:ring-blue-500/50"
+                      }`}
+                      disabled={isSubmitting}
+                    />
                   </div>
+                  {fieldErrors.startTime && (
+                    <p className="mt-2 text-sm text-red-600">
+                      {fieldErrors.startTime}
+                    </p>
+                  )}
+                </div>
 
-                  {/* End Time */}
-                  <div>
-                    <label
-                      htmlFor="endTime"
-                      className="block text-sm font-semibold mb-2"
-                      style={{ color: "#120309" }}
-                    >
-                      Eind tijd{" "}
-                      {!formData.isOpenEnded && (
-                        <span className="text-red-500">*</span>
-                      )}
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Clock
-                          className="h-5 w-5"
-                          style={{ color: "#67697c" }}
-                        />
-                      </div>
-                      <input
-                        type="time"
-                        id="endTime"
-                        value={formData.endTime || ""}
-                        onChange={(e) =>
-                          handleInputChange("endTime", e.target.value)
-                        }
-                        className={`w-full pl-12 pr-4 py-3 border rounded-xl text-gray-900 focus:outline-none focus:ring-2 transition-all duration-200 ${
-                          fieldErrors.endTime
-                            ? "border-red-300 bg-red-50/50 focus:ring-red-500/50"
-                            : "border-gray-200 bg-white/60 focus:ring-blue-500/50"
-                        } ${formData.isOpenEnded ? "opacity-50" : ""}`}
-                        disabled={formData.isOpenEnded || isSubmitting}
+                {/* End Time */}
+                <div>
+                  <label
+                    htmlFor="endTime"
+                    className="block text-sm font-semibold mb-2"
+                    style={{ color: "#120309" }}
+                  >
+                    Eind tijd{" "}
+                    {!formData.isOpenEnded && (
+                      <span className="text-red-500">*</span>
+                    )}
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <Clock
+                        className="h-5 w-5"
+                        style={{ color: "#67697c" }}
                       />
                     </div>
-                    {fieldErrors.endTime && (
-                      <p className="mt-2 text-sm text-red-600">
-                        {fieldErrors.endTime}
-                      </p>
-                    )}
+                    <input
+                      type="time"
+                      id="endTime"
+                      value={formData.endTime || ""}
+                      onChange={(e) =>
+                        handleInputChange("endTime", e.target.value)
+                      }
+                      className={`w-full pl-12 pr-4 py-3 border rounded-xl text-gray-900 focus:outline-none focus:ring-2 transition-all duration-200 ${
+                        fieldErrors.endTime
+                          ? "border-red-300 bg-red-50/50 focus:ring-red-500/50"
+                          : "border-gray-200 bg-white/60 focus:ring-blue-500/50"
+                      } ${formData.isOpenEnded ? "opacity-50" : ""}`}
+                      disabled={formData.isOpenEnded || isSubmitting}
+                    />
                   </div>
+                  {fieldErrors.endTime && (
+                    <p className="mt-2 text-sm text-red-600">
+                      {fieldErrors.endTime}
+                    </p>
+                  )}
                 </div>
 
                 {/* Open Ended */}
@@ -602,7 +641,7 @@ export default function CreateShiftPage() {
                       className="text-sm font-medium"
                       style={{ color: "#120309" }}
                     >
-                      Open einde (werkt tot sluitingstijd)
+                      Open einde
                     </span>
                   </label>
                 </div>
@@ -623,7 +662,7 @@ export default function CreateShiftPage() {
                       className="text-sm font-medium"
                       style={{ color: "#120309" }}
                     >
-                      Standby shift (oproepbaar indien nodig)
+                      Standby shift
                     </span>
                   </label>
                 </div>
@@ -656,7 +695,7 @@ export default function CreateShiftPage() {
                       <option value={ShiftType.Bedienen}>Bedienen</option>
                       <option value={ShiftType.Schoonmaak}>Schoonmaak</option>
                       <option value={ShiftType.SchoonmaakBedienen}>
-                        Schoonmaak & Bedienen
+                        Schoonmaak & bedienen
                       </option>
                     </select>
                   </div>
@@ -684,7 +723,7 @@ export default function CreateShiftPage() {
                       onChange={(e) =>
                         handleInputChange("notes", e.target.value)
                       }
-                      placeholder="Eventuele opmerkingen..."
+                      placeholder="Opmerkingen..."
                       rows={3}
                       className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 bg-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all duration-200 resize-none"
                       disabled={isSubmitting}
@@ -710,19 +749,18 @@ export default function CreateShiftPage() {
           </div>
 
           {/* Week View Section - Right Side */}
-          <div className="col-span-12 lg:col-span-8">
-            {/* Week Navigation */}
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-2xl font-bold" style={{ color: "#120309" }}>
-                Week overzicht
-              </h2>
-              <div className="flex items-center space-x-4">
-                <button
-                  onClick={navigateToToday}
-                  className="px-4 py-2 bg-white/80 backdrop-blur-lg rounded-lg shadow-lg border border-white/20 text-gray-700 font-medium hover:bg-white transition-colors cursor-pointer"
-                >
-                  Vandaag
-                </button>
+          <div className="col-span-12 lg:col-span-10">
+            <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 overflow-hidden mb-6">
+              {/* Week Navigation inside the container */}
+              <div className="p-6 pb-4 flex items-center justify-between border-b border-gray-200/50">
+                <div className="flex items-center space-x-4">
+                  <button
+                    onClick={navigateToToday}
+                    className="px-4 py-2 bg-white/80 backdrop-blur-lg rounded-lg shadow-lg border border-white/20 text-gray-700 font-medium hover:bg-white transition-colors cursor-pointer"
+                  >
+                    Vandaag
+                  </button>
+                </div>
                 <div className="flex items-center bg-white/80 backdrop-blur-lg rounded-lg shadow-lg border border-white/20">
                   <button
                     onClick={() => navigateWeek("prev")}
@@ -738,10 +776,7 @@ export default function CreateShiftPage() {
                   </button>
                 </div>
               </div>
-            </div>
 
-            {/* Week View */}
-            <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 overflow-hidden mb-6">
               {isLoadingShifts ? (
                 <div className="p-12 text-center">
                   <div
@@ -764,14 +799,26 @@ export default function CreateShiftPage() {
                     {weekDates.map((date, index) => (
                       <div
                         key={index}
-                        className="bg-white p-4 max-[500px]:p-2 text-center"
+                        className={`p-4 max-[500px]:p-2 text-center ${
+                          isToday(date)
+                            ? "bg-red-50 border-red-200"
+                            : "bg-white"
+                        }`}
                       >
-                        <p className="text-lg font-medium text-gray-600 capitalize">
+                        <p
+                          className={`text-lg font-medium capitalize ${
+                            isToday(date) ? "text-red-600" : "text-gray-600"
+                          }`}
+                        >
                           {date.toLocaleDateString("nl-NL", {
                             weekday: "long",
                           })}
                         </p>
-                        <p className="text-2xl font-bold text-gray-900">
+                        <p
+                          className={`text-2xl font-bold ${
+                            isToday(date) ? "text-red-700" : "text-gray-900"
+                          }`}
+                        >
                           {date.getDate()}
                         </p>
                       </div>
@@ -854,7 +901,9 @@ export default function CreateShiftPage() {
                     {weekDates.map((date, index) => (
                       <div
                         key={index}
-                        className="text-center text-sm font-semibold text-gray-600 p-2"
+                        className={`text-center text-sm font-semibold p-2 ${
+                          isToday(date) ? "text-red-600" : "text-gray-600"
+                        }`}
                       >
                         {date.toLocaleDateString("nl-NL", { weekday: "short" })}
                       </div>
