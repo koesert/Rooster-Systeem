@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { useModal } from "@/contexts/ModalContext";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import LoadingScreen from "@/components/LoadingScreen";
 import {
@@ -13,20 +14,14 @@ import {
   Type,
   FileText,
   ArrowLeft,
-  X,
   CheckCircle,
   XCircle,
   Minus,
-  CalendarCheck,
   ChevronLeft,
   ChevronRight,
   Edit,
   Trash2,
-  Menu,
-  Home,
-  CalendarDays,
-  ClipboardList,
-  LogOut,
+  AlertTriangle,
 } from "lucide-react";
 import { CreateShiftRequest, ShiftType, Shift } from "@/types/shift";
 import { Employee } from "@/types/auth";
@@ -52,10 +47,8 @@ export default function CreateShiftPage() {
   usePageTitle("Dashboard - Nieuwe shift");
 
   const { user, isLoading, isManager } = useAuth();
+  const { showModal, showAlert, showConfirm, hideModal } = useModal();
   const router = useRouter();
-
-  // Sidebar state
-  const [isHoveringSidebar, setIsHoveringSidebar] = useState(false);
 
   // Employee list
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -126,9 +119,7 @@ export default function CreateShiftPage() {
     try {
       const employeesData = await api.getEmployees();
       setEmployees(employeesData);
-      if (employeesData.length > 0) {
-        setFormData((prev) => ({ ...prev, employeeId: employeesData[0].id }));
-      }
+      // Don't auto-select first employee - let user choose
     } catch (error: unknown) {
       console.error("Error loading employees:", error);
     } finally {
@@ -227,7 +218,7 @@ export default function CreateShiftPage() {
 
       // Reset form
       setFormData({
-        employeeId: employees.length > 0 ? employees[0].id : 0,
+        employeeId: 0, // Reset to "Selecteer werknemer"
         date: getCurrentDate(),
         startTime: "12:00",
         endTime: "18:00",
@@ -261,6 +252,32 @@ export default function CreateShiftPage() {
     }
   };
 
+  // Navigation helpers
+  const getWeekNumber = (date: Date): number => {
+    const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+    const pastDaysOfYear =
+      (date.getTime() - firstDayOfYear.getTime()) / 86400000;
+    return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+  };
+
+  const getWeekTitle = (): string => {
+    const weekDates = getWeekDates(currentWeekDate);
+    const startDate = weekDates[0];
+    const endDate = weekDates[6];
+    const weekNumber = getWeekNumber(currentWeekDate);
+
+    const startMonth = startDate.toLocaleDateString("nl-NL", { month: "long" });
+    const endMonth = endDate.toLocaleDateString("nl-NL", { month: "long" });
+    const year = startDate.getFullYear();
+
+    const dateRange =
+      startMonth === endMonth
+        ? `${startDate.getDate()} - ${endDate.getDate()} ${startMonth} ${year}`
+        : `${startDate.getDate()} ${startMonth} - ${endDate.getDate()} ${endMonth} ${year}`;
+
+    return `Week ${weekNumber} • ${dateRange}`;
+  };
+
   // Week navigation
   const navigateWeek = (direction: "prev" | "next") => {
     const newDate = new Date(currentWeekDate);
@@ -272,18 +289,162 @@ export default function CreateShiftPage() {
     setCurrentWeekDate(new Date());
   };
 
-  // Sidebar navigation
-  const navigateToPage = (path: string) => {
-    router.push(path);
+  // Shift click handler - identical to schedule page
+  const handleShiftClick = (shift: Shift) => {
+    const colors = getShiftColor(shift.shiftType);
+
+    showModal({
+      type: "custom",
+      title: "Shift details",
+      size: "md",
+      showCancel: false,
+      confirmText: "Sluiten",
+      content: (
+        <div className="space-y-4">
+          <div className="flex items-center space-x-3">
+            <div
+              className={`px-3 py-1 rounded-full text-sm font-medium ${colors.bg} ${colors.text}`}
+            >
+              {shift.shiftTypeName}
+            </div>
+            {shift.isOpenEnded && (
+              <span className="text-sm text-gray-600">Open einde</span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 gap-3">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Medewerker</p>
+              <p className="text-lg text-gray-600">{shift.employeeName}</p>
+            </div>
+
+            <div>
+              <p className="text-sm font-medium text-gray-600">Datum</p>
+              <p className="text-lg text-gray-600">{formatDate(shift.date)}</p>
+            </div>
+
+            <div>
+              <p className="text-sm font-medium text-gray-600">Tijd</p>
+              <p className="text-lg text-gray-600">{shift.timeRange}</p>
+              {shift.durationInHours && (
+                <p className="text-sm text-gray-600">
+                  {shift.durationInHours} uur
+                </p>
+              )}
+            </div>
+
+            {shift.notes && (
+              <div>
+                <p className="text-sm font-medium text-gray-600">Notities</p>
+                <p className="text-base text-gray-600">{shift.notes}</p>
+              </div>
+            )}
+          </div>
+
+          {isManager() && (
+            <div className="flex space-x-2 pt-4 border-t">
+              <button
+                onClick={() => {
+                  // Close the modal first, then navigate to edit page
+                  hideModal();
+                  setTimeout(() => handleEditShift(shift), 150);
+                }}
+                className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors cursor-pointer"
+              >
+                <Edit className="h-4 w-4" />
+                <span>Bewerken</span>
+              </button>
+              <button
+                onClick={() => {
+                  // Close the modal first, then show delete confirmation
+                  hideModal();
+                  setTimeout(() => handleDeleteShift(shift), 150);
+                }}
+                className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors cursor-pointer"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span>Verwijderen</span>
+              </button>
+            </div>
+          )}
+        </div>
+      ),
+      icon: <Clock className="h-6 w-6" style={{ color: "#d5896f" }} />,
+    });
   };
 
-  const handleLogout = async () => {
-    try {
-      await api.logout();
-      router.push("/login");
-    } catch (error: unknown) {
-      console.error("Logout error:", error);
+  // Edit shift handler (managers only)
+  const handleEditShift = (shift: Shift) => {
+    if (!isManager()) {
+      showAlert({
+        title: "Onvoldoende rechten",
+        message: "Alleen managers kunnen shifts bewerken.",
+        confirmText: "OK",
+        icon: <AlertTriangle className="h-6 w-6 text-red-600" />,
+      });
+      return;
     }
+
+    // Navigate to edit page
+    router.push(`/schedule/edit/${shift.id}`);
+  };
+
+  // Delete shift handler (managers only)
+  const handleDeleteShift = (shift: Shift) => {
+    if (!isManager()) {
+      showAlert({
+        title: "Onvoldoende rechten",
+        message: "Alleen managers kunnen shifts verwijderen.",
+        confirmText: "OK",
+        icon: <AlertTriangle className="h-6 w-6 text-red-600" />,
+      });
+      return;
+    }
+
+    showConfirm({
+      title: "Shift verwijderen",
+      message: `Weet je zeker dat je de shift van ${
+        shift.employeeName
+      } op ${formatDate(shift.date)} van ${formatTime(shift.startTime)} tot ${
+        shift.isOpenEnded ? "einde" : formatTime(shift.endTime!)
+      } wilt verwijderen?`,
+      confirmText: "Verwijderen",
+      cancelText: "Annuleren",
+      variant: "danger",
+      icon: <AlertTriangle className="h-6 w-6 text-red-600" />,
+      onConfirm: async () => {
+        try {
+          await api.deleteShift(shift.id);
+
+          // Reload data after successful deletion
+          loadWeekShifts();
+          loadAllEmployeesAvailability();
+
+          showAlert({
+            title: "Shift verwijderd",
+            message: "De shift is succesvol verwijderd.",
+            confirmText: "OK",
+            icon: <CheckCircle className="h-6 w-6 text-green-600" />,
+          });
+        } catch (error: unknown) {
+          console.error("Error deleting shift:", error);
+
+          let errorMessage =
+            "Er is een fout opgetreden bij het verwijderen van de shift";
+
+          if (error && typeof error === "object" && "message" in error) {
+            errorMessage = (error as { message: string }).message;
+          }
+
+          showAlert({
+            title: "Fout bij verwijderen",
+            message: errorMessage,
+            confirmText: "OK",
+            icon: <AlertTriangle className="h-6 w-6 text-red-600" />,
+          });
+        }
+      },
+    });
   };
 
   // Check if date is today
@@ -324,6 +485,7 @@ export default function CreateShiftPage() {
     if (dayShifts.length === 0) return null;
 
     const shiftsWithLanes = calculateShiftLanes(dayShifts);
+    const isCompactMode = dayShifts.length > 3;
 
     return shiftsWithLanes.map((shift) => {
       const colors = getShiftColor(shift.shiftType);
@@ -335,9 +497,29 @@ export default function CreateShiftPage() {
 
       const isHovered = hoveredShiftId === shift.id;
 
+      // Get employee details for name formatting
+      const employee = employees.find((emp) => emp.id === shift.employeeId);
+
+      // Format name based on compact mode
+      const displayName =
+        isCompactMode && employee
+          ? (() => {
+              const firstNameInitials = employee.firstName
+                .split(" ")
+                .map((name) => name.charAt(0))
+                .join("");
+              const lastNameInitials = employee.lastName
+                .split(" ")
+                .map((name) => name.charAt(0))
+                .join("");
+              return `${firstNameInitials} ${lastNameInitials}`;
+            })()
+          : employee?.firstName || shift.employeeName;
+
       return (
         <div
           key={shift.id}
+          onClick={() => handleShiftClick(shift)}
           onMouseEnter={() => setHoveredShiftId(shift.id)}
           onMouseLeave={() => setHoveredShiftId(null)}
           className={`absolute cursor-pointer rounded p-2 text-xs ${colors.bg} ${colors.border} ${colors.text} border transition-all duration-200 overflow-hidden`}
@@ -357,15 +539,35 @@ export default function CreateShiftPage() {
               : "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
           }}
         >
-          <div className="font-medium truncate">{shift.employeeName}</div>
-          <div className="text-xs opacity-75 truncate">
-            {formatTime(shift.startTime)} -{" "}
-            {shift.isOpenEnded
-              ? "Open"
-              : shift.endTime
-              ? formatTime(shift.endTime)
-              : "N/A"}
+          <div
+            className="font-medium text-xs max-[500px]:text-[10px]"
+            style={{
+              lineHeight: "1.2",
+              wordBreak: "break-word",
+              overflowWrap: "break-word",
+              whiteSpace: "normal",
+            }}
+          >
+            {displayName}
           </div>
+          {!isCompactMode && (
+            <div
+              className="text-xs max-[500px]:text-[9px] opacity-80 mt-1"
+              style={{
+                lineHeight: "1.1",
+                wordBreak: "break-word",
+                overflowWrap: "break-word",
+                whiteSpace: "normal",
+              }}
+            >
+              {formatTime(shift.startTime)} -{" "}
+              {shift.isOpenEnded
+                ? "einde"
+                : shift.endTime
+                ? formatTime(shift.endTime)
+                : "N/A"}
+            </div>
+          )}
         </div>
       );
     });
@@ -477,6 +679,7 @@ export default function CreateShiftPage() {
                     </div>
                     <select
                       id="employeeId"
+                      value={formData.employeeId}
                       onChange={(e) =>
                         handleInputChange(
                           "employeeId",
@@ -656,7 +859,7 @@ export default function CreateShiftPage() {
                       className="text-sm font-medium"
                       style={{ color: "#120309" }}
                     >
-                      Standby shift
+                      Standby
                     </span>
                   </label>
                 </div>
@@ -755,6 +958,14 @@ export default function CreateShiftPage() {
                     Vandaag
                   </button>
                 </div>
+
+                {/* Week title in center */}
+                <div className="flex-1 text-center">
+                  <h2 className="text-lg font-semibold text-gray-700">
+                    {getWeekTitle()}
+                  </h2>
+                </div>
+
                 <div className="flex items-center bg-white/80 backdrop-blur-lg rounded-lg shadow-lg border border-white/20">
                   <button
                     onClick={() => navigateWeek("prev")}
