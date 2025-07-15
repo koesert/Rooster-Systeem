@@ -224,7 +224,7 @@ export default function CreateShiftPage() {
       };
 
       await api.createShift(apiData);
-      
+
       // Reset form
       setFormData({
         employeeId: employees.length > 0 ? employees[0].id : 0,
@@ -240,7 +240,7 @@ export default function CreateShiftPage() {
       // Reload data
       loadWeekShifts();
       loadAllEmployeesAvailability();
-      
+
       setError(null);
     } catch (error: unknown) {
       console.error("Error creating shift:", error);
@@ -557,10 +557,7 @@ export default function CreateShiftPage() {
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <Clock
-                        className="h-5 w-5"
-                        style={{ color: "#67697c" }}
-                      />
+                      <Clock className="h-5 w-5" style={{ color: "#67697c" }} />
                     </div>
                     <input
                       type="time"
@@ -598,10 +595,7 @@ export default function CreateShiftPage() {
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <Clock
-                        className="h-5 w-5"
-                        style={{ color: "#67697c" }}
-                      />
+                      <Clock className="h-5 w-5" style={{ color: "#67697c" }} />
                     </div>
                     <input
                       type="time"
