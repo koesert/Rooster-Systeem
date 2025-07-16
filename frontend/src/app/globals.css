@@ -43,8 +43,8 @@ body {
   }
 }
 
-/* Mobile styles - screens less than 550px */
-@media (max-width: 549px) {
+/* Mobile styles - screens less than 650px */
+@media (max-width: 649px) {
   /* Stack view controls vertically */
   .layout-main-content .mb-6.flex.items-center.justify-between {
     flex-direction: column !important;

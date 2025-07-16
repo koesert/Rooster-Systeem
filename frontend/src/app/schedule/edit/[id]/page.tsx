@@ -81,7 +81,7 @@ export default function EditShiftPage() {
       loadShiftData();
       loadEmployees();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, isManager, shiftId]);
 
   // Load availability when employee or week changes
@@ -177,13 +177,13 @@ export default function EditShiftPage() {
 
   const loadEmployeeAvailability = async (
     employeeId: number,
-    weekStart: string,
+    weekStart: string
   ) => {
     setIsLoadingAvailability(true);
     try {
       const availability = await api.getEmployeeWeekAvailability(
         employeeId,
-        weekStart,
+        weekStart
       );
       setEmployeeAvailability(availability);
     } catch (error: unknown) {
@@ -268,7 +268,7 @@ export default function EditShiftPage() {
 
   const handleInputChange = (
     field: keyof UpdateShiftRequest,
-    value: string | number | boolean | null,
+    value: string | number | boolean | null
   ) => {
     let processedValue = value;
 
@@ -326,7 +326,9 @@ export default function EditShiftPage() {
           const errorDetails = Object.entries(error.errors)
             .map(
               ([field, messages]) =>
-                `${field}: ${Array.isArray(messages) ? messages.join(", ") : messages}`,
+                `${field}: ${
+                  Array.isArray(messages) ? messages.join(", ") : messages
+                }`
             )
             .join("\n");
           errorMessage = `Validatie fouten:\n${errorDetails}`;
@@ -414,7 +416,7 @@ export default function EditShiftPage() {
     const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
     const dayOfYear =
       Math.floor(
-        (date.getTime() - firstDayOfYear.getTime()) / (24 * 60 * 60 * 1000),
+        (date.getTime() - firstDayOfYear.getTime()) / (24 * 60 * 60 * 1000)
       ) + 1;
     const dayOfWeek =
       firstDayOfYear.getDay() === 0 ? 7 : firstDayOfYear.getDay(); // Monday = 1, Sunday = 7
@@ -575,10 +577,14 @@ export default function EditShiftPage() {
                             onChange={(e) =>
                               handleInputChange(
                                 "employeeId",
-                                parseInt(e.target.value),
+                                parseInt(e.target.value)
                               )
                             }
-                            className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.employeeId ? "border-red-300" : "border-gray-200"}`}
+                            className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${
+                              fieldErrors.employeeId
+                                ? "border-red-300"
+                                : "border-gray-200"
+                            }`}
                             style={{ color: "#120309" }}
                             disabled={isSubmitting}
                             onFocus={(e) => {
@@ -635,7 +641,11 @@ export default function EditShiftPage() {
                             onChange={(e) =>
                               handleInputChange("date", e.target.value)
                             }
-                            className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.date ? "border-red-300" : "border-gray-200"}`}
+                            className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${
+                              fieldErrors.date
+                                ? "border-red-300"
+                                : "border-gray-200"
+                            }`}
                             style={{ color: "#120309" }}
                             disabled={isSubmitting}
                             onFocus={(e) => {
@@ -696,7 +706,11 @@ export default function EditShiftPage() {
                             onChange={(e) =>
                               handleInputChange("startTime", e.target.value)
                             }
-                            className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.startTime ? "border-red-300" : "border-gray-200"}`}
+                            className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${
+                              fieldErrors.startTime
+                                ? "border-red-300"
+                                : "border-gray-200"
+                            }`}
                             style={{ color: "#120309" }}
                             disabled={isSubmitting}
                             min="12:00"
@@ -765,8 +779,8 @@ export default function EditShiftPage() {
                               formData.isOpenEnded
                                 ? "bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200"
                                 : fieldErrors.endTime
-                                  ? "border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg"
-                                  : "border-gray-200 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg"
+                                ? "border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg"
+                                : "border-gray-200 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg"
                             }`}
                             style={{
                               color: formData.isOpenEnded
@@ -871,7 +885,7 @@ export default function EditShiftPage() {
                               onChange={(e) =>
                                 handleInputChange(
                                   "shiftType",
-                                  parseInt(e.target.value) as ShiftType,
+                                  parseInt(e.target.value) as ShiftType
                                 )
                               }
                               className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg"
@@ -892,7 +906,9 @@ export default function EditShiftPage() {
                               <option value={ShiftType.Schoonmaak}>
                                 Schoonmaak
                               </option>
-                              <option value={ShiftType.Bedienen}>Bedienen</option>
+                              <option value={ShiftType.Bedienen}>
+                                Bedienen
+                              </option>
                               <option value={ShiftType.SchoonmaakBedienen}>
                                 Schoonmaak & Bedienen
                               </option>
@@ -946,7 +962,11 @@ export default function EditShiftPage() {
                             onChange={(e) =>
                               handleInputChange("notes", e.target.value)
                             }
-                            className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg resize-none ${fieldErrors.notes ? "border-red-300" : "border-gray-200"}`}
+                            className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg resize-none ${
+                              fieldErrors.notes
+                                ? "border-red-300"
+                                : "border-gray-200"
+                            }`}
                             style={{ color: "#120309" }}
                             placeholder="Eventuele opmerkingen..."
                             rows={3}
@@ -1081,7 +1101,7 @@ export default function EditShiftPage() {
                         className="flex items-center justify-between p-3 rounded-xl border border-gray-200 transition-all duration-200"
                         style={{
                           backgroundColor: getAvailabilityColor(
-                            day.isAvailable,
+                            day.isAvailable
                           ),
                         }}
                       >

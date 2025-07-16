@@ -67,10 +67,10 @@ export default function SchedulePage() {
   // Employee selection state (for managers)
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(
-    null,
+    null
   );
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(
-    null,
+    null
   );
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(false);
 
@@ -447,7 +447,11 @@ export default function SchedulePage() {
 
     showConfirm({
       title: "Shift verwijderen",
-      message: `Weet je zeker dat je de shift van ${shift.employeeName} op ${formatDate(shift.date)} van ${formatTime(shift.startTime)} tot ${shift.isOpenEnded ? "einde" : formatTime(shift.endTime!)} wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.`,
+      message: `Weet je zeker dat je de shift van ${
+        shift.employeeName
+      } op ${formatDate(shift.date)} van ${formatTime(shift.startTime)} tot ${
+        shift.isOpenEnded ? "einde" : formatTime(shift.endTime!)
+      } wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.`,
       confirmText: "Ja, verwijderen",
       cancelText: "Annuleren",
       variant: "danger",
@@ -768,6 +772,16 @@ export default function SchedulePage() {
               </button>
             </div>
 
+            {/* Week Number and Month/Date Display */}
+            <div className="flex items-center space-x-4 bg-white/80 backdrop-blur-lg rounded-xl shadow-lg border border-white/20 px-4 py-2">
+              <div className="text-sm font-medium text-gray-600">
+                {currentDate.toLocaleDateString("nl-NL", {
+                  month: "long",
+                  year: "numeric",
+                })}
+              </div>
+            </div>
+
             {/* Navigation */}
             <div className="flex items-center space-x-4">
               <button
@@ -857,7 +871,7 @@ export default function SchedulePage() {
                           >
                             {renderShiftBlocksForDay(
                               getAllShiftsForDate(currentDate),
-                              timeSlots,
+                              timeSlots
                             )}
                           </div>
                         )}
@@ -889,7 +903,9 @@ export default function SchedulePage() {
                       <div
                         key={index}
                         onClick={() => navigateToDay(date)}
-                        className={`bg-white p-4 max-[500px]:p-2 text-center cursor-pointer hover:bg-gray-50 transition-colors ${isToday ? "bg-orange-50" : ""}`}
+                        className={`bg-white p-4 max-[500px]:p-2 text-center cursor-pointer hover:bg-gray-50 transition-colors ${
+                          isToday ? "bg-orange-50" : ""
+                        }`}
                         title="Klik om dag weergave te openen"
                       >
                         <p className="text-lg font-medium text-gray-600 capitalize">
@@ -897,7 +913,9 @@ export default function SchedulePage() {
                           <span className="md:hidden">{shortDayName}</span>
                         </p>
                         <p
-                          className={`text-2xl font-bold ${isToday ? "text-orange-600" : "text-gray-900"}`}
+                          className={`text-2xl font-bold ${
+                            isToday ? "text-orange-600" : "text-gray-900"
+                          }`}
                         >
                           {dayNumber}
                         </p>
@@ -926,7 +944,9 @@ export default function SchedulePage() {
                         return (
                           <div
                             key={`cell-${timeIndex}-${dayIndex}`}
-                            className={`bg-white p-0 relative ${isToday ? "bg-orange-50/50" : ""}`}
+                            className={`bg-white p-0 relative ${
+                              isToday ? "bg-orange-50/50" : ""
+                            }`}
                             style={{ minHeight: "50px" }}
                           >
                             {/* Render all shifts for this day only once at the first time slot */}
@@ -937,7 +957,7 @@ export default function SchedulePage() {
                               >
                                 {renderShiftBlocksForDay(
                                   getShiftsForDate(date),
-                                  timeSlots,
+                                  timeSlots
                                 )}
                               </div>
                             )}
@@ -1043,7 +1063,9 @@ export default function SchedulePage() {
                                       {formatTime(shift.startTime)}{" "}
                                       {shift.shiftTypeName}
                                       {shift.isStandby && (
-                                        <div className="text-orange-600 text-xs mt-0.5">standby</div>
+                                        <div className="text-orange-600 text-xs mt-0.5">
+                                          standby
+                                        </div>
                                       )}
                                     </div>
                                   </div>
@@ -1068,7 +1090,9 @@ export default function SchedulePage() {
                                       handleShiftClick(shift);
                                     }}
                                     className={`w-5 h-5 rounded-full cursor-pointer hover:scale-110 transition-transform border border-green-300 ${colors.bg} relative flex items-center justify-center`}
-                                    title={`${formatTime(shift.startTime)} - ${shift.shiftTypeName}${shift.isStandby ? ' (standby)' : ''}`}
+                                    title={`${formatTime(shift.startTime)} - ${
+                                      shift.shiftTypeName
+                                    }${shift.isStandby ? " (standby)" : ""}`}
                                   >
                                     {shift.isStandby && (
                                       <div className="w-1 h-1 rounded-full bg-orange-300 border border-orange-400"></div>
