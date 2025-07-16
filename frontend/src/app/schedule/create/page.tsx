@@ -310,6 +310,9 @@ export default function CreateShiftPage() {
             {shift.isOpenEnded && (
               <span className="text-sm text-gray-600">Open einde</span>
             )}
+            {shift.isStandby && (
+              <span className="text-sm text-orange-600">Standby</span>
+            )}
           </div>
 
           <div className="grid grid-cols-1 gap-3">
@@ -539,6 +542,11 @@ export default function CreateShiftPage() {
               : "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
           }}
         >
+          {/* Standby indicator */}
+          {shift.isStandby && (
+            <div className="absolute top-1 right-1 w-2 h-2 bg-orange-500 rounded-full shadow-sm"></div>
+          )}
+          
           <div
             className="font-medium text-xs max-[500px]:text-[10px]"
             style={{
@@ -623,7 +631,7 @@ export default function CreateShiftPage() {
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => router.push("/schedule")}
-                className="p-3 rounded-xl hover:bg-white/20 transition-colors"
+                className="p-3 rounded-xl hover:bg-white/20 transition-colors cursor-pointer"
               >
                 <ArrowLeft className="h-5 w-5" style={{ color: "#67697c" }} />
               </button>
