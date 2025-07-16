@@ -546,7 +546,7 @@ export default function CreateShiftPage() {
           {shift.isStandby && (
             <div className="absolute top-1 right-1 w-2 h-2 bg-orange-500 rounded-full shadow-sm"></div>
           )}
-          
+
           <div
             className="font-medium text-xs max-[500px]:text-[10px]"
             style={{
