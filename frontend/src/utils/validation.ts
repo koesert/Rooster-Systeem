@@ -160,6 +160,60 @@ export class ValidationManager {
       },
     ],
 
+    // Time off date validation
+    startDate: [
+      { required: true, message: "Startdatum is verplicht" },
+      {
+        custom: (value: string, formData: any) => {
+          if (!value) return null;
+
+          const startDate = new Date(value); // Input is in YYYY-MM-DD format
+
+          // Check minimum 2 weeks in advance (only for non-managers)
+          // Note: formData.isManager should be passed from the component
+          if (!formData.isManager) {
+            const today = new Date();
+            const minStartDate = new Date(
+              today.getTime() + 14 * 24 * 60 * 60 * 1000
+            );
+            if (startDate < minStartDate) {
+              return "Vrij moet minimaal 2 weken van tevoren worden aangevraagd";
+            }
+          }
+
+          return null;
+        },
+      },
+    ],
+
+    endDate: [
+      { required: true, message: "Einddatum is verplicht" },
+      {
+        custom: (value: string, formData: any) => {
+          if (!value) return null;
+
+          const endDate = new Date(value); // Input is in YYYY-MM-DD format
+
+          if (formData.startDate) {
+            const startDate = new Date(formData.startDate);
+
+            if (endDate < startDate) {
+              return "Einddatum moet na of gelijk aan startdatum zijn";
+            }
+
+            // Check maximum 8 weeks (56 days)
+            const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            if (diffDays > 56) {
+              return "Maximaal 8 weken (56 dagen) aanvragen toegestaan";
+            }
+          }
+
+          return null;
+        },
+      },
+    ],
+
     // Time validation
     startTime: [
       { required: true, message: "Starttijd is verplicht" },
