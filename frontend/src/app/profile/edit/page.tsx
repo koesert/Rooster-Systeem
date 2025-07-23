@@ -428,11 +428,6 @@ export default function ProfileEditPage() {
                         {fieldErrors.firstName}
                       </p>
                     )}
-                    {!isManager() && (
-                      <p className="mt-2 text-xs text-gray-500">
-                        Dit veld kan niet worden bewerkt
-                      </p>
-                    )}
                   </div>
 
                   {/* Last Name */}
@@ -492,11 +487,6 @@ export default function ProfileEditPage() {
                     {fieldErrors.lastName && (
                       <p className="mt-2 text-sm text-red-600">
                         {fieldErrors.lastName}
-                      </p>
-                    )}
-                    {!isManager() && (
-                      <p className="mt-2 text-xs text-gray-500">
-                        Dit veld kan niet worden bewerkt
                       </p>
                     )}
                   </div>
@@ -893,11 +883,6 @@ export default function ProfileEditPage() {
                         {fieldErrors.hireDate}
                       </p>
                     )}
-                    {!isManager() && (
-                      <p className="mt-2 text-xs text-gray-500">
-                        Dit veld kan niet worden bewerkt
-                      </p>
-                    )}
                   </div>
 
                   {/* Birth Date */}
@@ -961,11 +946,6 @@ export default function ProfileEditPage() {
                     {fieldErrors.birthDate && (
                       <p className="mt-2 text-sm text-red-600">
                         {fieldErrors.birthDate}
-                      </p>
-                    )}
-                    {!isManager() && (
-                      <p className="mt-2 text-xs text-gray-500">
-                        Dit veld kan niet worden bewerkt
                       </p>
                     )}
                   </div>
