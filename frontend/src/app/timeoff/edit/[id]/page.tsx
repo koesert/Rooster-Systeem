@@ -331,7 +331,7 @@ export default function EditTimeOffPage() {
                   <div className="flex items-center space-x-4">
                     <button
                       onClick={handleCancel}
-                      className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200"
+                      className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200 cursor-pointer"
                       title="Terug naar aanvraag details"
                       disabled={isSubmitting}
                     >
@@ -500,7 +500,7 @@ export default function EditTimeOffPage() {
                   type="button"
                   onClick={handleCancel}
                   disabled={isSubmitting}
-                  className="flex items-center justify-center py-3 px-4 max-[500px]:py-2 max-[500px]:px-2 max-[500px]:space-x-0 space-x-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center justify-center py-3 px-4 max-[500px]:py-2 max-[500px]:px-2 max-[500px]:space-x-0 space-x-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   style={{ color: "#67697c" }}
                 >
                   <X className="h-5 w-5" />
@@ -509,7 +509,7 @@ export default function EditTimeOffPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex items-center justify-center space-x-2 py-3 px-4 rounded-xl text-white font-medium transition-all duration-200 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center justify-center space-x-2 py-3 px-4 rounded-xl text-white font-medium transition-all duration-200 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   style={{
                     background: isSubmitting
                       ? "#d5896f80"

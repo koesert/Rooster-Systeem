@@ -22,8 +22,6 @@ import {
 } from "lucide-react";
 import * as api from "@/lib/api";
 
-import TimeOffModal from "@/components/TimeOffModal";
-
 // Types voor vrij aanvragen
 interface TimeOffRequest {
   id: number;
@@ -56,7 +54,6 @@ export default function TimeOffPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoadingRequests, setIsLoadingRequests] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -182,7 +179,7 @@ export default function TimeOffPage() {
   };
 
   const handleAddRequest = () => {
-    setIsModalOpen(true);
+    router.push("/timeoff/create");
   };
 
   if (isLoading) {
@@ -416,29 +413,15 @@ export default function TimeOffPage() {
                             >
                               {searchTerm
                                 ? "Geen vrij aanvragen gevonden met deze zoekterm"
-                                : "Nog geen vrij aanvragen"}
+                                : "Geen vrij aanvragen"}
                             </p>
-                            {searchTerm ? (
+                            {searchTerm && (
                               <button
                                 onClick={() => setSearchTerm("")}
                                 className="text-sm underline cursor-pointer"
                                 style={{ color: "#d5896f" }}
                               >
                                 Wis zoekterm
-                              </button>
-                            ) : (
-                              <button
-                                onClick={handleAddRequest}
-                                className="flex items-center max-[500px]:space-x-0 space-x-2 px-4 max-[500px]:px-3 py-2 rounded-lg text-white font-medium transition-all duration-200 hover:scale-105 cursor-pointer"
-                                style={{
-                                  background:
-                                    "linear-gradient(135deg, #d5896f, #d5896f90)",
-                                }}
-                              >
-                                <Plus className="h-4 w-4" />
-                                <span className="max-[500px]:hidden">
-                                  Eerste aanvraag toevoegen
-                                </span>
                               </button>
                             )}
                           </div>
@@ -575,15 +558,6 @@ export default function TimeOffPage() {
           </div>
         </div>
       </main>
-
-      {/* Time Off Modal */}
-      <TimeOffModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSuccess={() => {
-          loadRequests(); // Reload the list
-        }}
-      />
     </div>
   );
 }
