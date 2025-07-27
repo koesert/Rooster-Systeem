@@ -18,6 +18,33 @@ export interface ValidationResult {
   errors: Record<string, string>;
 }
 
+// Security utility functions
+const sanitizeInput = (input: string): string => {
+  return input
+    .trim()
+    .replace(/[<>"/\\&]/g, "") // Remove potential XSS characters
+    .replace(/['";]/g, ""); // Remove SQL injection characters
+};
+
+const containsDangerousPatterns = (input: string): boolean => {
+  const dangerousPatterns = [
+    /<script/i,
+    /javascript:/i,
+    /on\w+=/i,
+    /sql/i,
+    /union/i,
+    /select/i,
+    /insert/i,
+    /update/i,
+    /delete/i,
+    /drop/i,
+    /exec/i,
+    /script/i,
+  ];
+
+  return dangerousPatterns.some((pattern) => pattern.test(input));
+};
+
 export class ValidationManager {
   private rules: ValidationRules = {};
 
@@ -46,9 +73,13 @@ export class ValidationManager {
       },
     ],
 
-    // Username validation
+    // Secure username validation
     username: [
       { required: true, message: "Gebruikersnaam is verplicht" },
+      {
+        minLength: 5,
+        message: "Gebruikersnaam moet minimaal 5 tekens bevatten",
+      },
       {
         maxLength: 30,
         message: "Gebruikersnaam mag maximaal 30 tekens bevatten",
@@ -60,8 +91,32 @@ export class ValidationManager {
       },
       {
         custom: (value: string) => {
-          if (value && !value.trim())
-            return "Gebruikersnaam mag niet leeg zijn";
+          if (!value) return null;
+
+          // Trim and check for empty
+          const trimmed = value.trim();
+          if (!trimmed) return "Gebruikersnaam mag niet leeg zijn";
+
+          // Check for dangerous patterns
+          if (containsDangerousPatterns(value)) {
+            return "Gebruikersnaam bevat niet toegestane tekens";
+          }
+
+          // Must start with letter or number
+          if (!/^[a-zA-Z0-9]/.test(trimmed)) {
+            return "Gebruikersnaam moet beginnen met een letter of cijfer";
+          }
+
+          // Must end with letter or number
+          if (!/[a-zA-Z0-9]$/.test(trimmed)) {
+            return "Gebruikersnaam moet eindigen met een letter of cijfer";
+          }
+
+          // No consecutive special characters
+          if (/[._-]{2,}/.test(trimmed)) {
+            return "Gebruikersnaam mag geen opeenvolgende speciale tekens bevatten";
+          }
+
           return null;
         },
       },
@@ -167,12 +222,12 @@ export class ValidationManager {
         custom: (value: string, formData: any) => {
           if (!value) return null;
 
-          const startDate = new Date(value); // Input is in YYYY-MM-DD format
+          const startDate = new Date(value);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
 
           // Check minimum 2 weeks in advance (only for non-managers)
-          // Note: formData.isManager should be passed from the component
           if (!formData.isManager) {
-            const today = new Date();
             const minStartDate = new Date(
               today.getTime() + 14 * 24 * 60 * 60 * 1000
             );
@@ -190,23 +245,13 @@ export class ValidationManager {
       { required: true, message: "Einddatum is verplicht" },
       {
         custom: (value: string, formData: any) => {
-          if (!value) return null;
+          if (!value || !formData.startDate) return null;
 
-          const endDate = new Date(value); // Input is in YYYY-MM-DD format
+          const startDate = new Date(formData.startDate);
+          const endDate = new Date(value);
 
-          if (formData.startDate) {
-            const startDate = new Date(formData.startDate);
-
-            if (endDate < startDate) {
-              return "Einddatum moet na of gelijk aan startdatum zijn";
-            }
-
-            // Check maximum 8 weeks (56 days)
-            const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            if (diffDays > 56) {
-              return "Maximaal 8 weken (56 dagen) aanvragen toegestaan";
-            }
+          if (endDate < startDate) {
+            return "Einddatum moet na of gelijk aan startdatum zijn";
           }
 
           return null;
@@ -214,7 +259,7 @@ export class ValidationManager {
       },
     ],
 
-    // Time validation
+    // Shift time validation
     startTime: [
       { required: true, message: "Starttijd is verplicht" },
       {
@@ -225,6 +270,7 @@ export class ValidationManager {
           if (hour < 12) {
             return "Starttijd moet tussen 12:00 en 23:59 liggen";
           }
+
           return null;
         },
       },
@@ -275,12 +321,36 @@ export class ValidationManager {
     reason: [
       { required: true, message: "Reden is verplicht" },
       { maxLength: 500, message: "Reden mag maximaal 500 tekens bevatten" },
+      {
+        custom: (value: string) => {
+          if (!value) return null;
+
+          // Basic XSS protection for text fields
+          if (containsDangerousPatterns(value)) {
+            return "Tekst bevat niet toegestane tekens";
+          }
+
+          return null;
+        },
+      },
     ],
 
     notes: [
       {
         maxLength: 500,
         message: "Notities mogen maximaal 500 tekens bevatten",
+      },
+      {
+        custom: (value: string) => {
+          if (!value) return null;
+
+          // Basic XSS protection for text fields
+          if (containsDangerousPatterns(value)) {
+            return "Tekst bevat niet toegestane tekens";
+          }
+
+          return null;
+        },
       },
     ],
 
@@ -333,11 +403,17 @@ export class ValidationManager {
         continue;
       }
 
+      // Sanitize string inputs before further validation
+      let sanitizedValue = value;
+      if (typeof value === "string") {
+        sanitizedValue = sanitizeInput(value);
+      }
+
       // Min length validation
       if (
         rule.minLength &&
-        typeof value === "string" &&
-        value.length < rule.minLength
+        typeof sanitizedValue === "string" &&
+        sanitizedValue.length < rule.minLength
       ) {
         return (
           rule.message ||
@@ -348,8 +424,8 @@ export class ValidationManager {
       // Max length validation
       if (
         rule.maxLength &&
-        typeof value === "string" &&
-        value.length > rule.maxLength
+        typeof sanitizedValue === "string" &&
+        sanitizedValue.length > rule.maxLength
       ) {
         return (
           rule.message ||
@@ -360,8 +436,8 @@ export class ValidationManager {
       // Pattern validation
       if (
         rule.pattern &&
-        typeof value === "string" &&
-        !rule.pattern.test(value)
+        typeof sanitizedValue === "string" &&
+        !rule.pattern.test(sanitizedValue)
       ) {
         return rule.message || `${fieldName} heeft een ongeldig formaat`;
       }
