@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useError } from "@/contexts/ErrorContext";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { useValidation, ValidationConfigs } from "@/hooks/useValidation";
 import { useModal } from "@/contexts/ModalContext";
 import Sidebar from "@/components/Sidebar";
 import LoadingScreen from "@/components/LoadingScreen";
@@ -52,43 +53,34 @@ export default function EditTimeOffPage() {
   const [selectedStatus, setSelectedStatus] = useState<TimeOffStatus>(
     TimeOffStatus.Pending
   );
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-  // Redirect if not authenticated
+  // Validation setup
+  const { fieldErrors, setFieldErrors, validateForm, clearAllErrors } =
+    useValidation({
+      ...ValidationConfigs.timeoffCreate,
+      validateOnChange: false, // Only validate on submit
+    });
+
+  // Redirect if not authenticated or not manager
   useEffect(() => {
     if (!isLoading && !user) {
       router.push("/login");
+    } else if (!isLoading && user && !isManager()) {
+      router.push("/timeoff");
     }
-  }, [user, isLoading, router]);
+  }, [user, isLoading, router, isManager]);
 
   // Load request data
   useEffect(() => {
-    if (user && requestId) {
+    if (user && requestId && isManager()) {
       loadRequest();
     }
-  }, [user, requestId]);
+  }, [user, requestId, isManager]);
 
   const loadRequest = async () => {
     try {
       setIsLoadingRequest(true);
       const data = await api.getTimeOffRequestById(requestId);
-
-      // Check access: users can only edit their own pending requests, but managers can edit all requests
-      if (!isManager() && data.employeeId !== user?.id) {
-        router.push("/timeoff");
-        return;
-      }
-
-      // Only restrict status for non-managers
-      if (!isManager() && data.status !== TimeOffStatus.Pending) {
-        showAlert({
-          title: "Bewerken niet mogelijk",
-          message:
-            "Alleen aanvragen met status 'Aangevraagd' kunnen worden bewerkt",
-        });
-        router.push(`/timeoff/${requestId}`);
-        return;
-      }
 
       setRequest(data);
 
@@ -149,101 +141,51 @@ export default function EditTimeOffPage() {
     }
   };
 
-  // Get current display status (selected by manager or original status)
-  const getCurrentDisplayStatus = (): TimeOffStatus => {
-    return isManager() ? selectedStatus : (request?.status || TimeOffStatus.Pending);
-  };
+  const handleInputChange = (
+    field: keyof CreateTimeOffRequestDto,
+    value: string
+  ) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
 
-  const validateForm = (): boolean => {
-    const errors: Record<string, string> = {};
-
-    if (!formData.reason.trim()) {
-      errors.reason = "Reden is verplicht";
-    } else if (formData.reason.length > 500) {
-      errors.reason = "Reden mag maximaal 500 karakters zijn";
+    // Clear field error when user starts typing
+    if (fieldErrors[field]) {
+      setFieldErrors((prev) => ({ ...prev, [field]: "" }));
     }
-
-    if (!formData.startDate) {
-      errors.startDate = "Startdatum is verplicht";
-    }
-
-    if (!formData.endDate) {
-      errors.endDate = "Einddatum is verplicht";
-    }
-
-    if (formData.startDate && formData.endDate) {
-      const startDate = new Date(fromInputDateFormat(formData.startDate));
-      const endDate = new Date(fromInputDateFormat(formData.endDate));
-
-      if (endDate < startDate) {
-        errors.endDate = "Einddatum moet na of gelijk aan startdatum zijn";
-      }
-
-      // Check maximum 8 weeks (56 days)
-      const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      if (diffDays > 56) {
-        errors.endDate = "Maximaal 8 weken (56 dagen) aanvragen toegestaan";
-      }
-
-      // Check minimum 2 weeks in advance (only for non-managers)
-      if (!isManager()) {
-        const today = new Date();
-        const minStartDate = new Date(
-          today.getTime() + 14 * 24 * 60 * 60 * 1000
-        );
-        if (startDate < minStartDate) {
-          errors.startDate =
-            "Vrij moet minimaal 2 weken van tevoren worden aangevraagd";
-        }
-      }
-    }
-
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm() || !request) {
+    if (!request) {
+      return;
+    }
+
+    // Add isManager to form data for validation
+    const formDataWithManager = {
+      ...formData,
+      isManager: isManager(),
+    };
+
+    if (!validateForm(formDataWithManager)) {
       return;
     }
 
     try {
       setIsSubmitting(true);
 
-      if (isManager()) {
-        // Managers can update everything including status in one call
-        const managerRequestData = {
-          reason: formData.reason.trim(),
-          startDate: fromInputDateFormat(formData.startDate),
-          endDate: fromInputDateFormat(formData.endDate),
-          status: selectedStatus as "Pending" | "Approved" | "Rejected" | "Cancelled",
-        };
+      // Managers can update everything including status in one call
+      const managerRequestData = {
+        reason: formData.reason.trim(),
+        startDate: fromInputDateFormat(formData.startDate),
+        endDate: fromInputDateFormat(formData.endDate),
+        status: selectedStatus as
+          | "Pending"
+          | "Approved"
+          | "Rejected"
+          | "Cancelled",
+      };
 
-        await api.updateTimeOffRequestAsManager(request.id, managerRequestData);
-        
-        showAlert({
-          title: "Succes",
-          message: "Aanvraag succesvol bijgewerkt door manager",
-        });
-      } else {
-        // Employees can only update basic information (no status)
-        const requestData: CreateTimeOffRequestDto = {
-          reason: formData.reason.trim(),
-          startDate: fromInputDateFormat(formData.startDate),
-          endDate: fromInputDateFormat(formData.endDate),
-        };
-
-        await api.updateTimeOffRequest(request.id, requestData);
-        
-        showAlert({
-          title: "Succes",
-          message: "Aanvraag succesvol bijgewerkt",
-        });
-      }
-
+      await api.updateTimeOffRequestAsManager(request.id, managerRequestData);
       router.push("/timeoff");
     } catch (error) {
       showApiError(
@@ -268,11 +210,6 @@ export default function EditTimeOffPage() {
         try {
           setIsSubmitting(true);
           await api.deleteTimeOffRequest(request.id);
-
-          showAlert({
-            title: "Succes",
-            message: "Aanvraag succesvol verwijderd",
-          });
           router.push("/timeoff");
         } catch (error) {
           showApiError(
@@ -287,14 +224,14 @@ export default function EditTimeOffPage() {
   };
 
   const handleCancel = () => {
-    router.push(`/timeoff/${requestId}`);
+    router.push("/timeoff");
   };
 
   if (isLoading || isLoadingRequest) {
     return <LoadingScreen message="Aanvraag laden" />;
   }
 
-  if (!user || !request) {
+  if (!user || !isManager() || !request) {
     return null;
   }
 
@@ -330,10 +267,9 @@ export default function EditTimeOffPage() {
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center space-x-4">
                     <button
-                      onClick={handleCancel}
+                      onClick={() => router.push("/timeoff")}
                       className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200 cursor-pointer"
-                      title="Terug naar aanvraag details"
-                      disabled={isSubmitting}
+                      title="Terug naar vrij aanvragen"
                     >
                       <ArrowLeft
                         className="h-5 w-5"
@@ -351,7 +287,7 @@ export default function EditTimeOffPage() {
                     </div>
                     <div>
                       <h1
-                        className="text-4xl font-bold max-[500px]:text-2xl"
+                        className="text-3xl font-bold"
                         style={{
                           background:
                             "linear-gradient(135deg, #120309, #67697c)",
@@ -359,20 +295,30 @@ export default function EditTimeOffPage() {
                           WebkitTextFillColor: "transparent",
                         }}
                       >
-                        Aanvraag bewerken
+                        Vrij aanvraag bewerken
                       </h1>
+                      <p className="text-sm mt-1" style={{ color: "#67697c" }}>
+                        {request.employeeName}
+                      </p>
                     </div>
                   </div>
 
                   {/* Status Badge */}
-                  {request && (
-                    <div className={`flex items-center border border-green-300 space-x-2 max-[500px]:space-x-0 px-4 py-2 rounded-xl ${getStatusInfo(getCurrentDisplayStatus()).bg} ${getStatusInfo(getCurrentDisplayStatus()).border} max-[500px]:px-2`}>
-                      {getStatusInfo(getCurrentDisplayStatus()).icon}
-                      <span className={`text-sm font-medium ${getStatusInfo(getCurrentDisplayStatus()).text} max-[500px]:hidden`}>
-                        {getStatusInfo(getCurrentDisplayStatus()).label}
-                      </span>
-                    </div>
-                  )}
+                  <div className="flex items-center space-x-3">
+                    {(() => {
+                      const statusInfo = getStatusInfo(selectedStatus);
+                      return (
+                        <div
+                          className={`px-4 py-2 rounded-xl border ${statusInfo.bg} ${statusInfo.border} flex items-center space-x-2`}
+                        >
+                          {statusInfo.icon}
+                          <span className={`font-medium ${statusInfo.text}`}>
+                            {statusInfo.label}
+                          </span>
+                        </div>
+                      );
+                    })()}
+                  </div>
                 </div>
               </div>
             </div>
@@ -394,17 +340,21 @@ export default function EditTimeOffPage() {
                     type="date"
                     value={formData.startDate}
                     onChange={(e) =>
-                      setFormData({ ...formData, startDate: e.target.value })
+                      handleInputChange("startDate", e.target.value)
                     }
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all duration-200"
+                    className={`w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all duration-200 ${
+                      fieldErrors.startDate
+                        ? "border-red-300"
+                        : "border-gray-200"
+                    }`}
                     style={{
                       color: "#120309",
                     }}
                     disabled={isSubmitting}
                   />
-                  {formErrors.startDate && (
+                  {fieldErrors.startDate && (
                     <p className="mt-1 text-sm text-red-500">
-                      {formErrors.startDate}
+                      {fieldErrors.startDate}
                     </p>
                   )}
                 </div>
@@ -420,47 +370,23 @@ export default function EditTimeOffPage() {
                     type="date"
                     value={formData.endDate}
                     onChange={(e) =>
-                      setFormData({ ...formData, endDate: e.target.value })
+                      handleInputChange("endDate", e.target.value)
                     }
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all duration-200"
+                    className={`w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all duration-200 ${
+                      fieldErrors.endDate ? "border-red-300" : "border-gray-200"
+                    }`}
                     style={{
                       color: "#120309",
                     }}
                     disabled={isSubmitting}
                   />
-                  {formErrors.endDate && (
+                  {fieldErrors.endDate && (
                     <p className="mt-1 text-sm text-red-500">
-                      {formErrors.endDate}
+                      {fieldErrors.endDate}
                     </p>
                   )}
                 </div>
               </div>
-
-              {/* Status - Only for managers */}
-              {isManager() && (
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "#120309" }}
-                  >
-                    Status
-                  </label>
-                  <select
-                    value={selectedStatus}
-                    onChange={(e) =>
-                      setSelectedStatus(e.target.value as TimeOffStatus)
-                    }
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all duration-200"
-                    style={{ color: "#120309" }}
-                    disabled={isSubmitting}
-                  >
-                    <option value={TimeOffStatus.Pending}>Aangevraagd</option>
-                    <option value={TimeOffStatus.Approved}>Goedgekeurd</option>
-                    <option value={TimeOffStatus.Rejected}>Afgekeurd</option>
-                    <option value={TimeOffStatus.Cancelled}>Geannuleerd</option>
-                  </select>
-                </div>
-              )}
 
               {/* Reason */}
               <div>
@@ -472,52 +398,117 @@ export default function EditTimeOffPage() {
                 </label>
                 <textarea
                   value={formData.reason}
-                  onChange={(e) =>
-                    setFormData({ ...formData, reason: e.target.value })
-                  }
-                  placeholder="Waarom vraag je vrij aan?"
+                  onChange={(e) => handleInputChange("reason", e.target.value)}
+                  placeholder="Geef een reden voor je vrij aanvraag..."
                   rows={4}
                   maxLength={500}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all duration-200 resize-none"
-                  style={{
-                    color: "#120309",
-                  }}
+                  className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all duration-200 resize-none ${
+                    fieldErrors.reason ? "border-red-300" : "border-gray-200"
+                  }`}
+                  style={{ color: "#120309" }}
                   disabled={isSubmitting}
                 />
                 <div className="flex justify-between items-center mt-1">
-                  {formErrors.reason && (
-                    <p className="text-sm text-red-500">{formErrors.reason}</p>
+                  {fieldErrors.reason && (
+                    <p className="text-sm text-red-500 flex items-center">
+                      <AlertTriangle className="h-4 w-4 mr-1" />
+                      {fieldErrors.reason}
+                    </p>
                   )}
-                  <div className="ml-auto text-xs" style={{ color: "#67697c" }}>
+                  <p className="text-sm text-gray-500 ml-auto">
                     {formData.reason.length}/500
-                  </div>
+                  </p>
+                </div>
+              </div>
+
+              {/* Status Selection */}
+              <div>
+                <label
+                  className="block text-sm font-medium mb-2"
+                  style={{ color: "#120309" }}
+                >
+                  Status
+                </label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {[
+                    TimeOffStatus.Pending,
+                    TimeOffStatus.Approved,
+                    TimeOffStatus.Rejected,
+                    TimeOffStatus.Cancelled,
+                  ].map((status) => {
+                    const statusInfo = getStatusInfo(status);
+                    const isSelected = selectedStatus === status;
+                    return (
+                      <button
+                        key={status}
+                        type="button"
+                        onClick={() => setSelectedStatus(status)}
+                        disabled={isSubmitting}
+                        className={`p-3 rounded-xl border-2 transition-all duration-200 cursor-pointer ${
+                          isSelected
+                            ? `${statusInfo.border} ${statusInfo.bg} ring-2 ring-opacity-50`
+                            : "border-gray-200 bg-white hover:bg-gray-50"
+                        }`}
+                      >
+                        <div className="flex items-center space-x-2">
+                          {statusInfo.icon}
+                          <span
+                            className={`font-medium text-sm ${
+                              isSelected ? statusInfo.text : "text-gray-700"
+                            }`}
+                          >
+                            {statusInfo.label}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-between pt-6">
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  disabled={isSubmitting}
-                  className="flex items-center justify-center py-3 px-4 max-[500px]:py-2 max-[500px]:px-2 max-[500px]:space-x-0 space-x-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                  style={{ color: "#67697c" }}
-                >
-                  <X className="h-5 w-5" />
-                  <span className="max-[500px]:hidden">Annuleren</span>
-                </button>
+              <div className="flex items-center justify-between space-x-4 pt-6 border-t border-gray-200/50">
+                <div className="flex space-x-3">
+                  <button
+                    type="button"
+                    onClick={handleCancel}
+                    disabled={isSubmitting}
+                    className="flex items-center space-x-2 px-6 py-3 rounded-xl border border-gray-300 text-gray-700 font-semibold transition-all duration-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    <X className="h-5 w-5" />
+                    <span>Annuleren</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={isSubmitting}
+                    className="flex items-center space-x-2 px-6 py-3 rounded-xl border border-red-300 text-red-700 font-semibold transition-all duration-300 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    <AlertTriangle className="h-5 w-5" />
+                    <span>Verwijderen</span>
+                  </button>
+                </div>
+
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex items-center justify-center space-x-2 py-3 px-4 rounded-xl text-white font-medium transition-all duration-200 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  className="flex items-center space-x-2 px-6 py-3 rounded-xl text-white font-semibold transition-all duration-300 hover:shadow-lg hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   style={{
-                    background: isSubmitting
-                      ? "#d5896f80"
-                      : "linear-gradient(135deg, #d5896f, #d5896f90)",
+                    background: "linear-gradient(135deg, #d5896f, #d5896f90)",
                   }}
                 >
-                  <Save className="h-5 w-5" />
-                  <span>{isSubmitting ? "Opslaan..." : "Opslaan"}</span>
+                  {isSubmitting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      <span>Opslaan...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-5 w-5" />
+                      <span>Opslaan</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>
