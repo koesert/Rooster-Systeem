@@ -160,21 +160,6 @@ export default function TimeOffPage() {
   };
 
   const handleEditRequest = (request: TimeOffRequest) => {
-    // Managers can edit all requests, employees can only edit their own pending requests
-    if (
-      !isManager() &&
-      (request.employeeId !== user?.id ||
-        request.status.toLowerCase() !== "pending")
-    ) {
-      showAlert({
-        title: "Bewerken niet mogelijk",
-        message:
-          "Je kunt alleen je eigen aanvragen bewerken zolang ze nog niet behandeld zijn.",
-        confirmText: "OK",
-        icon: <AlertTriangle className="h-6 w-6 text-red-600" />,
-      });
-      return;
-    }
     router.push(`/timeoff/edit/${request.id}`);
   };
 
@@ -521,10 +506,7 @@ export default function TimeOffPage() {
                               >
                                 <Eye className="h-4 w-4 text-blue-600" />
                               </button>
-                              {(isManager() ||
-                                (request.employeeId === user?.id &&
-                                  request.status.toLowerCase() ===
-                                    "pending")) && (
+                              {isManager() && (
                                 <>
                                   <button
                                     onClick={() => handleEditRequest(request)}
@@ -533,17 +515,13 @@ export default function TimeOffPage() {
                                   >
                                     <Edit className="h-4 w-4 text-orange-600" />
                                   </button>
-                                  {isManager() && (
-                                    <button
-                                      onClick={() =>
-                                        handleDeleteRequest(request)
-                                      }
-                                      className="p-2 rounded-lg bg-red-100 hover:bg-red-200 transition-colors duration-200 cursor-pointer"
-                                      title="Verwijderen"
-                                    >
-                                      <Trash2 className="h-4 w-4 text-red-600" />
-                                    </button>
-                                  )}
+                                  <button
+                                    onClick={() => handleDeleteRequest(request)}
+                                    className="p-2 rounded-lg bg-red-100 hover:bg-red-200 transition-colors duration-200 cursor-pointer"
+                                    title="Verwijderen"
+                                  >
+                                    <Trash2 className="h-4 w-4 text-red-600" />
+                                  </button>
                                 </>
                               )}
                             </div>

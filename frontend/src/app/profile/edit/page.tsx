@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useError } from "@/contexts/ErrorContext";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { useValidation, ValidationConfigs } from "@/hooks/useValidation";
 import Sidebar from "@/components/Sidebar";
 import LoadingScreen from "@/components/LoadingScreen";
 import {
@@ -53,7 +54,13 @@ export default function ProfileEditPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  // Validation setup - ONLY CHANGE
+  const { fieldErrors, setFieldErrors, validateForm, clearAllErrors } =
+    useValidation({
+      ...ValidationConfigs.profileEdit,
+      validateOnChange: false, // Only validate on submit
+    });
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -77,105 +84,13 @@ export default function ProfileEditPage() {
     }
   }, [user]);
 
-  const validateForm = (): boolean => {
-    const errors: Record<string, string> = {};
-
-    // If user is a manager, validate all fields they can edit
-    if (isManager()) {
-      // First name validation
-      if (!formData.firstName.trim()) {
-        errors.firstName = "Voornaam is verplicht";
-      } else if (formData.firstName.length > 50) {
-        errors.firstName = "Voornaam mag maximaal 50 tekens bevatten";
-      }
-
-      // Last name validation
-      if (!formData.lastName.trim()) {
-        errors.lastName = "Achternaam is verplicht";
-      } else if (formData.lastName.length > 50) {
-        errors.lastName = "Achternaam mag maximaal 50 tekens bevatten";
-      }
-
-      // Hire date validation
-      if (!formData.hireDate) {
-        errors.hireDate = "Datum in dienst is verplicht";
-      } else {
-        const hireDate = new Date(formData.hireDate);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        if (hireDate > today) {
-          errors.hireDate = "Datum in dienst kan niet in de toekomst liggen";
-        }
-      }
-
-      // Birth date validation
-      if (!formData.birthDate) {
-        errors.birthDate = "Geboortedatum is verplicht";
-      } else {
-        const birthDate = new Date(formData.birthDate);
-        const today = new Date();
-        let age = today.getFullYear() - birthDate.getFullYear();
-        const monthDiff = today.getMonth() - birthDate.getMonth();
-
-        if (
-          monthDiff < 0 ||
-          (monthDiff === 0 && today.getDate() < birthDate.getDate())
-        ) {
-          age--;
-        }
-        if (age > 100) {
-          errors.birthDate = "Controleer de geboortedatum";
-        }
-      }
-    }
-
-    // Username validation (both managers and employees)
-    if (!formData.username.trim()) {
-      errors.username = "Gebruikersnaam is verplicht";
-    } else if (formData.username.length > 30) {
-      errors.username = "Gebruikersnaam mag maximaal 30 tekens bevatten";
-    } else if (!/^[a-zA-Z0-9._-]+$/.test(formData.username)) {
-      errors.username =
-        "Gebruikersnaam mag alleen letters, cijfers, punten, underscores en streepjes bevatten";
-    }
-
-    // Password validation (optional for updates, but if provided must be valid)
-    if (formData.password) {
-      if (formData.password.length < 6) {
-        errors.password = "Wachtwoord moet minimaal 6 tekens bevatten";
-      } else if (!/(?=.*[A-Z])/.test(formData.password)) {
-        errors.password = "Wachtwoord moet minimaal 1 hoofdletter bevatten";
-      } else if (!/(?=.*\d)/.test(formData.password)) {
-        errors.password = "Wachtwoord moet minimaal 1 cijfer bevatten";
-      }
-
-      // Password confirmation
-      if (formData.password !== confirmPassword) {
-        errors.confirmPassword = "Wachtwoorden komen niet overeen";
-      }
-    }
-
-    setFieldErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
   const handleInputChange = (
     field: keyof UpdateEmployeeRequest,
-    value: string | Role,
+    value: string | Role
   ) => {
-    let processedValue = value;
-
-    // Convert date fields from HTML input format (YYYY-MM-DD) to DD-MM-YYYY
-    if (
-      (field === "hireDate" || field === "birthDate") &&
-      typeof value === "string" &&
-      value
-    ) {
-      processedValue = fromInputDateFormat(value);
-    }
-
-    setFormData((prev) => ({ ...prev, [field]: processedValue }));
+    // Store the value as-is, no conversion here
+    // HTML date inputs give us yyyy-MM-dd, we'll convert in handleSubmit
+    setFormData((prev) => ({ ...prev, [field]: value }));
 
     // Clear field error when user starts typing
     if (fieldErrors[field]) {
@@ -186,7 +101,19 @@ export default function ProfileEditPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm() || !user) {
+    if (!user) {
+      return;
+    }
+
+    // Prepare form data for validation - ONLY CHANGE
+    const formDataForValidation = {
+      ...formData,
+      passwordOptional: formData.password, // Map to validation field name
+      confirmPassword: confirmPassword,
+      isManager: isManager(),
+    };
+
+    if (!validateForm(formDataForValidation)) {
       return;
     }
 
@@ -197,10 +124,15 @@ export default function ProfileEditPage() {
       let updateData: UpdateEmployeeRequest;
 
       if (isManager()) {
-        // Managers can update everything
+        // Managers can update everything - convert dates from HTML input format to API format
         updateData = {
-          ...formData,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          username: formData.username,
           password: formData.password || undefined, // Only include password if provided
+          role: formData.role,
+          hireDate: fromInputDateFormat(formData.hireDate), // Convert yyyy-MM-dd to dd-MM-yyyy
+          birthDate: fromInputDateFormat(formData.birthDate), // Convert yyyy-MM-dd to dd-MM-yyyy
         };
       } else {
         // Employees can only update username and password
@@ -210,8 +142,8 @@ export default function ProfileEditPage() {
           username: formData.username,
           password: formData.password || undefined,
           role: user.role,
-          hireDate: user.hireDate,
-          birthDate: user.birthDate,
+          hireDate: user.hireDate, // Keep original format
+          birthDate: user.birthDate, // Keep original format
         };
       }
 
@@ -231,9 +163,15 @@ export default function ProfileEditPage() {
       console.error("Error updating profile:", error);
 
       // Handle specific field validation errors
-      if (error && typeof error === 'object' && 'status' in error && 'message' in error && error.status === 400) {
+      if (
+        error &&
+        typeof error === "object" &&
+        "status" in error &&
+        "message" in error &&
+        error.status === 400
+      ) {
         if (
-          typeof error.message === 'string' &&
+          typeof error.message === "string" &&
           error.message.includes("Username") &&
           error.message.includes("already exists")
         ) {
@@ -245,7 +183,7 @@ export default function ProfileEditPage() {
       // All other errors are handled automatically by the error system
       showApiError(
         error,
-        "Er is een fout opgetreden bij het bijwerken van je profiel",
+        "Er is een fout opgetreden bij het bijwerken van je profiel"
       );
     } finally {
       setIsSubmitting(false);
@@ -398,8 +336,8 @@ export default function ProfileEditPage() {
                           !isManager()
                             ? "bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200"
                             : fieldErrors.firstName
-                              ? "border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg"
-                              : "border-gray-200 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg"
+                            ? "border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg"
+                            : "border-gray-200 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg"
                         }`}
                         style={{ color: isManager() ? "#120309" : "#9ca3af" }}
                         placeholder="Voornaam"
@@ -459,8 +397,8 @@ export default function ProfileEditPage() {
                           !isManager()
                             ? "bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200"
                             : fieldErrors.lastName
-                              ? "border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg"
-                              : "border-gray-200 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg"
+                            ? "border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg"
+                            : "border-gray-200 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg"
                         }`}
                         style={{ color: isManager() ? "#120309" : "#9ca3af" }}
                         placeholder="Achternaam"
@@ -500,14 +438,6 @@ export default function ProfileEditPage() {
                   style={{ color: "#120309" }}
                 >
                   Account informatie
-                  {!isManager() && (
-                    <span
-                      className="text-sm font-normal ml-2"
-                      style={{ color: "#d5896f" }}
-                    >
-                      (bewerkbaar)
-                    </span>
-                  )}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Username */}
@@ -534,7 +464,7 @@ export default function ProfileEditPage() {
                         onChange={(e) =>
                           handleInputChange(
                             "username",
-                            e.target.value.toLowerCase(),
+                            e.target.value.toLowerCase()
                           )
                         }
                         disabled={isSubmitting}
@@ -573,7 +503,7 @@ export default function ProfileEditPage() {
                       </p>
                     )}
                     <p className="mt-2 text-xs" style={{ color: "#67697c" }}>
-                      Alleen letters, cijfers, punten, underscores en streepjes
+                      Minimaal 6 tekens. Alleen letters, cijfers, punten, underscores en streepjes
                       toegestaan
                     </p>
                   </div>
@@ -609,14 +539,14 @@ export default function ProfileEditPage() {
                         autoCapitalize="off"
                         spellCheck="false"
                         className={`w-full pl-12 pr-12 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${
-                          fieldErrors.password
+                          fieldErrors.passwordOptional
                             ? "border-red-300"
                             : "border-gray-200"
                         }`}
                         style={{ color: "#120309" }}
                         placeholder="Wachtwoord"
                         onFocus={(e) => {
-                          if (!fieldErrors.password) {
+                          if (!fieldErrors.passwordOptional) {
                             const target = e.target as HTMLInputElement;
                             target.style.boxShadow =
                               "0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)";
@@ -626,9 +556,10 @@ export default function ProfileEditPage() {
                         onBlur={(e) => {
                           const target = e.target as HTMLInputElement;
                           target.style.boxShadow = "";
-                          target.style.borderColor = fieldErrors.password
-                            ? "#fca5a5"
-                            : "#d1d5db";
+                          target.style.borderColor =
+                            fieldErrors.passwordOptional
+                              ? "#fca5a5"
+                              : "#d1d5db";
                         }}
                       />
                       <button
@@ -650,9 +581,9 @@ export default function ProfileEditPage() {
                         )}
                       </button>
                     </div>
-                    {fieldErrors.password && (
+                    {fieldErrors.passwordOptional && (
                       <p className="mt-2 text-sm text-red-600">
-                        {fieldErrors.password}
+                        {fieldErrors.passwordOptional}
                       </p>
                     )}
                     <p className="mt-2 text-xs" style={{ color: "#67697c" }}>
@@ -763,7 +694,9 @@ export default function ProfileEditPage() {
                   )}
                 </h3>
                 <div
-                  className={`grid grid-cols-1 ${isManager() ? "md:grid-cols-3" : "md:grid-cols-2"} gap-6`}
+                  className={`grid grid-cols-1 ${
+                    isManager() ? "md:grid-cols-3" : "md:grid-cols-2"
+                  } gap-6`}
                 >
                   {/* Role - Only show for managers */}
                   {isManager() && (
@@ -788,7 +721,7 @@ export default function ProfileEditPage() {
                           onChange={(e) =>
                             handleInputChange(
                               "role",
-                              parseInt(e.target.value) as Role,
+                              parseInt(e.target.value) as Role
                             )
                           }
                           disabled={isSubmitting}

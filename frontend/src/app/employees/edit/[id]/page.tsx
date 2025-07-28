@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useError } from "@/contexts/ErrorContext";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { useValidation, ValidationConfigs } from "@/hooks/useValidation";
 import Sidebar from "@/components/Sidebar";
 import LoadingScreen from "@/components/LoadingScreen";
 import {
@@ -55,7 +56,13 @@ export default function EditEmployeePage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  // Validation setup - ONLY CHANGE
+  const { fieldErrors, setFieldErrors, validateForm, clearAllErrors } =
+    useValidation({
+      ...ValidationConfigs.employeeEdit,
+      validateOnChange: false, // Only validate on submit
+    });
 
   // Check if current user is editing their own profile
   const isEditingSelf = user?.id === employeeId;
@@ -93,7 +100,7 @@ export default function EditEmployeePage() {
       // Use centralized error handling
       showApiError(
         error,
-        "Er is een fout opgetreden bij het laden van de medewerkersgegevens",
+        "Er is een fout opgetreden bij het laden van de medewerkersgegevens"
       );
 
       // Redirect back on error
@@ -110,107 +117,13 @@ export default function EditEmployeePage() {
     }
   }, [user, canEdit, employeeId, loadEmployee]);
 
-  const validateForm = (): boolean => {
-    const errors: Record<string, string> = {};
-
-    // Only validate fields that can be edited based on user role
-    if (isManager()) {
-      // Managers can edit everything
-
-      // First name validation
-      if (!formData.firstName.trim()) {
-        errors.firstName = "Voornaam is verplicht";
-      } else if (formData.firstName.length > 50) {
-        errors.firstName = "Voornaam mag maximaal 50 tekens bevatten";
-      }
-
-      // Last name validation
-      if (!formData.lastName.trim()) {
-        errors.lastName = "Achternaam is verplicht";
-      } else if (formData.lastName.length > 50) {
-        errors.lastName = "Achternaam mag maximaal 50 tekens bevatten";
-      }
-
-      // Hire date validation
-      if (!formData.hireDate) {
-        errors.hireDate = "Datum in dienst is verplicht";
-      } else {
-        const hireDate = new Date(formData.hireDate);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        if (hireDate > today) {
-          errors.hireDate = "Datum in dienst kan niet in de toekomst liggen";
-        }
-      }
-
-      // Birth date validation
-      if (!formData.birthDate) {
-        errors.birthDate = "Geboortedatum is verplicht";
-      } else {
-        const birthDate = new Date(formData.birthDate);
-        const today = new Date();
-        let age = today.getFullYear() - birthDate.getFullYear();
-        const monthDiff = today.getMonth() - birthDate.getMonth();
-
-        if (
-          monthDiff < 0 ||
-          (monthDiff === 0 && today.getDate() < birthDate.getDate())
-        ) {
-          age--;
-        }
-        if (age > 100) {
-          errors.birthDate = "Controleer de geboortedatum";
-        }
-      }
-    }
-
-    // Username validation (both managers and employees)
-    if (!formData.username.trim()) {
-      errors.username = "Gebruikersnaam is verplicht";
-    } else if (formData.username.length > 30) {
-      errors.username = "Gebruikersnaam mag maximaal 30 tekens bevatten";
-    } else if (!/^[a-zA-Z0-9._-]+$/.test(formData.username)) {
-      errors.username =
-        "Gebruikersnaam mag alleen letters, cijfers, punten, underscores en streepjes bevatten";
-    }
-
-    // Password validation (optional for updates, but if provided must be valid)
-    if (formData.password) {
-      if (formData.password.length < 6) {
-        errors.password = "Wachtwoord moet minimaal 6 tekens bevatten";
-      } else if (!/(?=.*[A-Z])/.test(formData.password)) {
-        errors.password = "Wachtwoord moet minimaal 1 hoofdletter bevatten";
-      } else if (!/(?=.*\d)/.test(formData.password)) {
-        errors.password = "Wachtwoord moet minimaal 1 cijfer bevatten";
-      }
-
-      // Password confirmation
-      if (formData.password !== confirmPassword) {
-        errors.confirmPassword = "Wachtwoorden komen niet overeen";
-      }
-    }
-
-    setFieldErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
   const handleInputChange = (
     field: keyof UpdateEmployeeRequest,
-    value: string | Role,
+    value: string | Role
   ) => {
-    let processedValue = value;
-
-    // Convert date fields from HTML input format (YYYY-MM-DD) to DD-MM-YYYY
-    if (
-      (field === "hireDate" || field === "birthDate") &&
-      typeof value === "string" &&
-      value
-    ) {
-      processedValue = fromInputDateFormat(value);
-    }
-
-    setFormData((prev) => ({ ...prev, [field]: processedValue }));
+    // Store the value as-is, no conversion here for dates
+    // HTML date inputs give us yyyy-MM-dd, we'll convert in handleSubmit
+    setFormData((prev) => ({ ...prev, [field]: value }));
 
     // Clear field error when user starts typing
     if (fieldErrors[field]) {
@@ -221,21 +134,39 @@ export default function EditEmployeePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) {
+    if (!employee) {
+      return;
+    }
+
+    // Prepare form data for validation
+    const formDataForValidation = {
+      ...formData,
+      passwordOptional: formData.password, // Map to validation field name
+      confirmPassword: confirmPassword,
+      isManager: isManager(),
+      isEditingSelf: isEditingSelf,
+    };
+
+    if (!validateForm(formDataForValidation)) {
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      // Create update payload based on user role and whether editing self
+      // Create update payload based on user role
       let updateData: UpdateEmployeeRequest;
 
       if (isManager()) {
-        // Managers can update everything
+        // Managers can update everything - convert dates from HTML input format to API format
         updateData = {
-          ...formData,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          username: formData.username,
           password: formData.password || undefined, // Only include password if provided
+          role: formData.role,
+          hireDate: fromInputDateFormat(formData.hireDate), // Convert yyyy-MM-dd to dd-MM-yyyy
+          birthDate: fromInputDateFormat(formData.birthDate), // Convert yyyy-MM-dd to dd-MM-yyyy
         };
       } else {
         // Employees can only update username and password
@@ -282,14 +213,13 @@ export default function EditEmployeePage() {
           // Use centralized error handling for all other errors
           showApiError(
             error,
-            "Er is een fout opgetreden bij het bijwerken van de medewerker",
+            "Er is een fout opgetreden bij het bijwerken van de medewerker"
           );
         }
       } else {
-        // Use centralized error handling for all other errors
         showApiError(
           error,
-          "Er is een fout opgetreden bij het bijwerken van de medewerker",
+          "Er is een fout opgetreden bij het bijwerken van de medewerker"
         );
       }
     } finally {
@@ -298,17 +228,12 @@ export default function EditEmployeePage() {
   };
 
   if (isLoading || isLoadingEmployee) {
-    return <LoadingScreen message="Gegevens laden" />;
+    return <LoadingScreen message="Medewerker laden..." />;
   }
 
-  if (!user || !employee) {
+  if (!user || !canEdit || !employee) {
     return null;
   }
-
-  const canEditField = (field: string) => {
-    if (isManager()) return true;
-    return field === "username" || field === "password";
-  };
 
   return (
     <div
@@ -342,9 +267,9 @@ export default function EditEmployeePage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
                     <button
-                      onClick={() => router.back()}
+                      onClick={() => router.push("/employees")}
                       className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200 cursor-pointer"
-                      title="Terug"
+                      title="Terug naar medewerkerslijst"
                     >
                       <ArrowLeft
                         className="h-5 w-5"
@@ -370,10 +295,13 @@ export default function EditEmployeePage() {
                           WebkitTextFillColor: "transparent",
                         }}
                       >
-                        {isEditingSelf
-                          ? "Profiel bewerken"
-                          : `${employee.fullName} bewerken`}
+                        {employee.fullName} bewerken
                       </h1>
+                      <p className="text-sm mt-1" style={{ color: "#67697c" }}>
+                        {isEditingSelf
+                          ? "Je bewerkt je eigen profiel"
+                          : `Bewerk ${employee.fullName}'s profiel`}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -411,6 +339,14 @@ export default function EditEmployeePage() {
                   style={{ color: "#120309" }}
                 >
                   Persoonlijke informatie
+                  {!isManager() && (
+                    <span
+                      className="text-sm font-normal ml-2"
+                      style={{ color: "#67697c" }}
+                    >
+                      (alleen-lezen)
+                    </span>
+                  )}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* First Name */}
@@ -420,51 +356,36 @@ export default function EditEmployeePage() {
                       className="block text-sm font-semibold mb-2"
                       style={{ color: "#120309" }}
                     >
-                      Voornaam <span className="text-red-500">*</span>
+                      Voornaam{" "}
+                      {isManager() && <span className="text-red-500">*</span>}
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                         <User
                           className="h-5 w-5"
-                          style={{
-                            color: canEditField("firstName")
-                              ? "#67697c"
-                              : "#9ca3af",
-                          }}
+                          style={{ color: isManager() ? "#67697c" : "#9ca3af" }}
                         />
                       </div>
                       <input
                         id="firstName"
-                        name="first-name"
                         type="text"
                         value={formData.firstName}
                         onChange={(e) =>
                           handleInputChange("firstName", e.target.value)
                         }
-                        disabled={!canEditField("firstName") || isSubmitting}
-                        autoComplete="off"
-                        autoCorrect="off"
-                        autoCapitalize="words"
-                        spellCheck="false"
-                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 ${
-                          !canEditField("firstName")
+                        disabled={!isManager() || isSubmitting}
+                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none transition-all duration-300 ${
+                          !isManager()
                             ? "bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200"
                             : fieldErrors.firstName
-                              ? "border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg"
-                              : "border-gray-200 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg"
+                            ? "border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg"
+                            : "border-gray-200 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg"
                         }`}
-                        style={{
-                          color: canEditField("firstName")
-                            ? "#120309"
-                            : "#9ca3af",
-                        }}
+                        style={{ color: isManager() ? "#120309" : "#9ca3af" }}
                         placeholder="Voornaam"
                         maxLength={50}
                         onFocus={(e) => {
-                          if (
-                            canEditField("firstName") &&
-                            !fieldErrors.firstName
-                          ) {
+                          if (isManager() && !fieldErrors.firstName) {
                             const target = e.target as HTMLInputElement;
                             target.style.boxShadow =
                               "0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)";
@@ -472,7 +393,7 @@ export default function EditEmployeePage() {
                           }
                         }}
                         onBlur={(e) => {
-                          if (canEditField("firstName")) {
+                          if (isManager()) {
                             const target = e.target as HTMLInputElement;
                             target.style.boxShadow = "";
                             target.style.borderColor = fieldErrors.firstName
@@ -487,11 +408,6 @@ export default function EditEmployeePage() {
                         {fieldErrors.firstName}
                       </p>
                     )}
-                    {!canEditField("firstName") && (
-                      <p className="mt-2 text-xs text-gray-500">
-                        Dit veld kan niet worden bewerkt
-                      </p>
-                    )}
                   </div>
 
                   {/* Last Name */}
@@ -501,51 +417,36 @@ export default function EditEmployeePage() {
                       className="block text-sm font-semibold mb-2"
                       style={{ color: "#120309" }}
                     >
-                      Achternaam <span className="text-red-500">*</span>
+                      Achternaam{" "}
+                      {isManager() && <span className="text-red-500">*</span>}
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                         <User
                           className="h-5 w-5"
-                          style={{
-                            color: canEditField("lastName")
-                              ? "#67697c"
-                              : "#9ca3af",
-                          }}
+                          style={{ color: isManager() ? "#67697c" : "#9ca3af" }}
                         />
                       </div>
                       <input
                         id="lastName"
-                        name="last-name"
                         type="text"
                         value={formData.lastName}
                         onChange={(e) =>
                           handleInputChange("lastName", e.target.value)
                         }
-                        disabled={!canEditField("lastName") || isSubmitting}
-                        autoComplete="off"
-                        autoCorrect="off"
-                        autoCapitalize="words"
-                        spellCheck="false"
-                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 ${
-                          !canEditField("lastName")
+                        disabled={!isManager() || isSubmitting}
+                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none transition-all duration-300 ${
+                          !isManager()
                             ? "bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200"
                             : fieldErrors.lastName
-                              ? "border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg"
-                              : "border-gray-200 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg"
+                            ? "border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg"
+                            : "border-gray-200 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg"
                         }`}
-                        style={{
-                          color: canEditField("lastName")
-                            ? "#120309"
-                            : "#9ca3af",
-                        }}
+                        style={{ color: isManager() ? "#120309" : "#9ca3af" }}
                         placeholder="Achternaam"
                         maxLength={50}
                         onFocus={(e) => {
-                          if (
-                            canEditField("lastName") &&
-                            !fieldErrors.lastName
-                          ) {
+                          if (isManager() && !fieldErrors.lastName) {
                             const target = e.target as HTMLInputElement;
                             target.style.boxShadow =
                               "0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)";
@@ -553,7 +454,7 @@ export default function EditEmployeePage() {
                           }
                         }}
                         onBlur={(e) => {
-                          if (canEditField("lastName")) {
+                          if (isManager()) {
                             const target = e.target as HTMLInputElement;
                             target.style.boxShadow = "";
                             target.style.borderColor = fieldErrors.lastName
@@ -568,16 +469,11 @@ export default function EditEmployeePage() {
                         {fieldErrors.lastName}
                       </p>
                     )}
-                    {!canEditField("lastName") && (
-                      <p className="mt-2 text-xs text-gray-500">
-                        Dit veld kan niet worden bewerkt
-                      </p>
-                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Account Information */}
+              {/* Account Information - Editable */}
               <div>
                 <h3
                   className="text-xl font-semibold mb-6"
@@ -604,17 +500,17 @@ export default function EditEmployeePage() {
                       </div>
                       <input
                         id="username"
-                        name="user-name"
+                        name="username"
                         type="text"
                         value={formData.username}
                         onChange={(e) =>
                           handleInputChange(
                             "username",
-                            e.target.value.toLowerCase(),
+                            e.target.value.toLowerCase()
                           )
                         }
                         disabled={isSubmitting}
-                        autoComplete="off"
+                        autoComplete="nope"
                         autoCorrect="off"
                         autoCapitalize="off"
                         spellCheck="false"
@@ -649,8 +545,8 @@ export default function EditEmployeePage() {
                       </p>
                     )}
                     <p className="mt-2 text-xs" style={{ color: "#67697c" }}>
-                      Alleen letters, cijfers, punten, underscores en streepjes
-                      toegestaan
+                      Minimaal 6 tekens. Alleen letters, cijfers, punten,
+                      underscores en streepjes toegestaan
                     </p>
                   </div>
 
@@ -685,14 +581,14 @@ export default function EditEmployeePage() {
                         autoCapitalize="off"
                         spellCheck="false"
                         className={`w-full pl-12 pr-12 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${
-                          fieldErrors.password
+                          fieldErrors.passwordOptional
                             ? "border-red-300"
                             : "border-gray-200"
                         }`}
                         style={{ color: "#120309" }}
-                        placeholder="Laat leeg voor geen wijzigingen"
+                        placeholder="Wachtwoord"
                         onFocus={(e) => {
-                          if (!fieldErrors.password) {
+                          if (!fieldErrors.passwordOptional) {
                             const target = e.target as HTMLInputElement;
                             target.style.boxShadow =
                               "0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)";
@@ -702,9 +598,10 @@ export default function EditEmployeePage() {
                         onBlur={(e) => {
                           const target = e.target as HTMLInputElement;
                           target.style.boxShadow = "";
-                          target.style.borderColor = fieldErrors.password
-                            ? "#fca5a5"
-                            : "#d1d5db";
+                          target.style.borderColor =
+                            fieldErrors.passwordOptional
+                              ? "#fca5a5"
+                              : "#d1d5db";
                         }}
                       />
                       <button
@@ -726,9 +623,9 @@ export default function EditEmployeePage() {
                         )}
                       </button>
                     </div>
-                    {fieldErrors.password && (
+                    {fieldErrors.passwordOptional && (
                       <p className="mt-2 text-sm text-red-600">
-                        {fieldErrors.password}
+                        {fieldErrors.passwordOptional}
                       </p>
                     )}
                     <p className="mt-2 text-xs" style={{ color: "#67697c" }}>
@@ -758,7 +655,6 @@ export default function EditEmployeePage() {
                       <input
                         id="confirmPassword"
                         type={showConfirmPassword ? "text" : "password"}
-                        autoComplete="off"
                         value={confirmPassword}
                         onChange={(e) => {
                           setConfirmPassword(e.target.value);
@@ -823,17 +719,29 @@ export default function EditEmployeePage() {
                 )}
               </div>
 
-              {/* Role and Dates Information - Only show for managers */}
-              {isManager() && (
-                <div>
-                  <h3
-                    className="text-xl font-semibold mb-6"
-                    style={{ color: "#120309" }}
-                  >
-                    Functie & gegevens
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* Role */}
+              {/* Role and Dates Information */}
+              <div>
+                <h3
+                  className="text-xl font-semibold mb-6"
+                  style={{ color: "#120309" }}
+                >
+                  {isManager() ? "Functie & gegevens" : "Gegevens"}
+                  {!isManager() && (
+                    <span
+                      className="text-sm font-normal ml-2"
+                      style={{ color: "#67697c" }}
+                    >
+                      (alleen-lezen)
+                    </span>
+                  )}
+                </h3>
+                <div
+                  className={`grid grid-cols-1 ${
+                    isManager() ? "md:grid-cols-3" : "md:grid-cols-2"
+                  } gap-6`}
+                >
+                  {/* Role - Only show for managers */}
+                  {isManager() && (
                     <div>
                       <label
                         htmlFor="role"
@@ -846,11 +754,7 @@ export default function EditEmployeePage() {
                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                           <Shield
                             className="h-5 w-5"
-                            style={{
-                              color: canEditField("role")
-                                ? "#67697c"
-                                : "#9ca3af",
-                            }}
+                            style={{ color: "#67697c" }}
                           />
                         </div>
                         <select
@@ -859,36 +763,22 @@ export default function EditEmployeePage() {
                           onChange={(e) =>
                             handleInputChange(
                               "role",
-                              parseInt(e.target.value) as Role,
+                              parseInt(e.target.value) as Role
                             )
                           }
-                          disabled={!canEditField("role") || isSubmitting}
-                          className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 ${
-                            !canEditField("role")
-                              ? "bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200"
-                              : fieldErrors.role
-                                ? "border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg"
-                                : "border-gray-200 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg"
-                          }`}
-                          style={{
-                            color: canEditField("role") ? "#120309" : "#9ca3af",
-                          }}
+                          disabled={isSubmitting}
+                          className="w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg border-gray-200"
+                          style={{ color: "#120309" }}
                           onFocus={(e) => {
-                            if (canEditField("role") && !fieldErrors.role) {
-                              const target = e.target as HTMLSelectElement;
-                              target.style.boxShadow =
-                                "0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)";
-                              target.style.borderColor = "#d5896f";
-                            }
+                            const target = e.target as HTMLSelectElement;
+                            target.style.boxShadow =
+                              "0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)";
+                            target.style.borderColor = "#d5896f";
                           }}
                           onBlur={(e) => {
-                            if (canEditField("role")) {
-                              const target = e.target as HTMLSelectElement;
-                              target.style.boxShadow = "";
-                              target.style.borderColor = fieldErrors.role
-                                ? "#fca5a5"
-                                : "#d1d5db";
-                            }
+                            const target = e.target as HTMLSelectElement;
+                            target.style.boxShadow = "";
+                            target.style.borderColor = "#d1d5db";
                           }}
                         >
                           <option value={Role.Werknemer}>
@@ -902,65 +792,44 @@ export default function EditEmployeePage() {
                           </option>
                         </select>
                       </div>
-                      {fieldErrors.role && (
-                        <p className="mt-2 text-sm text-red-600">
-                          {fieldErrors.role}
-                        </p>
-                      )}
-                      {!canEditField("role") && (
-                        <p className="mt-2 text-xs text-gray-500">
-                          Dit veld kan niet worden bewerkt
-                        </p>
-                      )}
                     </div>
+                  )}
 
-                    {/* Hire Date */}
-                    <div>
-                      <label
-                        htmlFor="hireDate"
-                        className="block text-sm font-semibold mb-2"
-                        style={{ color: "#120309" }}
-                      >
-                        In dienst sinds <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                          <Calendar
-                            className="h-5 w-5"
-                            style={{
-                              color: canEditField("hireDate")
-                                ? "#67697c"
-                                : "#9ca3af",
-                            }}
-                          />
-                        </div>
+                  {/* Hire Date */}
+                  <div>
+                    <label
+                      htmlFor="hireDate"
+                      className="block text-sm font-semibold mb-2"
+                      style={{ color: "#120309" }}
+                    >
+                      In dienst sinds{" "}
+                      {isManager() && <span className="text-red-500">*</span>}
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <Calendar
+                          className="h-5 w-5"
+                          style={{ color: isManager() ? "#67697c" : "#9ca3af" }}
+                        />
+                      </div>
+                      {isManager() ? (
                         <input
                           id="hireDate"
-                          name="hire-date"
                           type="date"
                           value={toInputDateFormat(formData.hireDate)}
                           onChange={(e) =>
                             handleInputChange("hireDate", e.target.value)
                           }
-                          disabled={!canEditField("hireDate") || isSubmitting}
-                          className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 ${
-                            !canEditField("hireDate")
-                              ? "bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200"
-                              : fieldErrors.hireDate
-                                ? "border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg"
-                                : "border-gray-200 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg"
+                          disabled={isSubmitting}
+                          className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${
+                            fieldErrors.hireDate
+                              ? "border-red-300"
+                              : "border-gray-200"
                           }`}
-                          style={{
-                            color: canEditField("hireDate")
-                              ? "#120309"
-                              : "#9ca3af",
-                          }}
+                          style={{ color: "#120309" }}
                           max={new Date().toISOString().split("T")[0]}
                           onFocus={(e) => {
-                            if (
-                              canEditField("hireDate") &&
-                              !fieldErrors.hireDate
-                            ) {
+                            if (!fieldErrors.hireDate) {
                               const target = e.target as HTMLInputElement;
                               target.style.boxShadow =
                                 "0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)";
@@ -968,75 +837,64 @@ export default function EditEmployeePage() {
                             }
                           }}
                           onBlur={(e) => {
-                            if (canEditField("hireDate")) {
-                              const target = e.target as HTMLInputElement;
-                              target.style.boxShadow = "";
-                              target.style.borderColor = fieldErrors.hireDate
-                                ? "#fca5a5"
-                                : "#d1d5db";
-                            }
+                            const target = e.target as HTMLInputElement;
+                            target.style.boxShadow = "";
+                            target.style.borderColor = fieldErrors.hireDate
+                              ? "#fca5a5"
+                              : "#d1d5db";
                           }}
                         />
-                      </div>
-                      {fieldErrors.hireDate && (
-                        <p className="mt-2 text-sm text-red-600">
-                          {fieldErrors.hireDate}
-                        </p>
-                      )}
-                      {!canEditField("hireDate") && (
-                        <p className="mt-2 text-xs text-gray-500">
-                          Dit veld kan niet worden bewerkt
-                        </p>
+                      ) : (
+                        <input
+                          type="text"
+                          value={toInputDateFormat(formData.hireDate)}
+                          disabled
+                          className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-500 cursor-not-allowed"
+                        />
                       )}
                     </div>
+                    {fieldErrors.hireDate && (
+                      <p className="mt-2 text-sm text-red-600">
+                        {fieldErrors.hireDate}
+                      </p>
+                    )}
+                  </div>
 
-                    {/* Birth Date */}
-                    <div>
-                      <label
-                        htmlFor="birthDate"
-                        className="block text-sm font-semibold mb-2"
-                        style={{ color: "#120309" }}
-                      >
-                        Geboortedatum <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                          <Calendar
-                            className="h-5 w-5"
-                            style={{
-                              color: canEditField("birthDate")
-                                ? "#67697c"
-                                : "#9ca3af",
-                            }}
-                          />
-                        </div>
+                  {/* Birth Date */}
+                  <div>
+                    <label
+                      htmlFor="birthDate"
+                      className="block text-sm font-semibold mb-2"
+                      style={{ color: "#120309" }}
+                    >
+                      Geboortedatum{" "}
+                      {isManager() && <span className="text-red-500">*</span>}
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <Calendar
+                          className="h-5 w-5"
+                          style={{ color: isManager() ? "#67697c" : "#9ca3af" }}
+                        />
+                      </div>
+                      {isManager() ? (
                         <input
                           id="birthDate"
-                          name="birth-date"
                           type="date"
                           value={toInputDateFormat(formData.birthDate)}
                           onChange={(e) =>
                             handleInputChange("birthDate", e.target.value)
                           }
-                          disabled={!canEditField("birthDate") || isSubmitting}
-                          className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 ${
-                            !canEditField("birthDate")
-                              ? "bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200"
-                              : fieldErrors.birthDate
-                                ? "border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg"
-                                : "border-gray-200 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg"
+                          disabled={isSubmitting}
+                          className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${
+                            fieldErrors.birthDate
+                              ? "border-red-300"
+                              : "border-gray-200"
                           }`}
-                          style={{
-                            color: canEditField("birthDate")
-                              ? "#120309"
-                              : "#9ca3af",
-                          }}
+                          style={{ color: "#120309" }}
                           max={new Date().toISOString().split("T")[0]}
                           onFocus={(e) => {
-                            if (
-                              canEditField("birthDate") &&
-                              !fieldErrors.birthDate
-                            ) {
+                            if (!fieldErrors.birthDate) {
                               const target = e.target as HTMLInputElement;
                               target.style.boxShadow =
                                 "0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)";
@@ -1044,36 +902,36 @@ export default function EditEmployeePage() {
                             }
                           }}
                           onBlur={(e) => {
-                            if (canEditField("birthDate")) {
-                              const target = e.target as HTMLInputElement;
-                              target.style.boxShadow = "";
-                              target.style.borderColor = fieldErrors.birthDate
-                                ? "#fca5a5"
-                                : "#d1d5db";
-                            }
+                            const target = e.target as HTMLInputElement;
+                            target.style.boxShadow = "";
+                            target.style.borderColor = fieldErrors.birthDate
+                              ? "#fca5a5"
+                              : "#d1d5db";
                           }}
                         />
-                      </div>
-                      {fieldErrors.birthDate && (
-                        <p className="mt-2 text-sm text-red-600">
-                          {fieldErrors.birthDate}
-                        </p>
-                      )}
-                      {!canEditField("birthDate") && (
-                        <p className="mt-2 text-xs text-gray-500">
-                          Dit veld kan niet worden bewerkt
-                        </p>
+                      ) : (
+                        <input
+                          type="text"
+                          value={toInputDateFormat(formData.birthDate)}
+                          disabled
+                          className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-500 cursor-not-allowed"
+                        />
                       )}
                     </div>
+                    {fieldErrors.birthDate && (
+                      <p className="mt-2 text-sm text-red-600">
+                        {fieldErrors.birthDate}
+                      </p>
+                    )}
                   </div>
                 </div>
-              )}
+              </div>
 
               {/* Form Actions */}
               <div className="flex items-center justify-between space-x-4 pt-6 border-t border-gray-200/50">
                 <button
                   type="button"
-                  onClick={() => router.back()}
+                  onClick={() => router.push("/employees")}
                   disabled={isSubmitting}
                   className="flex items-center space-x-2 max-[500px]:space-x-0 px-6 py-3 max-[500px]:px-3 rounded-xl border border-gray-300 text-gray-700 font-semibold transition-all duration-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >

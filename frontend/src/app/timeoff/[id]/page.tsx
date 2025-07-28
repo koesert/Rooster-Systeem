@@ -21,6 +21,7 @@ import {
   CheckCircle,
   XCircle,
   MessageSquare,
+  X,
 } from "lucide-react";
 import * as api from "@/lib/api";
 
@@ -50,9 +51,7 @@ export default function TimeOffDetailPage() {
   const [isLoadingRequest, setIsLoadingRequest] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  usePageTitle(
-    "Vrij aanvraag"
-  );
+  usePageTitle("Vrij aanvraag");
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -159,42 +158,11 @@ export default function TimeOffDetailPage() {
   };
 
   const handleEdit = () => {
-    // Managers can edit all requests, employees can only edit their own pending requests
-    if (
-      !isManager() &&
-      (request?.employeeId !== user?.id || request?.status !== "Pending")
-    ) {
-      showAlert({
-        title: "Bewerken niet mogelijk",
-        message: isManager()
-          ? "Alleen managers kunnen alle vrij aanvragen bewerken."
-          : "Je kunt alleen je eigen aanvragen bewerken zolang ze nog niet behandeld zijn.",
-        confirmText: "OK",
-        icon: <AlertTriangle className="h-6 w-6 text-red-600" />,
-      });
-      return;
-    }
     router.push(`/timeoff/edit/${requestId}`);
   };
 
   const handleDelete = () => {
     if (!request) return;
-
-    // Managers can delete all requests, employees can only delete their own pending requests
-    if (
-      !isManager() &&
-      (request?.employeeId !== user?.id || request?.status !== "Pending")
-    ) {
-      showAlert({
-        title: "Verwijderen niet mogelijk",
-        message: isManager()
-          ? "Alleen managers kunnen alle vrij aanvragen verwijderen."
-          : "Je kunt alleen je eigen aanvragen verwijderen zolang ze nog niet behandeld zijn.",
-        confirmText: "OK",
-        icon: <AlertTriangle className="h-6 w-6 text-red-600" />,
-      });
-      return;
-    }
 
     showConfirm({
       title: "Vrij aanvraag verwijderen",
@@ -217,6 +185,36 @@ export default function TimeOffDetailPage() {
           router.push("/timeoff");
         } catch (error) {
           console.error("Error deleting time off request:", error);
+        }
+      },
+    });
+  };
+
+  const handleCancel = () => {
+    if (!request) return;
+
+    showConfirm({
+      title: "Vrij aanvraag annuleren",
+      message: `Weet je zeker dat je je vrij aanvraag wilt annuleren? Deze actie kan niet ongedaan worden gemaakt.`,
+      confirmText: "Ja, annuleren",
+      cancelText: "Terug",
+      variant: "danger",
+      icon: <AlertTriangle className="h-6 w-6 text-red-600" />,
+      onConfirm: async () => {
+        try {
+          await api.cancelTimeOffRequest(request.id, { showErrors: true });
+
+          showAlert({
+            title: "Vrij aanvraag geannuleerd",
+            message: "Je vrij aanvraag is succesvol geannuleerd.",
+            confirmText: "OK",
+            icon: <CheckCircle className="h-6 w-6 text-green-600" />,
+          });
+
+          // Reload the request to show updated status
+          await loadRequest();
+        } catch (error) {
+          console.error("Error cancelling time off request:", error);
         }
       },
     });
@@ -326,9 +324,9 @@ export default function TimeOffDetailPage() {
                     </div>
                   </div>
 
-                  {(isManager() || (request?.employeeId === user?.id && request?.status === "Pending")) && (
-                    <div className="flex flex-col space-y-2">
-                      {(isManager() || (request?.employeeId === user?.id && request?.status === "Pending")) && (
+                  <div className="flex flex-col space-y-2">
+                    {isManager() && (
+                      <>
                         <button
                           onClick={handleEdit}
                           className="flex items-center justify-center space-x-2 max-[500px]:space-x-0 px-4 max-[500px]:px-3 py-2 rounded-lg bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors cursor-pointer"
@@ -336,18 +334,29 @@ export default function TimeOffDetailPage() {
                           <Edit className="h-4 w-4" />
                           <span className="max-[500px]:hidden">Bewerken</span>
                         </button>
-                      )}
-                      {isManager() && (
                         <button
                           onClick={handleDelete}
                           className="flex items-center justify-center space-x-2 max-[500px]:space-x-0 px-4 max-[500px]:px-3 py-2 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors cursor-pointer"
                         >
                           <Trash2 className="h-4 w-4" />
-                          <span className="max-[500px]:hidden">Verwijderen</span>
+                          <span className="max-[500px]:hidden">
+                            Verwijderen
+                          </span>
+                        </button>
+                      </>
+                    )}
+                    {!isManager() &&
+                      request?.employeeId === user?.id &&
+                      request?.status === "Pending" && (
+                        <button
+                          onClick={handleCancel}
+                          className="flex items-center justify-center space-x-2 max-[500px]:space-x-0 px-4 max-[500px]:px-3 py-2 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors cursor-pointer"
+                        >
+                          <X className="h-4 w-4" />
+                          <span className="max-[500px]:hidden">Annuleren</span>
                         </button>
                       )}
-                    </div>
-                  )}
+                  </div>
                 </div>
               </div>
             </div>

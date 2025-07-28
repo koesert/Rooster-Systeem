@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useError } from "@/contexts/ErrorContext";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { useValidation, ValidationConfigs } from "@/hooks/useValidation";
 import Sidebar from "@/components/Sidebar";
 import LoadingScreen from "@/components/LoadingScreen";
 import {
@@ -48,7 +49,13 @@ export default function CreateEmployeePage() {
   // UI state
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  // Validation setup - ONLY CHANGE
+  const { fieldErrors, setFieldErrors, validateForm, clearAllErrors } =
+    useValidation({
+      ...ValidationConfigs.employeeCreate,
+      validateOnChange: false, // Only validate on submit
+    });
 
   // Redirect to login if not authenticated or no access
   useEffect(() => {
@@ -60,109 +67,13 @@ export default function CreateEmployeePage() {
     }
   }, [user, isLoading, router, isManager]);
 
-  const validateForm = (): boolean => {
-    const errors: Record<string, string> = {};
-
-    // First name validation
-    if (!formData.firstName.trim()) {
-      errors.firstName = "Voornaam is verplicht";
-    } else if (formData.firstName.length > 50) {
-      errors.firstName = "Voornaam mag maximaal 50 tekens bevatten";
-    }
-
-    // Last name validation
-    if (!formData.lastName.trim()) {
-      errors.lastName = "Achternaam is verplicht";
-    } else if (formData.lastName.length > 50) {
-      errors.lastName = "Achternaam mag maximaal 50 tekens bevatten";
-    }
-
-    // Username validation
-    if (!formData.username.trim()) {
-      errors.username = "Gebruikersnaam is verplicht";
-    } else if (formData.username.length > 30) {
-      errors.username = "Gebruikersnaam mag maximaal 30 tekens bevatten";
-    } else if (!/^[a-zA-Z0-9._-]+$/.test(formData.username)) {
-      errors.username =
-        "Gebruikersnaam mag alleen letters, cijfers, punten, underscores en streepjes bevatten";
-    }
-
-    // Password validation
-    if (!formData.password) {
-      errors.password = "Wachtwoord is verplicht";
-    } else if (formData.password.length < 6) {
-      errors.password = "Wachtwoord moet minimaal 6 tekens bevatten";
-    } else if (!/(?=.*[A-Z])/.test(formData.password)) {
-      errors.password = "Wachtwoord moet minimaal 1 hoofdletter bevatten";
-    } else if (!/(?=.*\d)/.test(formData.password)) {
-      errors.password = "Wachtwoord moet minimaal 1 cijfer bevatten";
-    }
-
-    // Role validation (only managers can assign manager role)
-    if (formData.role === Role.Manager && !isManager()) {
-      errors.role = "Alleen managers kunnen andere managers in dienst nemen";
-    }
-
-    // Hire date validation
-    if (!formData.hireDate) {
-      errors.hireDate = "Datum in dienst is verplicht";
-    } else {
-      const hireDate = new Date(formData.hireDate);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      if (hireDate > today) {
-        errors.hireDate = "Datum in dienst kan niet in de toekomst liggen";
-      }
-    }
-
-    // Birth date validation
-    if (!formData.birthDate) {
-      errors.birthDate = "Geboortedatum is verplicht";
-    } else {
-      const birthDate = new Date(formData.birthDate);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      if (birthDate > today) {
-        errors.birthDate = "Geboortedatum kan niet in de toekomst liggen";
-      } else {
-        let age = today.getFullYear() - birthDate.getFullYear();
-        const monthDiff = today.getMonth() - birthDate.getMonth();
-
-        if (
-          monthDiff < 0 ||
-          (monthDiff === 0 && today.getDate() < birthDate.getDate())
-        ) {
-          age--;
-        }
-
-        if (age > 100) {
-          errors.birthDate = "Controleer de geboortedatum";
-        }
-      }
-    }
-
-    setFieldErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
   const handleInputChange = (
     field: keyof CreateEmployeeRequest,
-    value: string | Role,
+    value: string | Role
   ) => {
-    let processedValue = value;
-
-    // Convert date fields from HTML input format (YYYY-MM-DD) to DD-MM-YYYY
-    if (
-      (field === "hireDate" || field === "birthDate") &&
-      typeof value === "string" &&
-      value
-    ) {
-      processedValue = fromInputDateFormat(value);
-    }
-
-    setFormData((prev) => ({ ...prev, [field]: processedValue }));
+    // Store the value as-is, no conversion here for dates
+    // HTML date inputs give us yyyy-MM-dd, we'll convert in handleSubmit
+    setFormData((prev) => ({ ...prev, [field]: value }));
 
     // Clear field error when user starts typing
     if (fieldErrors[field]) {
@@ -173,21 +84,33 @@ export default function CreateEmployeePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) {
+    // Prepare form data for validation
+    if (!validateForm(formData)) {
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      await api.createEmployee(formData);
+      // Convert date fields from HTML format to API format before sending
+      const createEmployeeData: CreateEmployeeRequest = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        username: formData.username,
+        password: formData.password,
+        role: formData.role,
+        hireDate: fromInputDateFormat(formData.hireDate), // Convert yyyy-MM-dd to dd-MM-yyyy
+        birthDate: fromInputDateFormat(formData.birthDate), // Convert yyyy-MM-dd to dd-MM-yyyy
+      };
 
-      // Success! Redirect to employees page
+      await api.createEmployee(createEmployeeData);
+
+      // Success! Go back to employees list
       router.push("/employees");
     } catch (error: unknown) {
       console.error("Error creating employee:", error);
 
-      // Handle specific errors and convert them to field errors
+      // Handle specific username conflict error
       if (
         error &&
         typeof error === "object" &&
@@ -195,67 +118,33 @@ export default function CreateEmployeePage() {
         "message" in error
       ) {
         const errorWithDetails = error as { status: number; message: string };
-
-        if (errorWithDetails.status === 400) {
-          if (
-            errorWithDetails.message &&
-            errorWithDetails.message.includes("Username") &&
-            errorWithDetails.message.includes("already exists")
-          ) {
-            setFieldErrors({ username: "Deze gebruikersnaam bestaat al" });
-          } else if (
-            errorWithDetails.message &&
-            errorWithDetails.message.includes(
-              "Hire date cannot be more than one day in the future",
-            )
-          ) {
-            setFieldErrors({
-              hireDate: "Datum in dienst kan niet in de toekomst liggen",
-            });
-          } else if (
-            errorWithDetails.message &&
-            (errorWithDetails.message.includes("hire date") ||
-              errorWithDetails.message.includes("Hire date"))
-          ) {
-            setFieldErrors({ hireDate: "Ongeldige datum in dienst" });
-          } else if (
-            errorWithDetails.message &&
-            (errorWithDetails.message.includes("birth date") ||
-              errorWithDetails.message.includes("Birth date"))
-          ) {
-            setFieldErrors({ birthDate: "Ongeldige geboortedatum" });
-          } else {
-            // Use centralized error handling for other 400 errors
-            showApiError(
-              error,
-              "Er is een fout opgetreden bij het aanmaken van de medewerker",
-            );
-          }
-        } else {
-          // Use centralized error handling for all other errors
-          showApiError(
-            error,
-            "Er is een fout opgetreden bij het aanmaken van de medewerker",
-          );
+        if (
+          errorWithDetails.status === 400 &&
+          errorWithDetails.message &&
+          errorWithDetails.message.includes("Username") &&
+          errorWithDetails.message.includes("already exists")
+        ) {
+          setFieldErrors({ username: "Deze gebruikersnaam bestaat al" });
+          return;
         }
-      } else {
-        // Use centralized error handling for all other errors
-        showApiError(
-          error,
-          "Er is een fout opgetreden bij het aanmaken van de medewerker",
-        );
       }
+
+      // Use centralized error handling for all other errors
+      showApiError(
+        error,
+        "Er is een fout opgetreden bij het aanmaken van de medewerker"
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
 
   if (isLoading) {
-    return <LoadingScreen message="Pagina laden" />;
+    return <LoadingScreen message="Laden..." />;
   }
 
-  if (!user) {
-    return null; // Will redirect to login
+  if (!user || !isManager()) {
+    return null;
   }
 
   return (
@@ -292,7 +181,7 @@ export default function CreateEmployeePage() {
                     <button
                       onClick={() => router.push("/employees")}
                       className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200 cursor-pointer"
-                      title="Terug naar medewerkers"
+                      title="Terug naar medewerkerslijst"
                     >
                       <ArrowLeft
                         className="h-5 w-5"
@@ -334,6 +223,22 @@ export default function CreateEmployeePage() {
               autoComplete="off"
               className="space-y-8"
             >
+              {/* Hidden honeypot fields to confuse autocomplete */}
+              <div style={{ display: "none" }}>
+                <input
+                  type="text"
+                  name="username"
+                  autoComplete="username"
+                  tabIndex={-1}
+                />
+                <input
+                  type="password"
+                  name="password"
+                  autoComplete="current-password"
+                  tabIndex={-1}
+                />
+              </div>
+
               {/* Personal Information */}
               <div>
                 <h3
@@ -361,17 +266,19 @@ export default function CreateEmployeePage() {
                       </div>
                       <input
                         id="firstName"
-                        name="new-firstname"
                         type="text"
-                        autoComplete="off"
                         value={formData.firstName}
                         onChange={(e) =>
                           handleInputChange("firstName", e.target.value)
                         }
-                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.firstName ? "border-red-300" : "border-gray-200"}`}
-                        style={{ color: "#120309" }}
-                        placeholder="Voer de voornaam in"
                         disabled={isSubmitting}
+                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none transition-all duration-300 ${
+                          fieldErrors.firstName
+                            ? "border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg"
+                            : "border-gray-200 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg"
+                        }`}
+                        style={{ color: "#120309" }}
+                        placeholder="Voornaam"
                         maxLength={50}
                         onFocus={(e) => {
                           if (!fieldErrors.firstName) {
@@ -415,17 +322,19 @@ export default function CreateEmployeePage() {
                       </div>
                       <input
                         id="lastName"
-                        name="new-lastname"
                         type="text"
-                        autoComplete="off"
                         value={formData.lastName}
                         onChange={(e) =>
                           handleInputChange("lastName", e.target.value)
                         }
-                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.lastName ? "border-red-300" : "border-gray-200"}`}
-                        style={{ color: "#120309" }}
-                        placeholder="Voer de achternaam in"
                         disabled={isSubmitting}
+                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none transition-all duration-300 ${
+                          fieldErrors.lastName
+                            ? "border-red-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg"
+                            : "border-gray-200 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg"
+                        }`}
+                        style={{ color: "#120309" }}
+                        placeholder="Achternaam"
                         maxLength={50}
                         onFocus={(e) => {
                           if (!fieldErrors.lastName) {
@@ -480,20 +389,27 @@ export default function CreateEmployeePage() {
                       </div>
                       <input
                         id="username"
-                        name="new-username"
+                        name="username"
                         type="text"
-                        autoComplete="off"
                         value={formData.username}
                         onChange={(e) =>
                           handleInputChange(
                             "username",
-                            e.target.value.toLowerCase(),
+                            e.target.value.toLowerCase()
                           )
                         }
-                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.username ? "border-red-300" : "border-gray-200"}`}
+                        disabled={isSubmitting}
+                        autoComplete="nope"
+                        autoCorrect="off"
+                        autoCapitalize="off"
+                        spellCheck="false"
+                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${
+                          fieldErrors.username
+                            ? "border-red-300"
+                            : "border-gray-200"
+                        }`}
                         style={{ color: "#120309" }}
                         placeholder="bijv. john.doe"
-                        disabled={isSubmitting}
                         maxLength={30}
                         onFocus={(e) => {
                           if (!fieldErrors.username) {
@@ -518,8 +434,8 @@ export default function CreateEmployeePage() {
                       </p>
                     )}
                     <p className="mt-2 text-xs" style={{ color: "#67697c" }}>
-                      Alleen letters, cijfers, punten, underscores en streepjes
-                      toegestaan
+                      Minimaal 6 tekens. Alleen letters, cijfers, punten,
+                      underscores en streepjes toegestaan
                     </p>
                   </div>
 
@@ -543,15 +459,22 @@ export default function CreateEmployeePage() {
                         id="password"
                         name="new-password"
                         type={showPassword ? "text" : "password"}
-                        autoComplete="new-password"
                         value={formData.password}
                         onChange={(e) =>
                           handleInputChange("password", e.target.value)
                         }
-                        className={`w-full pl-12 pr-12 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.password ? "border-red-300" : "border-gray-200"}`}
-                        style={{ color: "#120309" }}
-                        placeholder="Voer een veilig wachtwoord in"
                         disabled={isSubmitting}
+                        autoComplete="new-password"
+                        autoCorrect="off"
+                        autoCapitalize="off"
+                        spellCheck="false"
+                        className={`w-full pl-12 pr-12 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${
+                          fieldErrors.password
+                            ? "border-red-300"
+                            : "border-gray-200"
+                        }`}
+                        style={{ color: "#120309" }}
+                        placeholder="Wachtwoord"
                         onFocus={(e) => {
                           if (!fieldErrors.password) {
                             const target = e.target as HTMLInputElement;
@@ -615,7 +538,7 @@ export default function CreateEmployeePage() {
                       className="block text-sm font-semibold mb-2"
                       style={{ color: "#120309" }}
                     >
-                      Functie <span className="text-red-500">*</span>
+                      Rol <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -630,26 +553,22 @@ export default function CreateEmployeePage() {
                         onChange={(e) =>
                           handleInputChange(
                             "role",
-                            parseInt(e.target.value) as Role,
+                            parseInt(e.target.value) as Role
                           )
                         }
-                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.role ? "border-red-300" : "border-gray-200"}`}
-                        style={{ color: "#120309" }}
                         disabled={isSubmitting}
+                        className="w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg border-gray-200"
+                        style={{ color: "#120309" }}
                         onFocus={(e) => {
-                          if (!fieldErrors.role) {
-                            const target = e.target as HTMLSelectElement;
-                            target.style.boxShadow =
-                              "0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)";
-                            target.style.borderColor = "#d5896f";
-                          }
+                          const target = e.target as HTMLSelectElement;
+                          target.style.boxShadow =
+                            "0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)";
+                          target.style.borderColor = "#d5896f";
                         }}
                         onBlur={(e) => {
                           const target = e.target as HTMLSelectElement;
                           target.style.boxShadow = "";
-                          target.style.borderColor = fieldErrors.role
-                            ? "#fca5a5"
-                            : "#d1d5db";
+                          target.style.borderColor = "#d1d5db";
                         }}
                       >
                         <option value={Role.Werknemer}>
@@ -658,23 +577,11 @@ export default function CreateEmployeePage() {
                         <option value={Role.ShiftLeider}>
                           {getRoleName(Role.ShiftLeider)}
                         </option>
-                        {isManager() && (
-                          <option value={Role.Manager}>
-                            {getRoleName(Role.Manager)}
-                          </option>
-                        )}
+                        <option value={Role.Manager}>
+                          {getRoleName(Role.Manager)}
+                        </option>
                       </select>
                     </div>
-                    {fieldErrors.role && (
-                      <p className="mt-2 text-sm text-red-600">
-                        {fieldErrors.role}
-                      </p>
-                    )}
-                    {!isManager() && (
-                      <p className="mt-2 text-xs" style={{ color: "#67697c" }}>
-                        Alleen managers kunnen andere managers in dienst nemen
-                      </p>
-                    )}
                   </div>
 
                   {/* Hire Date */}
@@ -695,16 +602,19 @@ export default function CreateEmployeePage() {
                       </div>
                       <input
                         id="hireDate"
-                        name="hire-date"
                         type="date"
                         value={toInputDateFormat(formData.hireDate)}
                         onChange={(e) =>
                           handleInputChange("hireDate", e.target.value)
                         }
-                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.hireDate ? "border-red-300" : "border-gray-200"}`}
-                        style={{ color: "#120309" }}
                         disabled={isSubmitting}
-                        onInvalid={(e) => e.preventDefault()}
+                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${
+                          fieldErrors.hireDate
+                            ? "border-red-300"
+                            : "border-gray-200"
+                        }`}
+                        style={{ color: "#120309" }}
+                        max={new Date().toISOString().split("T")[0]}
                         onFocus={(e) => {
                           if (!fieldErrors.hireDate) {
                             const target = e.target as HTMLInputElement;
@@ -747,16 +657,19 @@ export default function CreateEmployeePage() {
                       </div>
                       <input
                         id="birthDate"
-                        name="birth-date"
                         type="date"
                         value={toInputDateFormat(formData.birthDate)}
                         onChange={(e) =>
                           handleInputChange("birthDate", e.target.value)
                         }
-                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${fieldErrors.birthDate ? "border-red-300" : "border-gray-200"}`}
-                        style={{ color: "#120309" }}
                         disabled={isSubmitting}
-                        onInvalid={(e) => e.preventDefault()}
+                        className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${
+                          fieldErrors.birthDate
+                            ? "border-red-300"
+                            : "border-gray-200"
+                        }`}
+                        style={{ color: "#120309" }}
+                        max={new Date().toISOString().split("T")[0]}
                         onFocus={(e) => {
                           if (!fieldErrors.birthDate) {
                             const target = e.target as HTMLInputElement;
