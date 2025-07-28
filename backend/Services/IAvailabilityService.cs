@@ -1,4 +1,5 @@
 using backend.DTOs;
+using backend.Models;
 
 namespace backend.Services;
 
@@ -23,6 +24,11 @@ public interface IAvailabilityService
     /// Get all employees availability for a specific week (manager only)
     /// </summary>
     Task<List<WeekAvailabilityDto>> GetAllEmployeesWeekAvailabilityAsync(string weekStart);
+
+    /// <summary>
+    /// Update availability status for time off periods (called when time off is approved)
+    /// </summary>
+    Task UpdateAvailabilityForTimeOffAsync(int employeeId, DateTime startDate, DateTime endDate, AvailabilityStatus status);
 
     /// <summary>
     /// Validate if date is within allowed range (max 4 weeks ahead)
