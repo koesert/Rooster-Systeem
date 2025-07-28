@@ -1,5 +1,3 @@
-// frontend/src/utils/validation.ts
-
 export interface ValidationRule {
   required?: boolean;
   minLength?: number;

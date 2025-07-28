@@ -5,16 +5,25 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useError } from "@/contexts/ErrorContext";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { useValidation, ValidationConfigs } from "@/hooks/useValidation";
 import LoadingScreen from "@/components/LoadingScreen";
 import { User, Lock, LogIn, Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
   usePageTitle("Dashboard - Inloggen");
 
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [formData, setFormData] = useState({
+    username: "",
+    password: "",
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  // Validation setup
+  const { fieldErrors, setFieldErrors, validateForm } = useValidation({
+    ...ValidationConfigs.login,
+    validateOnChange: false,
+  });
 
   const { login, user, isLoading } = useAuth();
   const { showApiError } = useError();
@@ -27,12 +36,27 @@ export default function LoginPage() {
     }
   }, [user, isLoading, router]);
 
+  const handleInputChange = (field: keyof typeof formData, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+
+    // Clear field error when user starts typing
+    if (fieldErrors[field]) {
+      setFieldErrors((prev) => ({ ...prev, [field]: "" }));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate form before submitting
+    if (!validateForm(formData)) {
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      const result = await login(username, password);
+      const result = await login(formData.username, formData.password);
 
       if (result.success) {
         router.push("/home");
@@ -44,7 +68,7 @@ export default function LoginPage() {
       // This catches any unexpected errors
       showApiError(
         error,
-        "Er is een onverwachte fout opgetreden tijdens het inloggen",
+        "Er is een onverwachte fout opgetreden tijdens het inloggen"
       );
     } finally {
       setIsSubmitting(false);
@@ -136,27 +160,42 @@ export default function LoginPage() {
                     name="username"
                     type="text"
                     required
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="appearance-none relative block w-full pl-12 pr-4 py-3 border border-gray-200 text-gray-900 rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-gray-50/50 hover:bg-white/80 focus:shadow-lg"
+                    value={formData.username}
+                    onChange={(e) =>
+                      handleInputChange("username", e.target.value)
+                    }
+                    className={`appearance-none relative block w-full pl-12 pr-4 py-3 border text-gray-900 rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-gray-50/50 hover:bg-white/80 focus:shadow-lg ${
+                      fieldErrors.username
+                        ? "border-red-300"
+                        : "border-gray-200"
+                    }`}
                     style={{
                       color: "#120309",
                     }}
                     placeholder="Voer je gebruikersnaam in"
                     disabled={isSubmitting}
                     onFocus={(e) => {
-                      const target = e.target as HTMLInputElement;
-                      target.style.boxShadow =
-                        "0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)";
-                      target.style.borderColor = "#d5896f";
+                      if (!fieldErrors.username) {
+                        const target = e.target as HTMLInputElement;
+                        target.style.boxShadow =
+                          "0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)";
+                        target.style.borderColor = "#d5896f";
+                      }
                     }}
                     onBlur={(e) => {
                       const target = e.target as HTMLInputElement;
                       target.style.boxShadow = "";
-                      target.style.borderColor = "#d1d5db";
+                      target.style.borderColor = fieldErrors.username
+                        ? "#fca5a5"
+                        : "#d1d5db";
                     }}
                   />
                 </div>
+                {fieldErrors.username && (
+                  <p className="mt-2 text-sm text-red-600">
+                    {fieldErrors.username}
+                  </p>
+                )}
               </div>
 
               {/* Password Field */}
@@ -183,22 +222,32 @@ export default function LoginPage() {
                     name="password"
                     type={showPassword ? "text" : "password"}
                     required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="appearance-none relative block w-full pl-12 pr-12 py-3 border border-gray-200 text-gray-900 rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-gray-50/50 hover:bg-white/80 focus:shadow-lg"
+                    value={formData.password}
+                    onChange={(e) =>
+                      handleInputChange("password", e.target.value)
+                    }
+                    className={`appearance-none relative block w-full pl-12 pr-12 py-3 border text-gray-900 rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-gray-50/50 hover:bg-white/80 focus:shadow-lg ${
+                      fieldErrors.password
+                        ? "border-red-300"
+                        : "border-gray-200"
+                    }`}
                     style={{ color: "#120309" }}
                     placeholder="Voer je wachtwoord in"
                     disabled={isSubmitting}
                     onFocus={(e) => {
-                      const target = e.target as HTMLInputElement;
-                      target.style.boxShadow =
-                        "0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)";
-                      target.style.borderColor = "#d5896f";
+                      if (!fieldErrors.password) {
+                        const target = e.target as HTMLInputElement;
+                        target.style.boxShadow =
+                          "0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)";
+                        target.style.borderColor = "#d5896f";
+                      }
                     }}
                     onBlur={(e) => {
                       const target = e.target as HTMLInputElement;
                       target.style.boxShadow = "";
-                      target.style.borderColor = "#d1d5db";
+                      target.style.borderColor = fieldErrors.password
+                        ? "#fca5a5"
+                        : "#d1d5db";
                     }}
                   />
                   <button
@@ -221,6 +270,11 @@ export default function LoginPage() {
                     )}
                   </button>
                 </div>
+                {fieldErrors.password && (
+                  <p className="mt-2 text-sm text-red-600">
+                    {fieldErrors.password}
+                  </p>
+                )}
               </div>
             </div>
 

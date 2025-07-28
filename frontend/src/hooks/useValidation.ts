@@ -131,6 +131,11 @@ export const useValidation = (
 
 // Predefined validation configurations for common forms
 export const ValidationConfigs = {
+  // Login form
+  login: {
+    fields: ["username", "password"],
+  },
+
   // Profile edit form
   profileEdit: {
     fields: [
