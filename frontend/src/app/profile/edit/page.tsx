@@ -438,14 +438,6 @@ export default function ProfileEditPage() {
                   style={{ color: "#120309" }}
                 >
                   Account informatie
-                  {!isManager() && (
-                    <span
-                      className="text-sm font-normal ml-2"
-                      style={{ color: "#d5896f" }}
-                    >
-                      (bewerkbaar)
-                    </span>
-                  )}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Username */}
@@ -511,7 +503,7 @@ export default function ProfileEditPage() {
                       </p>
                     )}
                     <p className="mt-2 text-xs" style={{ color: "#67697c" }}>
-                      Alleen letters, cijfers, punten, underscores en streepjes
+                      Minimaal 6 tekens. Alleen letters, cijfers, punten, underscores en streepjes
                       toegestaan
                     </p>
                   </div>
