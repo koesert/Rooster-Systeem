@@ -22,10 +22,15 @@ import {
   Edit,
   Trash2,
   AlertTriangle,
+  Plane,
 } from "lucide-react";
 import { CreateShiftRequest, ShiftType, Shift } from "@/types/shift";
 import { Employee } from "@/types/auth";
-import { WeekAvailability } from "@/types/availability";
+import {
+  WeekAvailability,
+  AvailabilityStatus,
+  getAvailabilityStatusFromDay,
+} from "@/types/availability";
 import * as api from "@/lib/api";
 import {
   getCurrentDate,
@@ -581,7 +586,7 @@ export default function CreateShiftPage() {
     });
   };
 
-  // Get availability for employee on specific date
+  // Get availability for employee on specific date - UPDATED to handle verlof
   const getAvailabilityIcon = (employeeId: number, date: Date) => {
     const employeeAvailability = allEmployeesAvailability.find(
       (ea) => ea.employeeId === employeeId
@@ -596,12 +601,22 @@ export default function CreateShiftPage() {
       (day) => day.date === dateStr
     );
 
-    if (dayAvailability?.isAvailable === true) {
-      return <CheckCircle className="h-3 w-3 text-green-600" />;
-    } else if (dayAvailability?.isAvailable === false) {
-      return <XCircle className="h-3 w-3 text-red-600" />;
-    } else {
+    if (!dayAvailability) {
       return <Minus className="h-3 w-3 text-gray-400" />;
+    }
+
+    // Use the helper function to get the proper status
+    const status = getAvailabilityStatusFromDay(dayAvailability);
+
+    switch (status) {
+      case AvailabilityStatus.Available:
+        return <CheckCircle className="h-3 w-3 text-green-600" />;
+      case AvailabilityStatus.NotAvailable:
+        return <XCircle className="h-3 w-3 text-red-600" />;
+      case AvailabilityStatus.TimeOff:
+        return <Plane className="h-3 w-3 text-purple-600" />;
+      default:
+        return <Minus className="h-3 w-3 text-gray-400" />;
     }
   };
 
@@ -1143,7 +1158,7 @@ export default function CreateShiftPage() {
                     ))}
                   </div>
 
-                  {/* Legend */}
+                  {/* Legend - UPDATED to include verlof */}
                   <div className="mt-4 flex items-center justify-center space-x-6 text-sm">
                     <div className="flex items-center space-x-2">
                       <CheckCircle className="h-4 w-4 text-green-600" />
@@ -1152,6 +1167,10 @@ export default function CreateShiftPage() {
                     <div className="flex items-center space-x-2">
                       <XCircle className="h-4 w-4 text-red-600" />
                       <span className="text-gray-600">Niet beschikbaar</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Plane className="h-4 w-4 text-purple-600" />
+                      <span className="text-gray-600">Verlof</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Minus className="h-4 w-4 text-gray-400" />

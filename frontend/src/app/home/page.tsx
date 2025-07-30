@@ -18,9 +18,14 @@ import {
   Trash2,
   AlertTriangle,
   Home,
+  Plane,
 } from "lucide-react";
 import { Shift } from "@/types/shift";
-import { WeekAvailability } from "@/types/availability";
+import {
+  WeekAvailability,
+  AvailabilityStatus,
+  getAvailabilityStatusFromDay,
+} from "@/types/availability";
 import { formatDate } from "@/utils/dateUtils";
 import * as api from "@/lib/api";
 import { useModal } from "@/contexts/ModalContext";
@@ -80,7 +85,7 @@ export default function HomePage() {
       loadShifts();
       loadAvailability();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   // Clear justLoggedIn when component unmounts
@@ -102,7 +107,7 @@ export default function HomePage() {
 
       const shiftsData = await api.getMyShifts(
         startDate.toISOString().split("T")[0],
-        endDate.toISOString().split("T")[0],
+        endDate.toISOString().split("T")[0]
       );
       setShifts(shiftsData);
     } catch (error: unknown) {
@@ -239,7 +244,11 @@ export default function HomePage() {
 
     showConfirm({
       title: "Shift verwijderen",
-      message: `Weet je zeker dat je de shift van ${shift.employeeName} op ${formatDate(shift.date)} van ${formatTime(shift.startTime)} tot ${shift.isOpenEnded ? "einde" : formatTime(shift.endTime!)} wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.`,
+      message: `Weet je zeker dat je de shift van ${
+        shift.employeeName
+      } op ${formatDate(shift.date)} van ${formatTime(shift.startTime)} tot ${
+        shift.isOpenEnded ? "einde" : formatTime(shift.endTime!)
+      } wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.`,
       confirmText: "Ja, verwijderen",
       cancelText: "Annuleren",
       variant: "danger",
@@ -390,11 +399,13 @@ export default function HomePage() {
     const weekStartFormatted = `${day}-${month}-${year}`;
 
     return weekAvailabilities.find(
-      (week) => week.weekStart === weekStartFormatted,
+      (week) => week.weekStart === weekStartFormatted
     );
   };
 
-  const getAvailabilityForDay = (dayName: string) => {
+  const getAvailabilityForDay = (
+    dayName: string
+  ): AvailabilityStatus | null => {
     const currentWeek = getCurrentWeekAvailability();
     if (!currentWeek) return null;
 
@@ -414,26 +425,39 @@ export default function HomePage() {
 
     // Find day by dayOfWeek property
     const dayAvailability = currentWeek.days.find(
-      (day) => day.dayOfWeek && day.dayOfWeek.toLowerCase() === fullDayName,
+      (day) => day.dayOfWeek && day.dayOfWeek.toLowerCase() === fullDayName
     );
 
-    return dayAvailability?.isAvailable ?? null;
+    if (!dayAvailability) return null;
+
+    // Use the helper function to get the proper status
+    return getAvailabilityStatusFromDay(dayAvailability);
   };
 
-  const getAvailabilityIcon = (isAvailable?: boolean | null) => {
-    if (isAvailable === true) {
-      return <CheckCircle className="h-4 w-4 text-green-600" />;
-    } else if (isAvailable === false) {
-      return <X className="h-4 w-4 text-red-600" />;
-    } else {
-      return <div className="h-4 w-4 rounded-full bg-gray-300" />;
+  const getAvailabilityIcon = (status: AvailabilityStatus | null) => {
+    switch (status) {
+      case AvailabilityStatus.Available:
+        return <CheckCircle className="h-4 w-4 text-green-600" />;
+      case AvailabilityStatus.NotAvailable:
+        return <X className="h-4 w-4 text-red-600" />;
+      case AvailabilityStatus.TimeOff:
+        return <Plane className="h-4 w-4 text-purple-600" />;
+      default:
+        return <div className="h-4 w-4 rounded-full bg-gray-300" />;
     }
   };
 
-  const getAvailabilityText = (isAvailable?: boolean | null) => {
-    if (isAvailable === true) return "Beschikbaar";
-    if (isAvailable === false) return "Niet beschikbaar";
-    return "Niet opgegeven";
+  const getAvailabilityText = (status: AvailabilityStatus | null): string => {
+    switch (status) {
+      case AvailabilityStatus.Available:
+        return "Beschikbaar";
+      case AvailabilityStatus.NotAvailable:
+        return "Niet beschikbaar";
+      case AvailabilityStatus.TimeOff:
+        return "Verlof";
+      default:
+        return "Niet opgegeven";
+    }
   };
 
   // Generate time slots for day view
@@ -653,7 +677,7 @@ export default function HomePage() {
                                 >
                                   {renderShiftBlocksForDay(
                                     getAllShiftsForDate(currentDate),
-                                    timeSlots,
+                                    timeSlots
                                   )}
                                 </div>
                               )}
@@ -662,6 +686,17 @@ export default function HomePage() {
                         ))}
                       </div>
                     )}
+
+                    {/* Quick link to full schedule */}
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <button
+                        onClick={() => router.push("/schedule")}
+                        className="w-full text-sm text-center py-2 px-4 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors cursor-pointer"
+                        style={{ color: "#67697c" }}
+                      >
+                        Bekijk volledig rooster
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -701,7 +736,7 @@ export default function HomePage() {
                 ) : (
                   <div className="space-y-2">
                     {["ma", "di", "wo", "do", "vr", "za", "zo"].map((day) => {
-                      const isAvailable = getAvailabilityForDay(day);
+                      const status = getAvailabilityForDay(day);
                       const dayNames: { [key: string]: string } = {
                         ma: "maandag",
                         di: "dinsdag",
@@ -723,12 +758,12 @@ export default function HomePage() {
                             {dayNames[day]}
                           </span>
                           <div className="flex items-center space-x-2">
-                            {getAvailabilityIcon(isAvailable)}
+                            {getAvailabilityIcon(status)}
                             <span
                               className="text-xs"
                               style={{ color: "#67697c" }}
                             >
-                              {getAvailabilityText(isAvailable)}
+                              {getAvailabilityText(status)}
                             </span>
                           </div>
                         </div>
@@ -744,7 +779,7 @@ export default function HomePage() {
                     className="w-full text-sm text-center py-2 px-4 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors cursor-pointer"
                     style={{ color: "#67697c" }}
                   >
-                    Beschikbaarheid beheren
+                    Beschikbaarheid bekijken
                   </button>
                 </div>
               </div>
