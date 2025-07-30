@@ -175,7 +175,7 @@ export default function EmployeesPage() {
   const filteredEmployees = employees.filter(
     (employee) =>
       employee.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.username.toLowerCase().includes(searchTerm.toLowerCase()),
+      employee.username.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -428,8 +428,8 @@ export default function EmployeesPage() {
                                 employee.role === Role.Manager
                                   ? "bg-purple-100 text-purple-800"
                                   : employee.role === Role.ShiftLeider
-                                    ? "bg-blue-100 text-blue-800"
-                                    : "bg-gray-100 text-gray-800"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : "bg-gray-100 text-gray-800"
                               }`}
                             >
                               <Shield className="h-3 w-3 mr-1" />

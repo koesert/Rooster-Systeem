@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { useError } from "@/contexts/ErrorContext";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useValidation, ValidationConfigs } from "@/hooks/useValidation";
 import Sidebar from "@/components/Sidebar";
@@ -25,7 +24,6 @@ export default function CreateTimeOffPage() {
   usePageTitle("Dashboard - Nieuwe vrij aanvraag");
 
   const { user, isLoading, isManager } = useAuth();
-  const { showApiError } = useError();
   const router = useRouter();
 
   // Form state
@@ -37,6 +35,7 @@ export default function CreateTimeOffPage() {
 
   // UI state
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Validation setup
   const { fieldErrors, validateForm, handleInputChange, clearAllErrors } =
@@ -54,6 +53,9 @@ export default function CreateTimeOffPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Reset errors
+    setError(null);
 
     // Add isManager to form data for validation
     const formDataWithManager = {
@@ -78,11 +80,68 @@ export default function CreateTimeOffPage() {
 
       // Navigate back to time off list
       router.push("/timeoff");
-    } catch (error) {
-      showApiError(
-        error,
-        "Er is een fout opgetreden bij het aanmaken van de aanvraag"
-      );
+    } catch (error: unknown) {
+      // Parse error for comprehensive error handling
+      let errorMessage =
+        "Er is een onbekende fout opgetreden bij het aanmaken van de aanvraag";
+
+      if (error && typeof error === "object") {
+        // Check if it's an ApiError with message
+        if ("message" in error && typeof error.message === "string") {
+          const message = error.message;
+
+          // Check if the message is a JSON string
+          if (message.startsWith("{") && message.endsWith("}")) {
+            try {
+              const parsed = JSON.parse(message);
+              if (parsed.message && typeof parsed.message === "string") {
+                errorMessage = parsed.message;
+              } else {
+                errorMessage = message;
+              }
+            } catch {
+              // If JSON parsing fails, use the raw message
+              errorMessage = message;
+            }
+          } else {
+            errorMessage = message;
+          }
+        }
+        // Check for status code to provide fallback messages
+        else if ("status" in error) {
+          const status = error.status as number;
+          switch (status) {
+            case 400:
+              errorMessage =
+                "De ingevoerde gegevens zijn niet geldig. Controleer de datums en probeer het opnieuw.";
+              break;
+            case 401:
+              errorMessage =
+                "Je bent niet ingelogd. Log opnieuw in en probeer het opnieuw.";
+              break;
+            case 403:
+              errorMessage =
+                "Je hebt geen toestemming om vrij aanvragen aan te maken.";
+              break;
+            case 422:
+              errorMessage =
+                "De aanvraag bevat fouten. Controleer de periode en reden.";
+              break;
+            case 409:
+              errorMessage =
+                "Er is al een aanvraag voor deze periode. Kies andere datums.";
+              break;
+            case 500:
+              errorMessage =
+                "Er is een serverfout opgetreden. Probeer het later opnieuw.";
+              break;
+            default:
+              errorMessage = `Er is een fout opgetreden. Probeer het later opnieuw.`;
+          }
+        }
+      }
+
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -180,6 +239,13 @@ export default function CreateTimeOffPage() {
           {/* Form Section */}
           <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8">
             <form onSubmit={handleSubmit} className="space-y-8">
+              {/* General Error */}
+              {error && (
+                <div className="p-4 bg-red-50/80 backdrop-blur-sm border border-red-200/50 rounded-xl text-red-700 text-center font-medium">
+                  {error}
+                </div>
+              )}
+
               {/* Period Information */}
               <div>
                 <h3
