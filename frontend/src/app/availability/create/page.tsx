@@ -14,10 +14,14 @@ import {
   CalendarCheck,
   ChevronLeft,
   ChevronRight,
+  Plane,
+  Lock,
 } from "lucide-react";
 import {
   UpdateWeekAvailability,
   UpdateDayAvailability,
+  AvailabilityStatus,
+  getAvailabilityStatusFromDay,
 } from "@/types/availability";
 import * as api from "@/lib/api";
 
@@ -33,6 +37,7 @@ export default function CreateAvailabilityPage() {
 
   // Form state
   const [formData, setFormData] = useState<UpdateDayAvailability[]>([]);
+  const [originalData, setOriginalData] = useState<any[]>([]); // Store original data to check for verlof
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingAvailability, setIsLoadingAvailability] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +64,7 @@ export default function CreateAvailabilityPage() {
       // Try to fetch existing availability for this week
       const existingAvailability = await api.getMyWeekAvailability(
         weekStartString,
-        { showErrors: false },
+        { showErrors: false }
       );
 
       // If we have existing data, use it
@@ -69,6 +74,7 @@ export default function CreateAvailabilityPage() {
         existingAvailability.days.length > 0
       ) {
         const weekDays: UpdateDayAvailability[] = [];
+        const originalDays: any[] = [];
 
         // Generate 7 days (Monday to Sunday) and map with existing data
         for (let i = 0; i < 7; i++) {
@@ -78,17 +84,28 @@ export default function CreateAvailabilityPage() {
 
           // Find existing availability for this date
           const existingDay = existingAvailability.days.find(
-            (day) => day.date === dateString,
+            (day) => day.date === dateString
           );
+
+          // Store original data to check for verlof
+          originalDays.push(existingDay);
+
+          // Check if this day has verlof status
+          const hasVerlof =
+            existingDay &&
+            getAvailabilityStatusFromDay(existingDay) ===
+              AvailabilityStatus.TimeOff;
 
           weekDays.push({
             date: dateString,
-            isAvailable: existingDay?.isAvailable ?? true, // Default to available if not set
+            isAvailable: hasVerlof ? null : existingDay?.isAvailable ?? true, // Don't set isAvailable for verlof days
+            status: existingDay?.status, // Keep original status
             notes: existingDay?.notes || "",
           });
         }
 
         setFormData(weekDays);
+        setOriginalData(originalDays);
       } else {
         // No existing data, create default availability (all available)
         initializeDefaultFormData();
@@ -119,6 +136,7 @@ export default function CreateAvailabilityPage() {
     }
 
     setFormData(weekDays);
+    setOriginalData([]);
   };
 
   const getSelectedWeekStart = (): Date => {
@@ -156,7 +174,9 @@ export default function CreateAvailabilityPage() {
     const [day, month, year] = dateString.split("-");
     const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
     const dayName = getDutchDayName(date);
-    return `${dayName.charAt(0).toUpperCase() + dayName.slice(1)} ${day}-${month}`;
+    return `${
+      dayName.charAt(0).toUpperCase() + dayName.slice(1)
+    } ${day}-${month}`;
   };
 
   const getWeekNumber = (): number => {
@@ -164,7 +184,7 @@ export default function CreateAvailabilityPage() {
     const startOfYear = new Date(startOfWeek.getFullYear(), 0, 1);
     const dayOfYear =
       Math.floor(
-        (startOfWeek.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000),
+        (startOfWeek.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000)
       ) + 1;
     return Math.ceil(dayOfYear / 7);
   };
@@ -175,15 +195,29 @@ export default function CreateAvailabilityPage() {
     return `${selectedWeekIndex} weken vooruit`;
   };
 
+  // Check if a day has verlof (TimeOff status)
+  const isDayVerlof = (dayIndex: number): boolean => {
+    const originalDay = originalData[dayIndex];
+    if (!originalDay) return false;
+    return (
+      getAvailabilityStatusFromDay(originalDay) === AvailabilityStatus.TimeOff
+    );
+  };
+
   const updateDayAvailability = (
     dayIndex: number,
     field: keyof UpdateDayAvailability,
-    value: string | boolean,
+    value: string | boolean
   ) => {
+    // Don't allow updates for verlof days
+    if (isDayVerlof(dayIndex) && field === "isAvailable") {
+      return;
+    }
+
     setFormData((prev) =>
       prev.map((day, index) =>
-        index === dayIndex ? { ...day, [field]: value } : day,
-      ),
+        index === dayIndex ? { ...day, [field]: value } : day
+      )
     );
   };
 
@@ -192,10 +226,23 @@ export default function CreateAvailabilityPage() {
     setError(null);
 
     try {
+      // Filter out verlof days from submission - they shouldn't be changed
+      const filteredFormData = formData.map((day, index) => {
+        if (isDayVerlof(index)) {
+          // Keep original verlof status, don't submit isAvailable changes
+          return {
+            date: day.date,
+            status: AvailabilityStatus.TimeOff, // Ensure verlof status is preserved
+            notes: day.notes,
+          };
+        }
+        return day;
+      });
+
       const updateData: UpdateWeekAvailability = {
         employeeId: user!.id, // Will be set by backend
         weekStart: formatDateString(getSelectedWeekStart()),
-        days: formData,
+        days: filteredFormData,
       };
 
       await api.updateMyWeekAvailability(updateData);
@@ -406,108 +453,174 @@ export default function CreateAvailabilityPage() {
                     Beschikbaarheid per dag
                   </h3>
 
-                  {formData.map((day, index) => (
-                    <div key={day.date} className="space-y-2">
-                      {/* Day Info */}
-                      <h4
-                        className="font-medium text-lg"
-                        style={{ color: "#120309" }}
-                      >
-                        {formatDisplayDate(day.date)}
-                      </h4>
+                  {formData.map((day, index) => {
+                    const isVerlof = isDayVerlof(index);
 
-                      <div className="p-4 border border-gray-200 rounded-xl bg-gray-50/50">
-                        {/* Availability Selection */}
-                        <div className="flex-1">
-                          <div className="space-y-3">
-                            <div>
-                              <label
-                                className="text-sm font-medium"
-                                style={{ color: "#67697c" }}
-                              >
-                                Beschikbaarheid *
-                              </label>
-                              <div className="mt-2 flex space-x-4">
-                                <label className="flex items-center cursor-pointer">
-                                  <input
-                                    type="radio"
-                                    name={`availability-${index}`}
-                                    value="true"
-                                    checked={day.isAvailable === true}
-                                    onChange={() =>
-                                      updateDayAvailability(
-                                        index,
-                                        "isAvailable",
-                                        true,
-                                      )
-                                    }
-                                    className="h-4 w-4 text-green-600 border-gray-300 focus:ring-green-500 cursor-pointer"
-                                  />
-                                  <span className="ml-2 text-sm font-medium text-green-700">
-                                    Ja
-                                  </span>
+                    return (
+                      <div key={day.date} className="space-y-2">
+                        {/* Day Info */}
+                        <h4
+                          className="font-medium text-lg"
+                          style={{ color: "#120309" }}
+                        >
+                          {formatDisplayDate(day.date)}
+                          {isVerlof && (
+                            <span className="ml-2 inline-flex items-center space-x-1 text-sm font-medium px-2 py-1 bg-purple-100 text-purple-700 rounded-lg">
+                              <Plane className="h-3 w-3" />
+                              <span>Verlof</span>
+                            </span>
+                          )}
+                        </h4>
+
+                        <div
+                          className={`p-4 border border-gray-200 rounded-xl ${
+                            isVerlof ? "bg-purple-50/50" : "bg-gray-50/50"
+                          }`}
+                        >
+                          {isVerlof ? (
+                            // Verlof day - show as read-only
+                            <div className="space-y-3">
+                              <div className="flex items-center space-x-3 p-4 bg-purple-100/60 rounded-lg border border-purple-200">
+                                <Lock className="h-5 w-5 text-purple-600" />
+                                <div>
+                                  <p className="text-sm font-medium text-purple-800">
+                                    Je hebt verlof op deze dag
+                                  </p>
+                                  <p className="text-xs text-purple-600">
+                                    Beschikbaarheid kan niet worden aangepast
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Show notes field for verlof days (can still be edited) */}
+                              <div>
+                                <label
+                                  htmlFor={`notes-${index}`}
+                                  className="text-sm font-medium"
+                                  style={{ color: "#67697c" }}
+                                >
+                                  Notities (optioneel)
                                 </label>
-                                <label className="flex items-center cursor-pointer">
-                                  <input
-                                    type="radio"
-                                    name={`availability-${index}`}
-                                    value="false"
-                                    checked={day.isAvailable === false}
-                                    onChange={() =>
-                                      updateDayAvailability(
-                                        index,
-                                        "isAvailable",
-                                        false,
-                                      )
-                                    }
-                                    className="h-4 w-4 text-red-600 border-gray-300 focus:ring-red-500 cursor-pointer"
-                                  />
-                                  <span className="ml-2 text-sm font-medium text-red-700">
-                                    Nee
-                                  </span>
-                                </label>
+                                <textarea
+                                  id={`notes-${index}`}
+                                  value={day.notes || ""}
+                                  onChange={(e) =>
+                                    updateDayAvailability(
+                                      index,
+                                      "notes",
+                                      e.target.value
+                                    )
+                                  }
+                                  placeholder="Opmerkingen..."
+                                  rows={2}
+                                  maxLength={500}
+                                  className="mt-1 block w-full px-3 py-2 text-gray-900 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#d5896f] focus:border-transparent resize-none"
+                                  style={{
+                                    borderColor: "#d1d5db",
+                                  }}
+                                />
+                                <p
+                                  className="mt-1 text-xs"
+                                  style={{ color: "#67697c" }}
+                                >
+                                  {day.notes?.length || 0}/500 tekens
+                                </p>
                               </div>
                             </div>
+                          ) : (
+                            // Regular day - normal availability selection
+                            <div className="flex-1">
+                              <div className="space-y-3">
+                                <div>
+                                  <label
+                                    className="text-sm font-medium"
+                                    style={{ color: "#67697c" }}
+                                  >
+                                    Beschikbaarheid *
+                                  </label>
+                                  <div className="mt-2 flex space-x-4">
+                                    <label className="flex items-center cursor-pointer">
+                                      <input
+                                        type="radio"
+                                        name={`availability-${index}`}
+                                        value="true"
+                                        checked={day.isAvailable === true}
+                                        onChange={() =>
+                                          updateDayAvailability(
+                                            index,
+                                            "isAvailable",
+                                            true
+                                          )
+                                        }
+                                        className="h-4 w-4 text-green-600 border-gray-300 focus:ring-green-500 cursor-pointer"
+                                      />
+                                      <span className="ml-2 text-sm font-medium text-green-700">
+                                        Ja
+                                      </span>
+                                    </label>
+                                    <label className="flex items-center cursor-pointer">
+                                      <input
+                                        type="radio"
+                                        name={`availability-${index}`}
+                                        value="false"
+                                        checked={day.isAvailable === false}
+                                        onChange={() =>
+                                          updateDayAvailability(
+                                            index,
+                                            "isAvailable",
+                                            false
+                                          )
+                                        }
+                                        className="h-4 w-4 text-red-600 border-gray-300 focus:ring-red-500 cursor-pointer"
+                                      />
+                                      <span className="ml-2 text-sm font-medium text-red-700">
+                                        Nee
+                                      </span>
+                                    </label>
+                                  </div>
+                                </div>
 
-                            {/* Notes */}
-                            <div>
-                              <label
-                                htmlFor={`notes-${index}`}
-                                className="text-sm font-medium"
-                                style={{ color: "#67697c" }}
-                              >
-                                Notities (optioneel)
-                              </label>
-                              <textarea
-                                id={`notes-${index}`}
-                                value={day.notes || ""}
-                                onChange={(e) =>
-                                  updateDayAvailability(
-                                    index,
-                                    "notes",
-                                    e.target.value,
-                                  )
-                                }
-                                placeholder="Opmerkingen..."
-                                rows={2}
-                                maxLength={500}
-                                className="mt-1 block w-full px-3 py-2 text-gray-900 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#d5896f] focus:border-transparent resize-none"
-                                style={{
-                                  borderColor: "#d1d5db",
-                                }}
-                              />
-                              <p
-                                className="mt-1 text-xs"
-                                style={{ color: "#67697c" }}
-                              >
-                                {day.notes?.length || 0}/500 tekens
-                              </p>
+                                {/* Notes */}
+                                <div>
+                                  <label
+                                    htmlFor={`notes-${index}`}
+                                    className="text-sm font-medium"
+                                    style={{ color: "#67697c" }}
+                                  >
+                                    Notities (optioneel)
+                                  </label>
+                                  <textarea
+                                    id={`notes-${index}`}
+                                    value={day.notes || ""}
+                                    onChange={(e) =>
+                                      updateDayAvailability(
+                                        index,
+                                        "notes",
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder="Opmerkingen..."
+                                    rows={2}
+                                    maxLength={500}
+                                    className="mt-1 block w-full px-3 py-2 text-gray-900 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#d5896f] focus:border-transparent resize-none"
+                                    style={{
+                                      borderColor: "#d1d5db",
+                                    }}
+                                  />
+                                  <p
+                                    className="mt-1 text-xs"
+                                    style={{ color: "#67697c" }}
+                                  >
+                                    {day.notes?.length || 0}/500 tekens
+                                  </p>
+                                </div>
+                              </div>
                             </div>
-                          </div>
+                          )}
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* Save and Next Week Option */}
@@ -520,8 +633,12 @@ export default function CreateAvailabilityPage() {
                       disabled={selectedWeekIndex >= 3}
                       className="h-4 w-4 text-[#d5896f] border-gray-300 rounded focus:ring-[#d5896f] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     />
-                    <span 
-                      className={`text-sm font-medium ${selectedWeekIndex >= 3 ? 'text-gray-400' : 'text-gray-700'}`}
+                    <span
+                      className={`text-sm font-medium ${
+                        selectedWeekIndex >= 3
+                          ? "text-gray-400"
+                          : "text-gray-700"
+                      }`}
                     >
                       Opslaan en naar volgende week
                     </span>

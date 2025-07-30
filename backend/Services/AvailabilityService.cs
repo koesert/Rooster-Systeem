@@ -199,35 +199,78 @@ public class AvailabilityService : IAvailabilityService
 
     /// <summary>
     /// Update availability status for time off periods (called when time off is approved)
+    /// If status is null, removes ALL availability records (back to "not specified")
     /// </summary>
-    public async Task UpdateAvailabilityForTimeOffAsync(int employeeId, DateTime startDate, DateTime endDate, AvailabilityStatus status)
+    public async Task UpdateAvailabilityForTimeOffAsync(int employeeId, DateTime startDate, DateTime endDate, AvailabilityStatus? status)
     {
         var currentDate = startDate.Date;
 
         while (currentDate <= endDate.Date)
         {
-            var existingAvailability = await _context.Availabilities
-                .FirstOrDefaultAsync(a => a.EmployeeId == employeeId && a.Date.Date == currentDate);
-
-            if (existingAvailability != null)
+            if (status == null)
             {
-                // Update existing availability
-                existingAvailability.Status = status;
-                existingAvailability.UpdatedAt = DateTime.UtcNow;
-                _context.Availabilities.Update(existingAvailability);
+                // Remove ALL availability records for this day - back to "not specified"
+                var allRecordsForDay = await _context.Availabilities
+                    .Where(a => a.EmployeeId == employeeId && a.Date.Date == currentDate)
+                    .ToListAsync();
+
+                if (allRecordsForDay.Any())
+                {
+                    _context.Availabilities.RemoveRange(allRecordsForDay);
+                }
             }
             else
             {
-                // Create new availability record
-                var availability = new Availability
+                var existingAvailability = await _context.Availabilities
+                    .FirstOrDefaultAsync(a => a.EmployeeId == employeeId && a.Date.Date == currentDate);
+
+                if (existingAvailability != null)
                 {
-                    EmployeeId = employeeId,
-                    Date = currentDate,
-                    Status = status,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                };
-                _context.Availabilities.Add(availability);
+                    // Update existing availability
+                    existingAvailability.Status = status.Value;
+                    existingAvailability.UpdatedAt = DateTime.UtcNow;
+                    _context.Availabilities.Update(existingAvailability);
+                }
+                else
+                {
+                    // Create new availability record
+                    var availability = new Availability
+                    {
+                        EmployeeId = employeeId,
+                        Date = currentDate,
+                        Status = status.Value,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                    _context.Availabilities.Add(availability);
+                }
+            }
+
+            currentDate = currentDate.AddDays(1);
+        }
+
+        await _context.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Remove availability records for time off periods (called when time off is deleted/cancelled)
+    /// This makes the days return to "not specified" status by removing ALL records for those days
+    /// </summary>
+    public async Task RemoveAvailabilityForTimeOffAsync(int employeeId, DateTime startDate, DateTime endDate)
+    {
+        var currentDate = startDate.Date;
+
+        while (currentDate <= endDate.Date)
+        {
+            // Remove ALL availability records for this day - back to "not specified"
+            var allRecordsForDay = await _context.Availabilities
+                .Where(a => a.EmployeeId == employeeId && a.Date.Date == currentDate)
+                .ToListAsync();
+
+            if (allRecordsForDay.Any())
+            {
+                _context.Availabilities.RemoveRange(allRecordsForDay);
             }
 
             currentDate = currentDate.AddDays(1);

@@ -27,8 +27,15 @@ public interface IAvailabilityService
 
     /// <summary>
     /// Update availability status for time off periods (called when time off is approved)
+    /// If status is null, removes the availability records (back to "not specified")
     /// </summary>
-    Task UpdateAvailabilityForTimeOffAsync(int employeeId, DateTime startDate, DateTime endDate, AvailabilityStatus status);
+    Task UpdateAvailabilityForTimeOffAsync(int employeeId, DateTime startDate, DateTime endDate, AvailabilityStatus? status);
+
+    /// <summary>
+    /// Remove availability records for time off periods (called when time off is deleted/cancelled)
+    /// This makes the days return to "not specified" status
+    /// </summary>
+    Task RemoveAvailabilityForTimeOffAsync(int employeeId, DateTime startDate, DateTime endDate);
 
     /// <summary>
     /// Validate if date is within allowed range (max 4 weeks ahead)

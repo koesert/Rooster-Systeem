@@ -16,8 +16,16 @@ import {
   CalendarCheck,
   User,
   Edit,
+  Plane,
 } from "lucide-react";
-import { WeekAvailability, DayAvailability } from "@/types/availability";
+import {
+  WeekAvailability,
+  DayAvailability,
+  AvailabilityStatus,
+  getAvailabilityStatusFromDay,
+  getAvailabilityStatusText,
+  getAvailabilityStatusColor,
+} from "@/types/availability";
 import { Employee } from "@/types/auth";
 import * as api from "@/lib/api";
 
@@ -26,25 +34,28 @@ export default function AvailabilityPage() {
   const { showApiError } = useError();
   const router = useRouter();
 
-  // State
+  // Availability data and navigation state
   const [weekAvailabilities, setWeekAvailabilities] = useState<
     WeekAvailability[]
   >([]);
   const [isLoadingAvailability, setIsLoadingAvailability] = useState(false);
-  const [currentWeekIndex, setCurrentWeekIndex] = useState(0); // Index voor navigatie door weken
+  const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
-  // Manager dropdown state
+  // Employee selection for managers
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(
-    null,
+    null
   );
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(
-    null,
+    null
   );
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(false);
 
-  // Get page title based on selected employee
+  /**
+   * Dynamically generates page title based on whether manager is viewing
+   * their own availability or a specific employee's availability
+   */
   const getPageTitle = (): string => {
     if (selectedEmployee) {
       return `Beschikbaarheid van ${selectedEmployee.fullName}`;
@@ -54,21 +65,21 @@ export default function AvailabilityPage() {
 
   usePageTitle(`Dashboard - ${getPageTitle()}`);
 
-  // Redirect if not authenticated
+  // Authentication guard
   useEffect(() => {
     if (!isLoading && !user) {
       router.push("/login");
     }
   }, [user, isLoading, router]);
 
-  // Load employees for managers
+  // Initialize employee list for managers
   useEffect(() => {
     if (user && isManager()) {
       loadEmployees();
     }
   }, [user]);
 
-  // Load availability data
+  // Reload availability when user changes or employee selection changes
   useEffect(() => {
     if (user) {
       loadAvailability();
@@ -95,10 +106,8 @@ export default function AvailabilityPage() {
       let availability: WeekAvailability[];
 
       if (selectedEmployeeId && isManager()) {
-        // Manager viewing specific employee's availability
         availability = await api.getEmployeeAvailability(selectedEmployeeId);
       } else {
-        // User viewing their own availability
         availability = await api.getMyAvailability();
       }
 
@@ -112,6 +121,10 @@ export default function AvailabilityPage() {
     }
   };
 
+  /**
+   * Handles dropdown selection for managers to switch between viewing
+   * their own availability or a specific employee's availability
+   */
   const handleEmployeeSelection = (value: string) => {
     if (value === "own") {
       setSelectedEmployeeId(null);
@@ -124,35 +137,45 @@ export default function AvailabilityPage() {
     }
   };
 
-  const getAvailabilityIcon = (isAvailable?: boolean | null) => {
-    if (isAvailable === true) {
+  /**
+   * Returns the appropriate icon component based on availability status
+   * Supports legacy isAvailable field and new status enum
+   */
+  const getAvailabilityIcon = (day: DayAvailability) => {
+    const status = getAvailabilityStatusFromDay(day);
+
+    if (status === AvailabilityStatus.Available) {
       return <CheckCircle className="h-5 w-5 text-green-600" />;
-    } else if (isAvailable === false) {
+    } else if (status === AvailabilityStatus.NotAvailable) {
       return <XCircle className="h-5 w-5 text-red-600" />;
+    } else if (status === AvailabilityStatus.TimeOff) {
+      return <Plane className="h-5 w-5" style={{ color: "#8B5CF6" }} />;
     } else {
       return <Minus className="h-5 w-5 text-gray-400" />;
     }
   };
 
-  const getAvailabilityText = (isAvailable?: boolean | null) => {
-    if (isAvailable === true) return "Beschikbaar";
-    if (isAvailable === false) return "Niet beschikbaar";
-    return "Niet opgegeven";
+  const getAvailabilityText = (day: DayAvailability) => {
+    const status = getAvailabilityStatusFromDay(day);
+    return getAvailabilityStatusText(status);
   };
 
-  const getAvailabilityColor = (isAvailable?: boolean | null) => {
-    if (isAvailable === true) return "bg-green-50 border-green-200";
-    if (isAvailable === false) return "bg-red-50 border-red-200";
-    return "bg-gray-50 border-gray-200";
+  const getAvailabilityColor = (day: DayAvailability) => {
+    const status = getAvailabilityStatusFromDay(day);
+    return getAvailabilityStatusColor(status);
   };
 
+  /**
+   * Formats a week range from start date to end date (start + 6 days)
+   * @param weekStart - Date string in DD-MM-YYYY format
+   * @returns Formatted range like "1 jan - 7 jan"
+   */
   const formatWeekRange = (weekStart: string) => {
-    // Parse DD-MM-YYYY format
     const [day, month, year] = weekStart.split("-");
     const startDate = new Date(
       parseInt(year),
       parseInt(month) - 1,
-      parseInt(day),
+      parseInt(day)
     );
     const endDate = new Date(startDate);
     endDate.setDate(startDate.getDate() + 6);
@@ -167,25 +190,26 @@ export default function AvailabilityPage() {
     return `${formatDate(startDate)} - ${formatDate(endDate)}`;
   };
 
+  /**
+   * Calculates ISO week number using the ISO 8601 standard
+   * Week 1 is the first week with at least 4 days in the new year
+   * @param weekStart - Date string in DD-MM-YYYY format
+   * @returns Week number (1-53)
+   */
   const getWeekNumber = (weekStart: string) => {
-    // Parse DD-MM-YYYY format
     const [day, month, year] = weekStart.split("-");
     const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
 
-    // Copy date so don't modify original
+    // Create UTC date to avoid timezone issues
     const d = new Date(
-      Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
+      Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
     );
 
-    // Set to nearest Thursday: current date + 4 - current day number
-    // Make Sunday's day number 7
-    const dayNum = d.getUTCDay() || 7;
+    // ISO week calculation: find nearest Thursday
+    const dayNum = d.getUTCDay() || 7; // Make Sunday = 7
     d.setUTCDate(d.getUTCDate() + 4 - dayNum);
 
-    // Get first day of year
     const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-
-    // Calculate full weeks to nearest Thursday
     return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
   };
 
@@ -221,7 +245,7 @@ export default function AvailabilityPage() {
 
       <main className="layout-main-content overflow-y-auto">
         <div className="max-w-7xl mx-auto">
-          {/* Header */}
+          {/* Page header with title, edit button, and employee selector */}
           <div className="mb-8">
             <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8 max-[500px]:p-4 relative overflow-hidden">
               <div
@@ -264,7 +288,7 @@ export default function AvailabilityPage() {
                     </div>
                   </div>
 
-                  {/* Only show "Add availability" button when viewing own availability */}
+                  {/* Edit button - only visible when viewing own availability */}
                   {!selectedEmployeeId && (
                     <button
                       onClick={() => router.push("/availability/create")}
@@ -280,7 +304,7 @@ export default function AvailabilityPage() {
                   )}
                 </div>
 
-                {/* Employee selection dropdown for managers */}
+                {/* Manager-only: Employee selection dropdown */}
                 {isManager() && (
                   <div className="flex items-center space-x-3 bg-white/80 backdrop-blur-lg rounded-xl shadow-lg border border-white/20 px-4 py-2">
                     <User className="h-5 w-5" style={{ color: "#67697c" }} />
@@ -431,7 +455,9 @@ export default function AvailabilityPage() {
                       (day: DayAvailability, index: number) => (
                         <div
                           key={index}
-                          className={`p-4 rounded-xl border-2 transition-all duration-200 ${getAvailabilityColor(day.isAvailable)}`}
+                          className={`p-4 rounded-xl border-2 transition-all duration-200 ${getAvailabilityColor(
+                            day
+                          )}`}
                         >
                           <div className="text-center">
                             <h4 className="font-semibold text-gray-900 capitalize mb-1">
@@ -442,14 +468,14 @@ export default function AvailabilityPage() {
                             </p>
 
                             <div className="flex flex-col items-center space-y-2">
-                              {getAvailabilityIcon(day.isAvailable)}
+                              {getAvailabilityIcon(day)}
                               <span className="text-sm font-medium text-gray-900">
-                                {getAvailabilityText(day.isAvailable)}
+                                {getAvailabilityText(day)}
                               </span>
                             </div>
                           </div>
                         </div>
-                      ),
+                      )
                     )}
                   </div>
                 </div>
@@ -467,9 +493,11 @@ export default function AvailabilityPage() {
                 <div className="space-y-4">
                   {weekAvailabilities.map(
                     (week: WeekAvailability, weekIndex: number) => {
-                      // Filter days that have notes
-                      const daysWithNotes = week.days.filter(day => day.notes && day.notes.trim() !== '');
-                      
+                      // Extract days with notes for display
+                      const daysWithNotes = week.days.filter(
+                        (day) => day.notes && day.notes.trim() !== ""
+                      );
+
                       return (
                         <div
                           key={weekIndex}
@@ -492,34 +520,53 @@ export default function AvailabilityPage() {
 
                             <div className="flex space-x-1">
                               {week.days.map(
-                                (day: DayAvailability, dayIndex: number) => (
-                                  <div
-                                    key={dayIndex}
-                                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                                      day.isAvailable === true
-                                        ? "bg-green-100 border-green-300"
-                                        : day.isAvailable === false
+                                (day: DayAvailability, dayIndex: number) => {
+                                  const status =
+                                    getAvailabilityStatusFromDay(day);
+                                  return (
+                                    <div
+                                      key={dayIndex}
+                                      className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                                        status === AvailabilityStatus.Available
+                                          ? "bg-green-100 border-green-300"
+                                          : status ===
+                                            AvailabilityStatus.NotAvailable
                                           ? "bg-red-100 border-red-300"
+                                          : status ===
+                                            AvailabilityStatus.TimeOff
+                                          ? "bg-purple-100 border-purple-300"
                                           : "bg-gray-100 border-gray-300"
-                                    }`}
-                                    title={`${day.dayOfWeek}: ${getAvailabilityText(day.isAvailable)}`}
-                                  >
-                                    {day.isAvailable === true && (
-                                      <CheckCircle className="h-3 w-3 text-green-600" />
-                                    )}
-                                    {day.isAvailable === false && (
-                                      <XCircle className="h-3 w-3 text-red-600" />
-                                    )}
-                                    {day.isAvailable === null && (
-                                      <Minus className="h-3 w-3 text-gray-400" />
-                                    )}
-                                  </div>
-                                ),
+                                      }`}
+                                      title={`${
+                                        day.dayOfWeek
+                                      }: ${getAvailabilityText(day)}`}
+                                    >
+                                      {status ===
+                                        AvailabilityStatus.Available && (
+                                        <CheckCircle className="h-3 w-3 text-green-600" />
+                                      )}
+                                      {status ===
+                                        AvailabilityStatus.NotAvailable && (
+                                        <XCircle className="h-3 w-3 text-red-600" />
+                                      )}
+                                      {status ===
+                                        AvailabilityStatus.TimeOff && (
+                                        <Plane
+                                          className="h-3 w-3"
+                                          style={{ color: "#8B5CF6" }}
+                                        />
+                                      )}
+                                      {status === null && (
+                                        <Minus className="h-3 w-3 text-gray-400" />
+                                      )}
+                                    </div>
+                                  );
+                                }
                               )}
                             </div>
                           </div>
 
-                          {/* Display notes if any day has notes */}
+                          {/* Notes section - only shown if any day has notes */}
                           {daysWithNotes.length > 0 && (
                             <div className="mt-4 pt-4 border-t border-gray-200">
                               <h5 className="text-sm font-medium text-gray-700 mb-3">

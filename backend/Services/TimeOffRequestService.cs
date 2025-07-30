@@ -149,6 +149,9 @@ public class TimeOffRequestService : ITimeOffRequestService
         }
 
         var oldStatus = request.Status;
+        var oldStartDate = request.StartDate;
+        var oldEndDate = request.EndDate;
+
         request.Status = newStatus;
         request.ApprovedBy = managerId;
         request.UpdatedAt = DateTimeExtensions.UtcNow;
@@ -156,9 +159,21 @@ public class TimeOffRequestService : ITimeOffRequestService
         _context.TimeOffRequests.Update(request);
         await _context.SaveChangesAsync();
 
-        // Update availability when request is approved
+        // Handle availability updates based on status changes
         if (newStatus == TimeOffStatus.Approved)
         {
+            // If dates changed and was already approved, first clear old dates
+            if (oldStatus == TimeOffStatus.Approved && (oldStartDate != request.StartDate || oldEndDate != request.EndDate))
+            {
+                await _availabilityService.UpdateAvailabilityForTimeOffAsync(
+                    request.EmployeeId,
+                    oldStartDate,
+                    oldEndDate,
+                    null  // Remove old records
+                );
+            }
+
+            // Set new dates as time off
             await _availabilityService.UpdateAvailabilityForTimeOffAsync(
                 request.EmployeeId,
                 request.StartDate,
@@ -166,19 +181,18 @@ public class TimeOffRequestService : ITimeOffRequestService
                 AvailabilityStatus.TimeOff
             );
         }
-        // If was approved and now rejected/cancelled, restore availability to Available
-        else if (oldStatus == TimeOffStatus.Approved && (newStatus == TimeOffStatus.Rejected || newStatus == TimeOffStatus.Cancelled))
+        // If was approved and now not approved, remove availability (back to "not specified")
+        else if (oldStatus == TimeOffStatus.Approved && newStatus != TimeOffStatus.Approved)
         {
             await _availabilityService.UpdateAvailabilityForTimeOffAsync(
                 request.EmployeeId,
-                request.StartDate,
-                request.EndDate,
-                AvailabilityStatus.Available
+                oldStartDate,
+                oldEndDate,
+                null  // Remove records - back to "not specified"
             );
         }
 
-        _logger.LogInformation("Vrij aanvraag {Id} status gewijzigd naar {Status} door manager {ManagerId}",
-            id, newStatus, managerId);
+        _logger.LogInformation("Vrij aanvraag {Id} bijgewerkt door manager", id);
 
         return request;
     }
@@ -368,19 +382,19 @@ public class TimeOffRequestService : ITimeOffRequestService
         _context.TimeOffRequests.Update(request);
         await _context.SaveChangesAsync();
 
-        // If was approved, restore availability
+        // If was approved, remove availability (back to "not specified")
         if (oldStatus == TimeOffStatus.Approved)
         {
-            await _availabilityService.UpdateAvailabilityForTimeOffAsync(
+            await _availabilityService.RemoveAvailabilityForTimeOffAsync(
                 request.EmployeeId,
                 request.StartDate,
-                request.EndDate,
-                AvailabilityStatus.Available
+                request.EndDate
             );
         }
 
         _logger.LogInformation("Vrij aanvraag {Id} geannuleerd door werknemer {EmployeeId}", id, employeeId);
     }
+
 
     public async Task DeleteRequestAsync(int id, int employeeId)
     {
@@ -410,14 +424,13 @@ public class TimeOffRequestService : ITimeOffRequestService
             }
         }
 
-        // If was approved, restore availability
+        // If was approved, remove availability (back to "not specified")
         if (request.Status == TimeOffStatus.Approved)
         {
-            await _availabilityService.UpdateAvailabilityForTimeOffAsync(
+            await _availabilityService.RemoveAvailabilityForTimeOffAsync(
                 request.EmployeeId,
                 request.StartDate,
-                request.EndDate,
-                AvailabilityStatus.Available
+                request.EndDate
             );
         }
 
