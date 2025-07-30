@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using backend.Models;
 
 namespace backend.DTOs;
 
@@ -13,7 +14,7 @@ public class AvailabilityDto
     public string Date { get; set; } = string.Empty; // DD-MM-YYYY format
 
     [Required(ErrorMessage = "Availability status is required")]
-    public bool IsAvailable { get; set; }
+    public AvailabilityStatus Status { get; set; } = AvailabilityStatus.Available;
 
     [MaxLength(500, ErrorMessage = "Notes cannot exceed 500 characters")]
     public string? Notes { get; set; }
@@ -46,7 +47,7 @@ public class DayAvailabilityDto
     [Required(ErrorMessage = "Day of week is required")]
     public string DayOfWeek { get; set; } = string.Empty; // maandag, dinsdag, etc.
 
-    public bool? IsAvailable { get; set; } // null = not set yet
+    public AvailabilityStatus? Status { get; set; } = null; // null = not set yet
 
     [MaxLength(500, ErrorMessage = "Notes cannot exceed 500 characters")]
     public string? Notes { get; set; }
@@ -69,7 +70,7 @@ public class UpdateDayAvailabilityDto
     [Required(ErrorMessage = "Date is required")]
     public string Date { get; set; } = string.Empty; // DD-MM-YYYY format
 
-    public bool? IsAvailable { get; set; } // null = remove availability record
+    public AvailabilityStatus? Status { get; set; } = null; // null = remove availability record
 
     [MaxLength(500, ErrorMessage = "Notes cannot exceed 500 characters")]
     public string? Notes { get; set; }

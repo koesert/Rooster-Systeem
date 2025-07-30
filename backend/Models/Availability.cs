@@ -13,7 +13,7 @@ public class Availability
     public DateTime Date { get; set; }
 
     [Required(ErrorMessage = "Availability status is required")]
-    public bool IsAvailable { get; set; }
+    public AvailabilityStatus Status { get; set; } = AvailabilityStatus.Available;
 
     /// <summary>
     /// Optional notes for availability (max 500 characters)

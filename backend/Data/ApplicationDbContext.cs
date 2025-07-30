@@ -168,8 +168,10 @@ public class ApplicationDbContext : DbContext
 				  .IsRequired()
 				  .HasColumnType("DATE");
 
-			entity.Property(a => a.IsAvailable)
-				  .IsRequired();
+			// Configure AvailabilityStatus enum
+			entity.Property(a => a.Status)
+				  .IsRequired()
+				  .HasConversion<int>();
 
 			entity.Property(a => a.Notes)
 				  .HasMaxLength(500);

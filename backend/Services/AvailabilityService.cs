@@ -57,7 +57,7 @@ public class AvailabilityService : IAvailabilityService
                 Id = availability?.Id,
                 Date = FormatDateString(currentDate),
                 DayOfWeek = GetDutchDayName(currentDate),
-                IsAvailable = availability?.IsAvailable,
+                Status = availability?.Status,
                 Notes = availability?.Notes
             });
         }
@@ -102,45 +102,74 @@ public class AvailabilityService : IAvailabilityService
             throw new InvalidOperationException("Medewerker niet gevonden");
         }
 
-        // Validate all dates are within allowed range
-        foreach (var day in updateDto.Days)
+        // Validate dates are within allowed range
+        for (int i = 0; i < 7; i++)
         {
-            var dayDate = ParseDateString(day.Date);
+            var dayDate = mondayDate.AddDays(i);
             if (!IsDateWithinAllowedRange(dayDate))
             {
-                throw new InvalidOperationException($"Datum {day.Date} ligt buiten het toegestane bereik (max 4 weken vooruit)");
+                throw new InvalidOperationException($"Datum {FormatDateString(dayDate)} valt buiten het toegestane bereik");
             }
         }
 
-        // Remove all existing availability records for this week
+        // Check if current week is locked (cannot be modified after Monday 00:00)
+        var today = DateTime.Today;
+        var currentWeekMonday = GetMondayOfWeek(today);
+
+        if (mondayDate <= currentWeekMonday)
+        {
+            throw new InvalidOperationException("De huidige week kan niet meer worden aangepast");
+        }
+
+        // Get existing availability records for the week
         var weekEndDate = mondayDate.AddDays(6);
-        var existingRecords = await _context.Availabilities
+        var existingAvailabilities = await _context.Availabilities
             .Where(a => a.EmployeeId == updateDto.EmployeeId
                 && a.Date >= mondayDate
                 && a.Date <= weekEndDate)
             .ToListAsync();
 
-        _context.Availabilities.RemoveRange(existingRecords);
-
-        // Add new availability records
         foreach (var day in updateDto.Days)
         {
-            // Only create records if availability is explicitly set (not null)
-            if (day.IsAvailable.HasValue)
+            var dayDate = ParseDateString(day.Date);
+            var existingAvailability = existingAvailabilities.FirstOrDefault(a => a.Date.Date == dayDate.Date);
+
+            if (day.Status == null)
             {
-                var dayDate = ParseDateString(day.Date);
-
-                var availability = new Availability
+                // Remove availability record if it exists
+                if (existingAvailability != null)
                 {
-                    EmployeeId = updateDto.EmployeeId,
-                    Date = dayDate,
-                    IsAvailable = day.IsAvailable.Value,
-                    Notes = string.IsNullOrWhiteSpace(day.Notes) ? null : day.Notes.Trim(),
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                };
+                    _context.Availabilities.Remove(existingAvailability);
+                }
+            }
+            else
+            {
+                if (existingAvailability != null)
+                {
+                    // Update existing record, but only if it's not TimeOff (approved leave has priority)
+                    if (existingAvailability.Status != AvailabilityStatus.TimeOff)
+                    {
+                        existingAvailability.Status = day.Status.Value;
+                        existingAvailability.Notes = string.IsNullOrWhiteSpace(day.Notes) ? null : day.Notes.Trim();
+                        existingAvailability.UpdatedAt = DateTime.UtcNow;
+                        _context.Availabilities.Update(existingAvailability);
+                    }
+                }
+                else
+                {
+                    // Create new availability record
+                    var availability = new Availability
+                    {
+                        EmployeeId = updateDto.EmployeeId,
+                        Date = dayDate.EnsureUtc(),
+                        Status = day.Status.Value,
+                        Notes = string.IsNullOrWhiteSpace(day.Notes) ? null : day.Notes.Trim(),
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
 
-                _context.Availabilities.Add(availability);
+                    _context.Availabilities.Add(availability);
+                }
             }
         }
 
@@ -166,6 +195,45 @@ public class AvailabilityService : IAvailabilityService
         }
 
         return allWeekAvailabilities.OrderBy(w => w.EmployeeName).ToList();
+    }
+
+    /// <summary>
+    /// Update availability status for time off periods (called when time off is approved)
+    /// </summary>
+    public async Task UpdateAvailabilityForTimeOffAsync(int employeeId, DateTime startDate, DateTime endDate, AvailabilityStatus status)
+    {
+        var currentDate = startDate.Date;
+
+        while (currentDate <= endDate.Date)
+        {
+            var existingAvailability = await _context.Availabilities
+                .FirstOrDefaultAsync(a => a.EmployeeId == employeeId && a.Date.Date == currentDate);
+
+            if (existingAvailability != null)
+            {
+                // Update existing availability
+                existingAvailability.Status = status;
+                existingAvailability.UpdatedAt = DateTime.UtcNow;
+                _context.Availabilities.Update(existingAvailability);
+            }
+            else
+            {
+                // Create new availability record
+                var availability = new Availability
+                {
+                    EmployeeId = employeeId,
+                    Date = currentDate,
+                    Status = status,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                _context.Availabilities.Add(availability);
+            }
+
+            currentDate = currentDate.AddDays(1);
+        }
+
+        await _context.SaveChangesAsync();
     }
 
     public bool IsDateWithinAllowedRange(DateTime date)
