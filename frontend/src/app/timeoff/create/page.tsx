@@ -88,7 +88,7 @@ export default function CreateTimeOffPage() {
       if (error && typeof error === "object") {
         // Check if it's an ApiError with message
         if ("message" in error && typeof error.message === "string") {
-          let message = error.message;
+          const message = error.message;
 
           // Check if the message is a JSON string
           if (message.startsWith("{") && message.endsWith("}")) {

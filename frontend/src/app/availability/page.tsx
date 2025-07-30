@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useError } from "@/contexts/ErrorContext";
@@ -65,28 +65,7 @@ export default function AvailabilityPage() {
 
   usePageTitle(`Dashboard - ${getPageTitle()}`);
 
-  // Authentication guard
-  useEffect(() => {
-    if (!isLoading && !user) {
-      router.push("/login");
-    }
-  }, [user, isLoading, router]);
-
-  // Initialize employee list for managers
-  useEffect(() => {
-    if (user && isManager()) {
-      loadEmployees();
-    }
-  }, [user]);
-
-  // Reload availability when user changes or employee selection changes
-  useEffect(() => {
-    if (user) {
-      loadAvailability();
-    }
-  }, [user, selectedEmployeeId]);
-
-  const loadEmployees = async () => {
+  const loadEmployees = useCallback(async () => {
     setIsLoadingEmployees(true);
     try {
       const employeeList = await api.getEmployees();
@@ -97,9 +76,9 @@ export default function AvailabilityPage() {
     } finally {
       setIsLoadingEmployees(false);
     }
-  };
+  }, [showApiError]);
 
-  const loadAvailability = async () => {
+  const loadAvailability = useCallback(async () => {
     setIsLoadingAvailability(true);
     setError(null);
     try {
@@ -119,7 +98,28 @@ export default function AvailabilityPage() {
     } finally {
       setIsLoadingAvailability(false);
     }
-  };
+  }, [selectedEmployeeId, isManager, showApiError]);
+
+  // Authentication guard
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.push("/login");
+    }
+  }, [user, isLoading, router]);
+
+  // Initialize employee list for managers
+  useEffect(() => {
+    if (user && isManager()) {
+      loadEmployees();
+    }
+  }, [user, isManager, loadEmployees]);
+
+  // Reload availability when user changes or employee selection changes
+  useEffect(() => {
+    if (user) {
+      loadAvailability();
+    }
+  }, [user, selectedEmployeeId, loadAvailability]);
 
   /**
    * Handles dropdown selection for managers to switch between viewing
