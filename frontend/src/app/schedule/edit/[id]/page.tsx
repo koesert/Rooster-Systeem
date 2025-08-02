@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { useValidation } from "@/hooks/useValidation";
 import Sidebar from "@/components/Sidebar";
 import LoadingScreen from "@/components/LoadingScreen";
 import {
@@ -21,10 +22,15 @@ import {
   XCircle,
   Minus,
   CalendarCheck,
+  Plane,
 } from "lucide-react";
 import { UpdateShiftRequest, ShiftType, Shift } from "@/types/shift";
 import { Employee } from "@/types/auth";
-import { WeekAvailability } from "@/types/availability";
+import {
+  WeekAvailability,
+  AvailabilityStatus,
+  getAvailabilityStatusFromDay,
+} from "@/types/availability";
 import * as api from "@/lib/api";
 import { toInputDateFormat, fromInputDateFormat } from "@/utils/dateUtils";
 
@@ -55,10 +61,28 @@ export default function EditShiftPage() {
     notes: "",
   });
 
+  // Validation setup - using central validation system
+  const {
+    fieldErrors,
+    setFieldErrors,
+    validateForm,
+    handleInputChange,
+    clearAllErrors,
+  } = useValidation({
+    fields: [
+      "employeeId",
+      "date",
+      "startTime",
+      "endTime",
+      "shiftType",
+      "notes",
+    ],
+    validateOnChange: false, // Only validate on submit
+  });
+
   // UI state
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // Availability state
   const [employeeAvailability, setEmployeeAvailability] =
@@ -195,78 +219,8 @@ export default function EditShiftPage() {
     }
   };
 
-  const validateForm = (): boolean => {
-    const errors: Record<string, string> = {};
-
-    // Employee validation
-    if (!formData.employeeId || formData.employeeId === 0) {
-      errors.employeeId = "Selecteer een medewerker";
-    }
-
-    // Date validation
-    if (!formData.date) {
-      errors.date = "Datum is verplicht";
-    }
-
-    // Start time validation
-    if (!formData.startTime) {
-      errors.startTime = "Starttijd is verplicht";
-    } else {
-      const [startHour] = formData.startTime.split(":").map(Number);
-      if (startHour < 12) {
-        errors.startTime = "Starttijd moet tussen 12:00 en 23:59 liggen";
-      }
-    }
-
-    // End time validation (if not open ended)
-    if (!formData.isOpenEnded) {
-      if (!formData.endTime) {
-        errors.endTime = "Eindtijd is verplicht voor niet-open shifts";
-      } else {
-        const [endHour, endMinute] = formData.endTime.split(":").map(Number);
-
-        // End time can be 00:00 (midnight) or between 12:01 and 23:59
-        if (!(endHour === 0 && endMinute === 0) && endHour < 12) {
-          errors.endTime = "Eindtijd moet tussen 12:01 en 00:00 liggen";
-        }
-
-        // Check if end time is after start time
-        if (formData.startTime && formData.endTime) {
-          const [startHour, startMinute] = formData.startTime
-            .split(":")
-            .map(Number);
-
-          const startTotalMinutes = startHour * 60 + startMinute;
-          let endTotalMinutes = endHour * 60 + endMinute;
-
-          // Handle midnight (00:00) as end of day
-          if (endHour === 0) {
-            endTotalMinutes = 24 * 60; // 24:00 in minutes
-          }
-
-          const durationMinutes = endTotalMinutes - startTotalMinutes;
-
-          if (durationMinutes <= 0) {
-            errors.endTime = "Eindtijd moet na de starttijd liggen";
-          } else if (durationMinutes < 15) {
-            errors.endTime = "Shift moet minimaal 15 minuten duren";
-          } else if (durationMinutes > 12 * 60) {
-            errors.endTime = "Shift kan maximaal 12 uur duren";
-          }
-        }
-      }
-    }
-
-    // Notes validation (optional but limited)
-    if (formData.notes && formData.notes.length > 500) {
-      errors.notes = "Notities mogen maximaal 500 tekens bevatten";
-    }
-
-    setFieldErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const handleInputChange = (
+  // Custom input change handler that uses central validation
+  const handleFormInputChange = (
     field: keyof UpdateShiftRequest,
     value: string | number | boolean | null
   ) => {
@@ -277,12 +231,8 @@ export default function EditShiftPage() {
       processedValue = fromInputDateFormat(value);
     }
 
-    setFormData((prev) => ({ ...prev, [field]: processedValue }));
-
-    // Clear field error when user changes input
-    if (fieldErrors[field]) {
-      setFieldErrors((prev) => ({ ...prev, [field]: "" }));
-    }
+    // Use central validation handleInputChange
+    handleInputChange(field, processedValue, formData, setFormData);
 
     // Clear general error
     if (error) {
@@ -293,8 +243,31 @@ export default function EditShiftPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) {
+    // Clear previous errors
+    setError(null);
+    clearAllErrors();
+
+    // Prepare form data for validation
+    const validationData = {
+      ...formData,
+      // Add any additional context needed for validation
+      isOpenEnded: formData.isOpenEnded,
+    };
+
+    // Validate form using central validation system
+    const isValid = validateForm(validationData);
+
+    // Extra safety check for employeeId specifically
+    if (!formData.employeeId || formData.employeeId === 0) {
+      setFieldErrors((prev: Record<string, string>) => ({
+        ...prev,
+        employeeId: "Selecteer een medewerker",
+      }));
       return;
+    }
+
+    if (!isValid) {
+      return; // Validation errors will be shown via fieldErrors
     }
 
     setIsSubmitting(true);
@@ -351,26 +324,58 @@ export default function EditShiftPage() {
     }
   };
 
-  const getAvailabilityIcon = (isAvailable?: boolean | null) => {
-    if (isAvailable === true) {
-      return <CheckCircle className="h-5 w-5 text-green-600" />;
-    } else if (isAvailable === false) {
-      return <XCircle className="h-5 w-5 text-red-600" />;
-    } else {
+  // Updated availability functions to support verlof
+  const getAvailabilityIcon = (day: any) => {
+    if (!day) {
       return <Minus className="h-5 w-5 text-gray-400" />;
+    }
+
+    const status = getAvailabilityStatusFromDay(day);
+
+    switch (status) {
+      case AvailabilityStatus.Available:
+        return <CheckCircle className="h-5 w-5 text-green-600" />;
+      case AvailabilityStatus.NotAvailable:
+        return <XCircle className="h-5 w-5 text-red-600" />;
+      case AvailabilityStatus.TimeOff:
+        return <Plane className="h-5 w-5 text-purple-600" />;
+      default:
+        return <Minus className="h-5 w-5 text-gray-400" />;
     }
   };
 
-  const getAvailabilityText = (isAvailable?: boolean | null) => {
-    if (isAvailable === true) return "Beschikbaar";
-    if (isAvailable === false) return "Niet beschikbaar";
-    return "Niet opgegeven";
+  const getAvailabilityText = (day: any) => {
+    if (!day) return "Niet opgegeven";
+
+    const status = getAvailabilityStatusFromDay(day);
+
+    switch (status) {
+      case AvailabilityStatus.Available:
+        return "Beschikbaar";
+      case AvailabilityStatus.NotAvailable:
+        return "Niet beschikbaar";
+      case AvailabilityStatus.TimeOff:
+        return "Verlof";
+      default:
+        return "Niet opgegeven";
+    }
   };
 
-  const getAvailabilityColor = (isAvailable?: boolean | null) => {
-    if (isAvailable === true) return "#dcfce7"; // green-100
-    if (isAvailable === false) return "#fee2e2"; // red-100
-    return "#f3f4f6"; // gray-100
+  const getAvailabilityColor = (day: any) => {
+    if (!day) return "#f3f4f6"; // gray-100
+
+    const status = getAvailabilityStatusFromDay(day);
+
+    switch (status) {
+      case AvailabilityStatus.Available:
+        return "#dcfce7"; // green-100
+      case AvailabilityStatus.NotAvailable:
+        return "#fee2e2"; // red-100
+      case AvailabilityStatus.TimeOff:
+        return "#f3e8ff"; // purple-100
+      default:
+        return "#f3f4f6"; // gray-100
+    }
   };
 
   const getDayName = (dateString: string): string => {
@@ -538,7 +543,7 @@ export default function EditShiftPage() {
             {/* Form Section */}
             <div className="lg:col-span-2">
               <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8">
-                <form onSubmit={handleSubmit} className="space-y-8">
+                <form onSubmit={handleSubmit} className="space-y-8" noValidate>
                   {/* General Error */}
                   {error && (
                     <div className="p-4 bg-red-50/80 backdrop-blur-sm border border-red-200/50 rounded-xl text-red-700 text-center font-medium">
@@ -575,7 +580,7 @@ export default function EditShiftPage() {
                             id="employeeId"
                             value={formData.employeeId}
                             onChange={(e) =>
-                              handleInputChange(
+                              handleFormInputChange(
                                 "employeeId",
                                 parseInt(e.target.value)
                               )
@@ -639,7 +644,7 @@ export default function EditShiftPage() {
                             type="date"
                             value={toInputDateFormat(formData.date)}
                             onChange={(e) =>
-                              handleInputChange("date", e.target.value)
+                              handleFormInputChange("date", e.target.value)
                             }
                             className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${
                               fieldErrors.date
@@ -704,7 +709,7 @@ export default function EditShiftPage() {
                             type="time"
                             value={formData.startTime}
                             onChange={(e) =>
-                              handleInputChange("startTime", e.target.value)
+                              handleFormInputChange("startTime", e.target.value)
                             }
                             className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg ${
                               fieldErrors.startTime
@@ -713,8 +718,6 @@ export default function EditShiftPage() {
                             }`}
                             style={{ color: "#120309" }}
                             disabled={isSubmitting}
-                            min="12:00"
-                            max="23:59"
                             onFocus={(e) => {
                               if (!fieldErrors.startTime) {
                                 const target = e.target as HTMLInputElement;
@@ -773,7 +776,7 @@ export default function EditShiftPage() {
                             type="time"
                             value={formData.endTime || ""}
                             onChange={(e) =>
-                              handleInputChange("endTime", e.target.value)
+                              handleFormInputChange("endTime", e.target.value)
                             }
                             className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none transition-all duration-300 ${
                               formData.isOpenEnded
@@ -831,11 +834,14 @@ export default function EditShiftPage() {
                           type="checkbox"
                           checked={formData.isOpenEnded}
                           onChange={(e) => {
-                            handleInputChange("isOpenEnded", e.target.checked);
+                            handleFormInputChange(
+                              "isOpenEnded",
+                              e.target.checked
+                            );
                             if (e.target.checked) {
-                              handleInputChange("endTime", null);
+                              handleFormInputChange("endTime", null);
                             } else {
-                              handleInputChange("endTime", "18:00");
+                              handleFormInputChange("endTime", "18:00");
                             }
                           }}
                           className="w-5 h-5 rounded border-gray-300 focus:ring-2 focus:ring-orange-500"
@@ -846,7 +852,7 @@ export default function EditShiftPage() {
                           className="text-sm font-medium"
                           style={{ color: "#120309" }}
                         >
-                          Open einde (werkt tot sluitingstijd)
+                          Open einde
                         </span>
                       </label>
                     </div>
@@ -883,7 +889,7 @@ export default function EditShiftPage() {
                               id="shiftType"
                               value={formData.shiftType}
                               onChange={(e) =>
-                                handleInputChange(
+                                handleFormInputChange(
                                   "shiftType",
                                   parseInt(e.target.value) as ShiftType
                                 )
@@ -923,7 +929,10 @@ export default function EditShiftPage() {
                               type="checkbox"
                               checked={formData.isStandby}
                               onChange={(e) =>
-                                handleInputChange("isStandby", e.target.checked)
+                                handleFormInputChange(
+                                  "isStandby",
+                                  e.target.checked
+                                )
                               }
                               className="w-5 h-5 rounded border-gray-300 focus:ring-2 focus:ring-orange-500"
                               style={{ accentColor: "#d5896f" }}
@@ -960,7 +969,7 @@ export default function EditShiftPage() {
                             id="notes"
                             value={formData.notes || ""}
                             onChange={(e) =>
-                              handleInputChange("notes", e.target.value)
+                              handleFormInputChange("notes", e.target.value)
                             }
                             className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:border-transparent transition-all duration-300 bg-white/60 hover:bg-white/80 focus:bg-white focus:shadow-lg resize-none ${
                               fieldErrors.notes
@@ -1100,13 +1109,11 @@ export default function EditShiftPage() {
                         key={index}
                         className="flex items-center justify-between p-3 rounded-xl border border-gray-200 transition-all duration-200"
                         style={{
-                          backgroundColor: getAvailabilityColor(
-                            day.isAvailable
-                          ),
+                          backgroundColor: getAvailabilityColor(day),
                         }}
                       >
                         <div className="flex items-center space-x-3">
-                          {getAvailabilityIcon(day.isAvailable)}
+                          {getAvailabilityIcon(day)}
                           <div>
                             <div
                               className="text-sm font-medium"
@@ -1119,7 +1126,7 @@ export default function EditShiftPage() {
                               style={{ color: "#67697c" }}
                             >
                               {formatDisplayDate(day.date)} •{" "}
-                              {getAvailabilityText(day.isAvailable)}
+                              {getAvailabilityText(day)}
                             </div>
                           </div>
                         </div>
@@ -1134,6 +1141,36 @@ export default function EditShiftPage() {
                         )}
                       </div>
                     ))}
+
+                    {/* Legend - UPDATED to include verlof */}
+                    <div className="mt-6 pt-4 border-t border-gray-200/50">
+                      <p
+                        className="text-xs font-medium mb-3"
+                        style={{ color: "#67697c" }}
+                      >
+                        Legenda:
+                      </p>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="flex items-center space-x-2">
+                          <CheckCircle className="h-3 w-3 text-green-600" />
+                          <span className="text-gray-600">Beschikbaar</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <XCircle className="h-3 w-3 text-red-600" />
+                          <span className="text-gray-600">
+                            Niet beschikbaar
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Plane className="h-3 w-3 text-purple-600" />
+                          <span className="text-gray-600">Verlof</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Minus className="h-3 w-3 text-gray-400" />
+                          <span className="text-gray-600">Niet opgegeven</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   <div className="text-center py-8">
