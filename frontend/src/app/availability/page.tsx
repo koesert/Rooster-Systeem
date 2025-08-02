@@ -17,6 +17,7 @@ import {
   User,
   Edit,
   Plane,
+  Eye,
 } from "lucide-react";
 import {
   WeekAvailability,
@@ -211,6 +212,45 @@ export default function AvailabilityPage() {
 
     const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
     return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  };
+
+  /**
+   * Check if a given week is the current week
+   */
+  const isCurrentWeek = (weekStart: string): boolean => {
+    const today = new Date();
+    const [day, month, year] = weekStart.split("-");
+    const weekDate = new Date(
+      parseInt(year),
+      parseInt(month) - 1,
+      parseInt(day)
+    );
+
+    // Get Monday of current week
+    const dayOfWeek = today.getDay();
+    const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const currentMondayDate = new Date(today);
+    currentMondayDate.setDate(today.getDate() + daysToMonday);
+
+    // Compare week starts
+    return (
+      weekDate.getFullYear() === currentMondayDate.getFullYear() &&
+      weekDate.getMonth() === currentMondayDate.getMonth() &&
+      weekDate.getDate() === currentMondayDate.getDate()
+    );
+  };
+
+  /**
+   * Get week status text with current week indication
+   */
+  const getWeekStatusText = (weekStart: string, weekIndex: number): string => {
+    if (isCurrentWeek(weekStart)) {
+      return "Huidige week (alleen bekijken)";
+    }
+    if (weekIndex === 1) {
+      return "Volgende week";
+    }
+    return `${weekIndex} weken vooruit`;
   };
 
   const navigateWeeks = (direction: "prev" | "next") => {
@@ -441,14 +481,28 @@ export default function AvailabilityPage() {
 
               {/* Current Week Availability */}
               {currentWeek && (
-                <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-6 max-[500px]:p-3">
-                  <h3
-                    className="text-lg font-semibold mb-6"
-                    style={{ color: "#120309" }}
-                  >
-                    Beschikbaarheid voor week van{" "}
-                    {formatWeekRange(currentWeek.weekStart)}
-                  </h3>
+                <div
+                  className={`bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-6 max-[500px]:p-3 ${
+                    isCurrentWeek(currentWeek.weekStart)
+                      ? "ring-2 ring-gray-200"
+                      : ""
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-6">
+                    <h3
+                      className="text-lg font-semibold"
+                      style={{ color: "#120309" }}
+                    >
+                      Beschikbaarheid voor week van{" "}
+                      {formatWeekRange(currentWeek.weekStart)}
+                    </h3>
+                    {isCurrentWeek(currentWeek.weekStart) && (
+                      <span className="inline-flex items-center space-x-1 text-sm font-medium px-3 py-1 bg-gray-100 text-gray-700 rounded-lg">
+                        <Eye className="h-4 w-4" />
+                        <span>Alleen bekijken</span>
+                      </span>
+                    )}
+                  </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4">
                     {currentWeek.days.map(
@@ -498,21 +552,33 @@ export default function AvailabilityPage() {
                         (day) => day.notes && day.notes.trim() !== ""
                       );
 
+                      const isCurrent = isCurrentWeek(week.weekStart);
+
                       return (
                         <div
                           key={weekIndex}
                           className={`p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer hover:bg-gray-50 ${
                             weekIndex === currentWeekIndex
                               ? "border-blue-300 bg-blue-50"
+                              : isCurrent
+                              ? "border-gray-300 bg-gray-50/50"
                               : "border-gray-200 bg-white"
                           }`}
                           onClick={() => setCurrentWeekIndex(weekIndex)}
                         >
                           <div className="flex items-center justify-between">
                             <div>
-                              <h4 className="font-semibold text-gray-900">
-                                Week {getWeekNumber(week.weekStart)}
-                              </h4>
+                              <div className="flex items-center space-x-2">
+                                <h4 className="font-semibold text-gray-900">
+                                  Week {getWeekNumber(week.weekStart)}
+                                </h4>
+                                {isCurrent && (
+                                  <span className="inline-flex items-center space-x-1 text-xs font-medium px-2 py-1 bg-gray-100 text-gray-700 rounded">
+                                    <Eye className="h-3 w-3" />
+                                    <span>Huidig</span>
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-sm text-gray-600">
                                 {formatWeekRange(week.weekStart)}
                               </p>

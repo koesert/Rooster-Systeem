@@ -73,7 +73,7 @@ public class AvailabilityController : ControllerBase
             // Default to current week if no dates provided
             var today = DateTime.Today;
             var defaultStart = _availabilityService.GetMondayOfWeek(today);
-            var defaultEnd = defaultStart.AddDays(27); // 4 weeks
+            var defaultEnd = defaultStart.AddDays(34); // 5 weeks
 
             var start = string.IsNullOrEmpty(startDate) ? _availabilityService.FormatDateString(defaultStart) : startDate;
             var end = string.IsNullOrEmpty(endDate) ? _availabilityService.FormatDateString(defaultEnd) : endDate;
@@ -179,7 +179,7 @@ public class AvailabilityController : ControllerBase
             // Default to current week if no dates provided
             var today = DateTime.Today;
             var defaultStart = _availabilityService.GetMondayOfWeek(today);
-            var defaultEnd = defaultStart.AddDays(27); // 4 weeks
+            var defaultEnd = defaultStart.AddDays(34); // 5 weeks
 
             var start = string.IsNullOrEmpty(startDate) ? _availabilityService.FormatDateString(defaultStart) : startDate;
             var end = string.IsNullOrEmpty(endDate) ? _availabilityService.FormatDateString(defaultEnd) : endDate;
@@ -275,7 +275,7 @@ public class AvailabilityController : ControllerBase
         try
         {
             var today = DateTime.Today;
-            var maxDate = today.AddDays(4 * 7 - 1);
+            var maxDate = today.AddDays(5 * 7 - 1); // 5 weeks
 
             return Ok(new
             {
