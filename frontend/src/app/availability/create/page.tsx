@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Plane,
   Lock,
+  Eye,
 } from "lucide-react";
 import {
   UpdateWeekAvailability,
@@ -32,8 +33,8 @@ export default function CreateAvailabilityPage() {
   const { showApiError } = useError();
   const router = useRouter();
 
-  // Week navigation state
-  const [selectedWeekIndex, setSelectedWeekIndex] = useState(0); // 0 = current week, 1 = next week, etc.
+  // Week navigation state - start at 1 (next week) instead of 0 (current week)
+  const [selectedWeekIndex, setSelectedWeekIndex] = useState(1); // 0 = current week (readonly), 1 = next week (first editable), etc.
 
   // Form state
   const [formData, setFormData] = useState<UpdateDayAvailability[]>([]);
@@ -191,8 +192,14 @@ export default function CreateAvailabilityPage() {
 
   const getWeekStatusText = (): string => {
     if (selectedWeekIndex === 0) return "Huidige week";
-    if (selectedWeekIndex === 1) return "1 week vooruit";
+    if (selectedWeekIndex === 1) return "Volgende week";
+    if (selectedWeekIndex === 2) return "2 weken vooruit";
     return `${selectedWeekIndex} weken vooruit`;
+  };
+
+  // Check if current week is selected (readonly mode)
+  const isCurrentWeek = (): boolean => {
+    return selectedWeekIndex === 0;
   };
 
   // Check if a day has verlof (TimeOff status)
@@ -209,8 +216,8 @@ export default function CreateAvailabilityPage() {
     field: keyof UpdateDayAvailability,
     value: string | boolean
   ) => {
-    // Don't allow updates for verlof days
-    if (isDayVerlof(dayIndex) && field === "isAvailable") {
+    // Don't allow updates for current week or verlof days
+    if (isCurrentWeek() || (isDayVerlof(dayIndex) && field === "isAvailable")) {
       return;
     }
 
@@ -222,6 +229,11 @@ export default function CreateAvailabilityPage() {
   };
 
   const handleSubmit = async () => {
+    // Don't allow submit for current week
+    if (isCurrentWeek()) {
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
 
@@ -248,8 +260,8 @@ export default function CreateAvailabilityPage() {
       await api.updateMyWeekAvailability(updateData);
 
       // Check if we should go to next week or back to availability page
-      if (saveAndGoToNextWeek && selectedWeekIndex < 3) {
-        // Go to next week
+      if (saveAndGoToNextWeek && selectedWeekIndex < 4) {
+        // Go to next week (max index is 4 for 5 weeks)
         setSelectedWeekIndex((prev) => prev + 1);
         setSaveAndGoToNextWeek(false); // Reset checkbox
       } else {
@@ -293,8 +305,8 @@ export default function CreateAvailabilityPage() {
   const navigateWeek = (direction: "prev" | "next") => {
     if (direction === "prev" && selectedWeekIndex > 0) {
       setSelectedWeekIndex((prev) => prev - 1);
-    } else if (direction === "next" && selectedWeekIndex < 3) {
-      // Max 4 weeks ahead
+    } else if (direction === "next" && selectedWeekIndex < 4) {
+      // Max 5 weeks ahead (0-4)
       setSelectedWeekIndex((prev) => prev + 1);
     }
   };
@@ -376,6 +388,22 @@ export default function CreateAvailabilityPage() {
             </div>
           </div>
 
+          {/* Current Week Notice */}
+          {isCurrentWeek() && (
+            <div className="mb-8">
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
+                <div className="flex items-center space-x-3">
+                  <Eye className="h-6 w-6 text-gray-600" />
+                  <div>
+                    <p className="text-gray-600">
+                      De huidige week kan niet meer worden aangepast
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Error State */}
           {error && (
             <div className="mb-8 bg-red-50 border border-red-200 rounded-xl p-6">
@@ -418,7 +446,7 @@ export default function CreateAvailabilityPage() {
 
                 <button
                   onClick={() => navigateWeek("next")}
-                  disabled={selectedWeekIndex >= 3}
+                  disabled={selectedWeekIndex >= 4}
                   className="flex items-center space-x-2 px-4 py-2 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   <span className="text-sm font-medium max-[500px]:hidden">
@@ -443,7 +471,11 @@ export default function CreateAvailabilityPage() {
               </div>
             </div>
           ) : (
-            <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8">
+            <div
+              className={`bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8 ${
+                isCurrentWeek() ? "opacity-75" : ""
+              }`}
+            >
               <div className="space-y-6">
                 <div className="space-y-4">
                   <h3
@@ -455,6 +487,7 @@ export default function CreateAvailabilityPage() {
 
                   {formData.map((day, index) => {
                     const isVerlof = isDayVerlof(index);
+                    const isReadonly = isCurrentWeek();
 
                     return (
                       <div key={day.date} className="space-y-2">
@@ -474,7 +507,11 @@ export default function CreateAvailabilityPage() {
 
                         <div
                           className={`p-4 border border-gray-200 rounded-xl ${
-                            isVerlof ? "bg-purple-50/50" : "bg-gray-50/50"
+                            isVerlof
+                              ? "bg-purple-50/50"
+                              : isReadonly
+                              ? "bg-gray-50/50"
+                              : "bg-gray-50/50"
                           }`}
                         >
                           {isVerlof ? (
@@ -492,7 +529,7 @@ export default function CreateAvailabilityPage() {
                                 </div>
                               </div>
 
-                              {/* Show notes field for verlof days (can still be edited) */}
+                              {/* Show notes field for verlof days (can still be edited if not current week) */}
                               <div>
                                 <label
                                   htmlFor={`notes-${index}`}
@@ -514,7 +551,8 @@ export default function CreateAvailabilityPage() {
                                   placeholder="Opmerkingen..."
                                   rows={2}
                                   maxLength={500}
-                                  className="mt-1 block w-full px-3 py-2 text-gray-900 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#d5896f] focus:border-transparent resize-none"
+                                  disabled={isReadonly}
+                                  className="mt-1 block w-full px-3 py-2 text-gray-900 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#d5896f] focus:border-transparent resize-none disabled:bg-gray-100 disabled:cursor-not-allowed"
                                   style={{
                                     borderColor: "#d1d5db",
                                   }}
@@ -526,6 +564,39 @@ export default function CreateAvailabilityPage() {
                                   {day.notes?.length || 0}/500 tekens
                                 </p>
                               </div>
+                            </div>
+                          ) : isReadonly ? (
+                            // Current week - readonly mode
+                            <div className="space-y-3">
+                              <div className="flex items-center space-x-3 p-4 bg-gray-100/60 rounded-lg border border-gray-200">
+                                <Lock className="h-5 w-5 text-gray-600" />
+                                <div>
+                                  <p className="text-sm font-medium text-gray-800">
+                                    {day.isAvailable
+                                      ? "Beschikbaar"
+                                      : "Niet beschikbaar"}
+                                  </p>
+                                  <p className="text-xs text-gray-600">
+                                    Huidige week kan niet worden aangepast
+                                  </p>
+                                </div>
+                              </div>
+
+                              {day.notes && (
+                                <div>
+                                  <label
+                                    className="text-sm font-medium"
+                                    style={{ color: "#67697c" }}
+                                  >
+                                    Notities
+                                  </label>
+                                  <div className="mt-1 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                    <p className="text-sm text-gray-700">
+                                      {day.notes}
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           ) : (
                             // Regular day - normal availability selection
@@ -623,32 +694,36 @@ export default function CreateAvailabilityPage() {
                   })}
                 </div>
 
-                {/* Save and Next Week Option */}
-                <div className="border-t border-gray-200/50 pt-6">
-                  <label className="flex items-center space-x-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={saveAndGoToNextWeek}
-                      onChange={(e) => setSaveAndGoToNextWeek(e.target.checked)}
-                      disabled={selectedWeekIndex >= 3}
-                      className="h-4 w-4 text-[#d5896f] border-gray-300 rounded focus:ring-[#d5896f] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                    />
-                    <span
-                      className={`text-sm font-medium ${
-                        selectedWeekIndex >= 3
-                          ? "text-gray-400"
-                          : "text-gray-700"
-                      }`}
-                    >
-                      Opslaan en naar volgende week
-                    </span>
-                  </label>
-                  {selectedWeekIndex >= 3 && (
-                    <p className="text-xs text-gray-500 mt-1 ml-7">
-                      Je kunt maximaal 4 weken vooruit plannen
-                    </p>
-                  )}
-                </div>
+                {/* Save and Next Week Option - only show if not current week */}
+                {!isCurrentWeek() && (
+                  <div className="border-t border-gray-200/50 pt-6">
+                    <label className="flex items-center space-x-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={saveAndGoToNextWeek}
+                        onChange={(e) =>
+                          setSaveAndGoToNextWeek(e.target.checked)
+                        }
+                        disabled={selectedWeekIndex >= 4}
+                        className="h-4 w-4 text-[#d5896f] border-gray-300 rounded focus:ring-[#d5896f] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      />
+                      <span
+                        className={`text-sm font-medium ${
+                          selectedWeekIndex >= 4
+                            ? "text-gray-400"
+                            : "text-gray-700"
+                        }`}
+                      >
+                        Opslaan en naar volgende week
+                      </span>
+                    </label>
+                    {selectedWeekIndex >= 4 && (
+                      <p className="text-xs text-gray-500 mt-1 ml-7">
+                        Je kunt maximaal 5 weken vooruit plannen
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 {/* Form Actions */}
                 <div className="flex items-center justify-between space-x-4 pt-6 border-t border-gray-200/50">
@@ -661,26 +736,30 @@ export default function CreateAvailabilityPage() {
                     <span className="max-[500px]:hidden">Annuleren</span>
                   </button>
 
-                  <button
-                    onClick={handleSubmit}
-                    disabled={isSubmitting}
-                    className="flex items-center space-x-2 px-6 py-3 rounded-xl text-white font-semibold transition-all duration-300 hover:shadow-lg hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                    style={{
-                      background: "linear-gradient(135deg, #d5896f, #d5896f90)",
-                    }}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                        <span>Opslaan...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Save className="h-5 w-5" />
-                        <span>Opslaan</span>
-                      </>
-                    )}
-                  </button>
+                  {/* Only show save button if not current week */}
+                  {!isCurrentWeek() && (
+                    <button
+                      onClick={handleSubmit}
+                      disabled={isSubmitting}
+                      className="flex items-center space-x-2 px-6 py-3 rounded-xl text-white font-semibold transition-all duration-300 hover:shadow-lg hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                      style={{
+                        background:
+                          "linear-gradient(135deg, #d5896f, #d5896f90)",
+                      }}
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                          <span>Opslaan...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Save className="h-5 w-5" />
+                          <span>Opslaan</span>
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

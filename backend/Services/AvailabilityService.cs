@@ -112,13 +112,13 @@ public class AvailabilityService : IAvailabilityService
             }
         }
 
-        // Check if current week is locked (cannot be modified after Monday 00:00)
+        // Current week is always locked (cannot be modified)
         var today = DateTime.Today;
         var currentWeekMonday = GetMondayOfWeek(today);
 
         if (mondayDate <= currentWeekMonday)
         {
-            throw new InvalidOperationException("De huidige week kan niet meer worden aangepast");
+            throw new InvalidOperationException("De huidige week kan niet worden aangepast");
         }
 
         // Get existing availability records for the week
@@ -283,7 +283,7 @@ public class AvailabilityService : IAvailabilityService
     {
         var today = DateTime.Today;
         var currentWeekMonday = GetMondayOfWeek(today);
-        var maxAllowedDate = currentWeekMonday.AddDays(4 * 7 - 1); // 4 weeks from current week start
+        var maxAllowedDate = currentWeekMonday.AddDays(5 * 7 - 1); // 5 weeks from current week start
 
         return date >= currentWeekMonday && date <= maxAllowedDate;
     }
