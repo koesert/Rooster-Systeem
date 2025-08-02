@@ -159,7 +159,39 @@ export class ValidationManager {
       },
     ],
 
-    // Date validation
+    // Date validation for shifts (accepts DD-MM-YYYY format)
+    date: [
+      { required: true, message: "Datum is verplicht" },
+      {
+        custom: (value: string) => {
+          if (!value || !value.trim()) return null;
+
+          // Check if it's in DD-MM-YYYY format
+          const dateRegex = /^(\d{2})-(\d{2})-(\d{4})$/;
+          const match = value.match(dateRegex);
+          
+          if (!match) {
+            return "Ongeldige datum";
+          }
+
+          const [, day, month, year] = match;
+          const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+
+          // Validate the date is correct (handles invalid dates like 31-02-2023)
+          if (
+            date.getDate() === parseInt(day) &&
+            date.getMonth() === parseInt(month) - 1 &&
+            date.getFullYear() === parseInt(year)
+          ) {
+            return null; // Valid date
+          }
+
+          return "Ongeldige datum";
+        },
+      },
+    ],
+
+    // Birth date validation (for employees)
     birthDate: [
       { required: true, message: "Geboortedatum is verplicht" },
       {
@@ -315,7 +347,25 @@ export class ValidationManager {
       },
     ],
 
-    // General text fields
+    // Shift type validation
+    shiftType: [
+      {
+        custom: (value: number) => {
+          if (value === undefined || value === null) {
+            return "Selecteer een shift type";
+          }
+
+          // Check if it's a valid shift type (assuming enum values 0, 1, 2)
+          if (![0, 1, 2].includes(value)) {
+            return "Ongeldig shift type";
+          }
+
+          return null;
+        },
+      },
+    ],
+
+    // General text fields with security protection
     reason: [
       { required: true, message: "Reden is verplicht" },
       { maxLength: 500, message: "Reden mag maximaal 500 tekens bevatten" },
@@ -354,9 +404,11 @@ export class ValidationManager {
 
     // Employee selection
     employeeId: [
+      { required: true, message: "Selecteer een medewerker" },
       {
-        custom: (value: number) => {
-          if (!value || value === 0) {
+        custom: (value: any) => {
+          const numValue = typeof value === 'string' ? parseInt(value) : value;
+          if (!numValue || numValue === 0 || isNaN(numValue)) {
             return "Selecteer een medewerker";
           }
           return null;

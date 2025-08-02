@@ -351,12 +351,6 @@ public class ShiftService : IShiftService
             throw new InvalidOperationException($"Medewerker met ID {employeeId} bestaat niet");
         }
 
-        // Validate date is not in the past (allow same day)
-        if (date.Date < DateTime.Today)
-        {
-            throw new InvalidOperationException("Shift datum mag niet in het verleden liggen");
-        }
-
         // Validate time logic
         if (!isOpenEnded && endTime != null && endTime <= startTime)
         {

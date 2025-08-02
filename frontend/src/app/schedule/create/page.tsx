@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useModal } from "@/contexts/ModalContext";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { useValidation } from "@/hooks/useValidation";
 import LoadingScreen from "@/components/LoadingScreen";
 import {
   Plus,
@@ -71,10 +72,28 @@ export default function CreateShiftPage() {
     notes: "",
   });
 
+  // Validation setup - using central validation system
+  const {
+    fieldErrors,
+    setFieldErrors,
+    validateForm,
+    handleInputChange,
+    clearAllErrors,
+  } = useValidation({
+    fields: [
+      "employeeId",
+      "date",
+      "startTime",
+      "endTime",
+      "shiftType",
+      "notes",
+    ],
+    validateOnChange: false, // Only validate on submit
+  });
+
   // UI state
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // Week view state
   const [currentWeekDate, setCurrentWeekDate] = useState(new Date());
@@ -184,28 +203,38 @@ export default function CreateShiftPage() {
     e.preventDefault();
     if (isSubmitting) return;
 
-    // Reset errors
+    // Clear previous errors
     setError(null);
-    setFieldErrors({});
+    clearAllErrors();
 
-    // Basic validation
-    const errors: Record<string, string> = {};
+    // Prepare form data for validation
+    const validationData = {
+      ...formData,
+      // Add any additional context needed for validation
+      isOpenEnded: formData.isOpenEnded,
+    };
+
+    // Validate form using central validation system
+    const isValid = validateForm(validationData);
+
+    // Debug log to see what's happening
+    console.log("Form validation result:", isValid);
+    console.log("Field errors:", fieldErrors);
+    console.log("Employee ID:", formData.employeeId);
+
+    // Extra safety check for employeeId specifically
     if (!formData.employeeId || formData.employeeId === 0) {
-      errors.employeeId = "Selecteer een werknemer";
-    }
-    if (!formData.date) {
-      errors.date = "Selecteer een datum";
-    }
-    if (!formData.startTime) {
-      errors.startTime = "Selecteer een starttijd";
-    }
-    if (!formData.endTime && !formData.isOpenEnded) {
-      errors.endTime = "Selecteer een eindtijd of kies voor open einde";
+      setFieldErrors((prev: Record<string, string>) => ({
+        ...prev,
+        employeeId: "Selecteer een medewerker",
+      }));
+      console.log("Employee ID is 0, stopping submit");
+      return;
     }
 
-    if (Object.keys(errors).length > 0) {
-      setFieldErrors(errors);
-      return;
+    if (!isValid) {
+      console.log("Validation failed, stopping submit");
+      return; // Validation errors will be shown via fieldErrors
     }
 
     setIsSubmitting(true);
@@ -233,6 +262,9 @@ export default function CreateShiftPage() {
         notes: "",
       });
 
+      // Clear any remaining errors
+      clearAllErrors();
+
       // Reload data
       loadWeekShifts();
       loadAllEmployeesAvailability();
@@ -246,15 +278,12 @@ export default function CreateShiftPage() {
     }
   };
 
-  const handleInputChange = (
+  // Custom input change handler that uses central validation
+  const handleFormInputChange = (
     field: string,
     value: string | number | boolean
   ) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    // Clear field error when user starts typing
-    if (fieldErrors[field]) {
-      setFieldErrors((prev) => ({ ...prev, [field]: "" }));
-    }
+    handleInputChange(field, value, formData, setFormData);
   };
 
   // Navigation helpers
@@ -704,7 +733,7 @@ export default function CreateShiftPage() {
                       id="employeeId"
                       value={formData.employeeId}
                       onChange={(e) =>
-                        handleInputChange(
+                        handleFormInputChange(
                           "employeeId",
                           parseInt(e.target.value)
                         )
@@ -752,7 +781,7 @@ export default function CreateShiftPage() {
                       id="date"
                       value={toInputDateFormat(formData.date)}
                       onChange={(e) =>
-                        handleInputChange(
+                        handleFormInputChange(
                           "date",
                           fromInputDateFormat(e.target.value)
                         )
@@ -790,7 +819,7 @@ export default function CreateShiftPage() {
                       id="startTime"
                       value={formData.startTime}
                       onChange={(e) =>
-                        handleInputChange("startTime", e.target.value)
+                        handleFormInputChange("startTime", e.target.value)
                       }
                       className={`w-full pl-12 pr-4 py-3 border rounded-xl text-gray-900 focus:outline-none focus:ring-2 transition-all duration-200 ${
                         fieldErrors.startTime
@@ -828,7 +857,7 @@ export default function CreateShiftPage() {
                       id="endTime"
                       value={formData.endTime || ""}
                       onChange={(e) =>
-                        handleInputChange("endTime", e.target.value)
+                        handleFormInputChange("endTime", e.target.value)
                       }
                       className={`w-full pl-12 pr-4 py-3 border rounded-xl text-gray-900 focus:outline-none focus:ring-2 transition-all duration-200 ${
                         fieldErrors.endTime
@@ -852,7 +881,7 @@ export default function CreateShiftPage() {
                       type="checkbox"
                       checked={formData.isOpenEnded}
                       onChange={(e) =>
-                        handleInputChange("isOpenEnded", e.target.checked)
+                        handleFormInputChange("isOpenEnded", e.target.checked)
                       }
                       className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500/50"
                       disabled={isSubmitting}
@@ -873,7 +902,7 @@ export default function CreateShiftPage() {
                       type="checkbox"
                       checked={formData.isStandby}
                       onChange={(e) =>
-                        handleInputChange("isStandby", e.target.checked)
+                        handleFormInputChange("isStandby", e.target.checked)
                       }
                       className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500/50"
                       disabled={isSubmitting}
@@ -904,12 +933,16 @@ export default function CreateShiftPage() {
                       id="shiftType"
                       value={formData.shiftType}
                       onChange={(e) =>
-                        handleInputChange(
+                        handleFormInputChange(
                           "shiftType",
                           parseInt(e.target.value) as ShiftType
                         )
                       }
-                      className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl text-gray-900 bg-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all duration-200"
+                      className={`w-full pl-12 pr-4 py-3 border rounded-xl text-gray-900 focus:outline-none focus:ring-2 transition-all duration-200 ${
+                        fieldErrors.shiftType
+                          ? "border-red-300 bg-red-50/50 focus:ring-red-500/50"
+                          : "border-gray-200 bg-white/60 focus:ring-blue-500/50"
+                      }`}
                       disabled={isSubmitting}
                     >
                       <option value={ShiftType.Bedienen}>Bedienen</option>
@@ -919,6 +952,11 @@ export default function CreateShiftPage() {
                       </option>
                     </select>
                   </div>
+                  {fieldErrors.shiftType && (
+                    <p className="mt-2 text-sm text-red-600">
+                      {fieldErrors.shiftType}
+                    </p>
+                  )}
                 </div>
 
                 {/* Notes */}
@@ -941,14 +979,23 @@ export default function CreateShiftPage() {
                       id="notes"
                       value={formData.notes}
                       onChange={(e) =>
-                        handleInputChange("notes", e.target.value)
+                        handleFormInputChange("notes", e.target.value)
                       }
                       placeholder="Opmerkingen..."
                       rows={3}
-                      className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 bg-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all duration-200 resize-none"
+                      className={`w-full pl-12 pr-4 py-3 border rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 transition-all duration-200 resize-none ${
+                        fieldErrors.notes
+                          ? "border-red-300 bg-red-50/50 focus:ring-red-500/50"
+                          : "border-gray-200 bg-white/60 focus:ring-blue-500/50"
+                      }`}
                       disabled={isSubmitting}
                     />
                   </div>
+                  {fieldErrors.notes && (
+                    <p className="mt-2 text-sm text-red-600">
+                      {fieldErrors.notes}
+                    </p>
+                  )}
                 </div>
 
                 {/* Submit Button */}
