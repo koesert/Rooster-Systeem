@@ -221,7 +221,7 @@ export default function AvailabilityPage() {
     const formatDate = (date: Date) => {
       return date.toLocaleDateString("nl-NL", {
         day: "numeric",
-        month: "short",
+        month: "long",
       });
     };
 
@@ -353,14 +353,14 @@ export default function AvailabilityPage() {
                   {!selectedEmployeeId && (
                     <button
                       onClick={() => router.push("/availability/create")}
-                      className="flex items-center space-x-2 px-6 py-3 max-[700px]:px-3 max-[500px]:space-x-0 rounded-xl text-white font-semibold transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer"
+                      className="flex items-center space-x-2 max-[549px]:space-x-0 px-3 py-3 min-[550px]:px-6 rounded-xl text-white font-semibold transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer"
                       style={{
                         background:
                           "linear-gradient(135deg, #d5896f, #d5896f90)",
                       }}
                     >
                       <Edit className="h-5 w-5" />
-                      <span className="max-[700px]:hidden">Aanpassen</span>
+                      <span className="hidden min-[550px]:inline">Aanpassen</span>
                     </button>
                   )}
                 </div>
@@ -514,7 +514,7 @@ export default function AvailabilityPage() {
                       className="text-lg font-semibold"
                       style={{ color: "#120309" }}
                     >
-                      Beschikbaarheid voor week van{" "}
+                      Beschikbaarheid van{" "}
                       {formatWeekRange(currentWeek.weekStart)}
                     </h3>
                     {isCurrentWeek(currentWeek.weekStart) && (
