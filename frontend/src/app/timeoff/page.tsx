@@ -345,7 +345,7 @@ export default function TimeOffPage() {
               <div className="overflow-x-auto">
                 <table className="w-full" style={{ tableLayout: "fixed" }}>
                   <colgroup>
-                    <col style={{ width: "200px" }} />
+                    {isManager() && <col style={{ width: "200px" }} />}
                     <col style={{ width: "200px" }} />
                     <col style={{ width: "200px" }} />
                     <col style={{ width: "200px" }} />
@@ -358,12 +358,14 @@ export default function TimeOffPage() {
                     }}
                   >
                     <tr>
-                      <th
-                        className="px-6 py-4 text-left text-sm font-semibold"
-                        style={{ color: "#120309" }}
-                      >
-                        Medewerker
-                      </th>
+                      {isManager() && (
+                        <th
+                          className="px-6 py-4 text-left text-sm font-semibold"
+                          style={{ color: "#120309" }}
+                        >
+                          Medewerker
+                        </th>
+                      )}
                       <th
                         className="px-6 py-4 text-left text-sm font-semibold"
                         style={{ color: "#120309" }}
@@ -393,7 +395,7 @@ export default function TimeOffPage() {
                   <tbody>
                     {filteredRequests.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="px-6 py-12 text-center">
+                        <td colSpan={isManager() ? 5 : 4} className="px-6 py-12 text-center">
                           <div className="flex flex-col items-center space-y-3">
                             <CalendarCheck
                               className="h-12 w-12"
@@ -425,30 +427,32 @@ export default function TimeOffPage() {
                           key={request.id}
                           className="border-b border-gray-200/30 hover:bg-white/40 transition-all duration-200"
                         >
-                          <td className="px-6 py-4">
-                            <div className="flex items-center space-x-3">
-                              <div
-                                className="p-2 rounded-lg"
-                                style={{
-                                  background:
-                                    "linear-gradient(135deg, #d5896f20, #d5896f10)",
-                                }}
-                              >
-                                <User
-                                  className="h-4 w-4"
-                                  style={{ color: "#d5896f" }}
-                                />
-                              </div>
-                              <div>
-                                <p
-                                  className="font-semibold"
-                                  style={{ color: "#120309" }}
+                          {isManager() && (
+                            <td className="px-6 py-4">
+                              <div className="flex items-center space-x-3">
+                                <div
+                                  className="p-2 rounded-lg"
+                                  style={{
+                                    background:
+                                      "linear-gradient(135deg, #d5896f20, #d5896f10)",
+                                  }}
                                 >
-                                  {request.employeeName}
-                                </p>
+                                  <User
+                                    className="h-4 w-4"
+                                    style={{ color: "#d5896f" }}
+                                  />
+                                </div>
+                                <div>
+                                  <p
+                                    className="font-semibold"
+                                    style={{ color: "#120309" }}
+                                  >
+                                    {request.employeeName}
+                                  </p>
+                                </div>
                               </div>
-                            </div>
-                          </td>
+                            </td>
+                          )}
                           <td className="px-6 py-4">
                             <div className="flex flex-col">
                               <span
