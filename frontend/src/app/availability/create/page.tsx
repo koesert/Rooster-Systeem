@@ -353,8 +353,8 @@ export default function CreateAvailabilityPage() {
         setSelectedWeekIndex((prev) => prev + 1);
         setSaveAndGoToNextWeek(false); // Reset checkbox
       } else {
-        // Success! Redirect back to availability page with updated flag
-        router.push("/availability?updated=true");
+        // Success! Redirect back to availability page
+        router.push("/availability");
       }
     } catch (error: unknown) {
       console.error("Error saving availability:", error);

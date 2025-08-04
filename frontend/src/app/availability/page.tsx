@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useError } from "@/contexts/ErrorContext";
 import { usePageTitle } from "@/hooks/usePageTitle";
@@ -34,7 +34,6 @@ export default function AvailabilityPage() {
   const { user, isLoading, isManager } = useAuth();
   const { showApiError } = useError();
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   // Availability data and navigation state
   const [weekAvailabilities, setWeekAvailabilities] = useState<
@@ -101,7 +100,7 @@ export default function AvailabilityPage() {
     }
   }, [showApiError]);
 
-  const loadAvailability = useCallback(async (forceReload = false) => {
+  const loadAvailability = useCallback(async () => {
     setIsLoadingAvailability(true);
     setError(null);
     try {
@@ -118,28 +117,18 @@ export default function AvailabilityPage() {
 
       if (selectedEmployeeId && isManager()) {
         availability = await api.getEmployeeAvailability(
-          selectedEmployeeId, 
-          startDateString, 
+          selectedEmployeeId,
+          startDateString,
           endDateString
         );
       } else {
         availability = await api.getMyAvailability(
-          startDateString, 
+          startDateString,
           endDateString
         );
       }
 
       setWeekAvailabilities(availability);
-
-      // If we force reloaded and have data, scroll to the first non-current week
-      if (forceReload && availability.length > 0) {
-        const firstEditableWeekIndex = availability.findIndex((week) => 
-          !isCurrentWeek(week.weekStart)
-        );
-        if (firstEditableWeekIndex > 0) {
-          setCurrentWeekIndex(firstEditableWeekIndex);
-        }
-      }
     } catch (error: unknown) {
       console.error("Error loading availability:", error);
       setError("Kon beschikbaarheid niet laden");
@@ -163,25 +152,12 @@ export default function AvailabilityPage() {
     }
   }, [user, isManager, loadEmployees]);
 
-  // Check for 'updated' search parameter to force reload
+  // Load availability when user or selectedEmployeeId changes
   useEffect(() => {
     if (user) {
-      const updated = searchParams.get('updated');
-      if (updated === 'true') {
-        // Force reload the data after coming back from create/edit
-        loadAvailability(true);
-        
-        // Clean up the URL parameter
-        const newSearchParams = new URLSearchParams(searchParams);
-        newSearchParams.delete('updated');
-        const newUrl = `${window.location.pathname}${newSearchParams.toString() ? `?${newSearchParams.toString()}` : ''}`;
-        window.history.replaceState({}, '', newUrl);
-      } else {
-        // Normal load
-        loadAvailability();
-      }
+      loadAvailability();
     }
-  }, [user, selectedEmployeeId, searchParams, loadAvailability]);
+  }, [user, selectedEmployeeId, loadAvailability]);
 
   /**
    * Handles dropdown selection for managers to switch between viewing
@@ -296,19 +272,6 @@ export default function AvailabilityPage() {
       weekDate.getMonth() === currentMondayDate.getMonth() &&
       weekDate.getDate() === currentMondayDate.getDate()
     );
-  };
-
-  /**
-   * Get week status text with current week indication
-   */
-  const getWeekStatusText = (weekStart: string, weekIndex: number): string => {
-    if (isCurrentWeek(weekStart)) {
-      return "Huidige week (alleen bekijken)";
-    }
-    if (weekIndex === 1) {
-      return "Volgende week";
-    }
-    return `${weekIndex} weken vooruit`;
   };
 
   const navigateWeeks = (direction: "prev" | "next") => {
