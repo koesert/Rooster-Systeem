@@ -12,7 +12,7 @@ import {
   X,
   CalendarDays,
   CalendarCheck,
-  User,
+  CalendarRange,
   Clock,
   Edit,
   Trash2,
@@ -854,7 +854,7 @@ export default function HomePage() {
 
                   {/* Profile */}
                   <button
-                    onClick={() => router.push("/profile")}
+                    onClick={() => router.push("/timeoff")}
                     className="w-full group p-4 bg-white/60 backdrop-blur-sm rounded-xl border border-white/30 hover:bg-white/80 transition-all duration-300 hover:shadow-lg hover:scale-105 text-left cursor-pointer"
                   >
                     <div className="flex items-center space-x-3">
@@ -865,17 +865,17 @@ export default function HomePage() {
                             "linear-gradient(135deg, #d5896f, #d5896f90)",
                         }}
                       >
-                        <User className="h-5 w-5 text-white" />
+                        <CalendarRange className="h-5 w-5 text-white" />
                       </div>
                       <div className="flex-1">
                         <h4
                           className="font-medium mb-1 group-hover:text-opacity-80 transition-all duration-200"
                           style={{ color: "#120309" }}
                         >
-                          Profiel
+                          Vrij vragen
                         </h4>
                         <p className="text-xs" style={{ color: "#67697c" }}>
-                          Bekijk je profiel
+                          Vrij aanvragen of verlof beheren
                         </p>
                       </div>
                     </div>
