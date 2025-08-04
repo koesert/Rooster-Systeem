@@ -49,7 +49,7 @@ export default function EditShiftPage() {
   const [isLoadingShift, setIsLoadingShift] = useState(true);
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(true);
 
-  // Form state
+  // Form state - store date in HTML format (yyyy-MM-dd) during editing
   const [formData, setFormData] = useState<UpdateShiftRequest>({
     employeeId: 0,
     date: "",
@@ -140,10 +140,10 @@ export default function EditShiftPage() {
       const shiftData = await api.getShiftById(shiftId);
       setShift(shiftData);
 
-      // Pre-fill form with existing data
+      // Pre-fill form with existing data - convert date to HTML format
       setFormData({
         employeeId: shiftData.employeeId,
-        date: shiftData.date, // Keep in DD-MM-YYYY format as backend expects
+        date: toInputDateFormat(shiftData.date), // Convert DD-MM-YYYY to yyyy-MM-dd
         startTime: shiftData.startTime.substring(0, 5), // Remove seconds
         endTime: shiftData.endTime ? shiftData.endTime.substring(0, 5) : null,
         shiftType: shiftData.shiftType,
@@ -181,9 +181,8 @@ export default function EditShiftPage() {
   };
 
   const getWeekStart = (dateString: string): string => {
-    // Parse DD-MM-YYYY format
-    const [day, month, year] = dateString.split("-").map(Number);
-    const date = new Date(year, month - 1, day);
+    // Parse yyyy-MM-dd format (HTML date input format)
+    const date = new Date(dateString);
 
     // Get Monday of this week
     const dayOfWeek = date.getDay();
@@ -191,7 +190,7 @@ export default function EditShiftPage() {
     const monday = new Date(date);
     monday.setDate(date.getDate() + daysToMonday);
 
-    // Format as DD-MM-YYYY
+    // Format as DD-MM-YYYY for API
     const formattedDay = monday.getDate().toString().padStart(2, "0");
     const formattedMonth = (monday.getMonth() + 1).toString().padStart(2, "0");
     const formattedYear = monday.getFullYear().toString();
@@ -224,15 +223,8 @@ export default function EditShiftPage() {
     field: keyof UpdateShiftRequest,
     value: string | number | boolean | null
   ) => {
-    let processedValue = value;
-
-    // Convert date field from HTML input format (YYYY-MM-DD) to DD-MM-YYYY
-    if (field === "date" && typeof value === "string" && value) {
-      processedValue = fromInputDateFormat(value);
-    }
-
-    // Use central validation handleInputChange
-    handleInputChange(field, processedValue, formData, setFormData);
+    // Store the value as-is (dates are already in HTML format yyyy-MM-dd)
+    handleInputChange(field, value, formData, setFormData);
 
     // Clear general error
     if (error) {
@@ -247,9 +239,10 @@ export default function EditShiftPage() {
     setError(null);
     clearAllErrors();
 
-    // Prepare form data for validation
+    // Create validation data with date converted to DD-MM-YYYY for validation
     const validationData = {
       ...formData,
+      date: formData.date ? fromInputDateFormat(formData.date) : "",
       // Add any additional context needed for validation
       isOpenEnded: formData.isOpenEnded,
     };
@@ -274,10 +267,10 @@ export default function EditShiftPage() {
     setError(null);
 
     try {
-      // Keep date in DD-MM-YYYY format for API (backend expects this format)
+      // Convert date to DD-MM-YYYY format for API
       const apiData: UpdateShiftRequest = {
         ...formData,
-        date: formData.date, // Keep in DD-MM-YYYY format as backend expects
+        date: fromInputDateFormat(formData.date), // Convert yyyy-MM-dd to dd-MM-yyyy
         startTime: formData.startTime + ":00", // Add seconds for backend
         endTime: formData.endTime ? formData.endTime + ":00" : null,
         notes: formData.notes?.trim() || undefined, // Handle empty notes
@@ -642,7 +635,7 @@ export default function EditShiftPage() {
                           <input
                             id="date"
                             type="date"
-                            value={toInputDateFormat(formData.date)}
+                            value={formData.date}
                             onChange={(e) =>
                               handleFormInputChange("date", e.target.value)
                             }

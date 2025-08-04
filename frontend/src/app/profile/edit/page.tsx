@@ -36,7 +36,7 @@ export default function ProfileEditPage() {
   const { showApiError } = useError();
   const router = useRouter();
 
-  // Form state
+  // Form state - store dates in HTML format (yyyy-MM-dd) during editing
   const [formData, setFormData] = useState<UpdateEmployeeRequest>({
     firstName: "",
     lastName: "",
@@ -69,7 +69,7 @@ export default function ProfileEditPage() {
     }
   }, [user, isLoading, router]);
 
-  // Pre-fill form with user data
+  // Pre-fill form with user data - convert dates to HTML format
   useEffect(() => {
     if (user) {
       setFormData({
@@ -78,8 +78,8 @@ export default function ProfileEditPage() {
         username: user.username,
         password: "", // Always empty for security
         role: user.role,
-        hireDate: toInputDateFormat(user.hireDate), // Convert to YYYY-MM-DD for input
-        birthDate: toInputDateFormat(user.birthDate),
+        hireDate: toInputDateFormat(user.hireDate), // Convert DD-MM-YYYY to yyyy-MM-dd
+        birthDate: toInputDateFormat(user.birthDate), // Convert DD-MM-YYYY to yyyy-MM-dd
       });
     }
   }, [user]);
@@ -88,8 +88,7 @@ export default function ProfileEditPage() {
     field: keyof UpdateEmployeeRequest,
     value: string | Role
   ) => {
-    // Store the value as-is, no conversion here
-    // HTML date inputs give us yyyy-MM-dd, we'll convert in handleSubmit
+    // Store the value as-is (dates are already in HTML format yyyy-MM-dd)
     setFormData((prev) => ({ ...prev, [field]: value }));
 
     // Clear field error when user starts typing
@@ -105,9 +104,13 @@ export default function ProfileEditPage() {
       return;
     }
 
-    // Prepare form data for validation - ONLY CHANGE
+    // Create validation data with dates converted to DD-MM-YYYY for validation
     const formDataForValidation = {
       ...formData,
+      hireDate: formData.hireDate ? fromInputDateFormat(formData.hireDate) : "",
+      birthDate: formData.birthDate
+        ? fromInputDateFormat(formData.birthDate)
+        : "",
       passwordOptional: formData.password, // Map to validation field name
       confirmPassword: confirmPassword,
       isManager: isManager(),
@@ -258,7 +261,7 @@ export default function ProfileEditPage() {
                           WebkitTextFillColor: "transparent",
                         }}
                       >
-                        Pofiel bewerken
+                        Profiel bewerken
                       </h1>
                     </div>
                   </div>
@@ -774,7 +777,7 @@ export default function ProfileEditPage() {
                         <input
                           id="hireDate"
                           type="date"
-                          value={toInputDateFormat(formData.hireDate)}
+                          value={formData.hireDate}
                           onChange={(e) =>
                             handleInputChange("hireDate", e.target.value)
                           }
@@ -805,7 +808,11 @@ export default function ProfileEditPage() {
                       ) : (
                         <input
                           type="text"
-                          value={formatDate(formData.hireDate)}
+                          value={
+                            formData.hireDate
+                              ? fromInputDateFormat(formData.hireDate)
+                              : ""
+                          }
                           disabled
                           className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-500 cursor-not-allowed"
                         />
@@ -839,7 +846,7 @@ export default function ProfileEditPage() {
                         <input
                           id="birthDate"
                           type="date"
-                          value={toInputDateFormat(formData.birthDate)}
+                          value={formData.birthDate}
                           onChange={(e) =>
                             handleInputChange("birthDate", e.target.value)
                           }
@@ -870,7 +877,11 @@ export default function ProfileEditPage() {
                       ) : (
                         <input
                           type="text"
-                          value={formatDate(formData.birthDate)}
+                          value={
+                            formData.birthDate
+                              ? fromInputDateFormat(formData.birthDate)
+                              : ""
+                          }
                           disabled
                           className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-500 cursor-not-allowed"
                         />

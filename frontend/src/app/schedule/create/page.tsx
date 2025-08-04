@@ -60,10 +60,10 @@ export default function CreateShiftPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(true);
 
-  // Form state
+  // Form state - store date in HTML format (yyyy-MM-dd) during editing
   const [formData, setFormData] = useState<CreateShiftRequest>({
     employeeId: 0,
-    date: getCurrentDate(),
+    date: toInputDateFormat(getCurrentDate()), // Convert DD-MM-YYYY to yyyy-MM-dd
     startTime: "12:00",
     endTime: "18:00",
     shiftType: ShiftType.Bedienen,
@@ -207,9 +207,10 @@ export default function CreateShiftPage() {
     setError(null);
     clearAllErrors();
 
-    // Prepare form data for validation
+    // Create validation data with date converted to DD-MM-YYYY for validation
     const validationData = {
       ...formData,
+      date: formData.date ? fromInputDateFormat(formData.date) : "",
       // Add any additional context needed for validation
       isOpenEnded: formData.isOpenEnded,
     };
@@ -233,9 +234,10 @@ export default function CreateShiftPage() {
     setIsSubmitting(true);
 
     try {
-      // Format data for API - add seconds to times for TimeSpan conversion
+      // Format data for API - convert date to DD-MM-YYYY and add seconds to times
       const apiData = {
         ...formData,
+        date: fromInputDateFormat(formData.date), // Convert yyyy-MM-dd to dd-MM-yyyy
         startTime: formData.startTime + ":00", // Add seconds for backend
         endTime: formData.endTime ? formData.endTime + ":00" : null,
         notes: formData.notes?.trim() || undefined,
@@ -246,7 +248,7 @@ export default function CreateShiftPage() {
       // Reset form
       setFormData({
         employeeId: 0, // Reset to "Selecteer werknemer"
-        date: getCurrentDate(),
+        date: toInputDateFormat(getCurrentDate()), // Reset to today in HTML format
         startTime: "12:00",
         endTime: "18:00",
         shiftType: ShiftType.Bedienen,
@@ -276,6 +278,7 @@ export default function CreateShiftPage() {
     field: string,
     value: string | number | boolean
   ) => {
+    // Store the value as-is (dates are already in HTML format yyyy-MM-dd)
     handleInputChange(field, value, formData, setFormData);
   };
 
@@ -772,12 +775,9 @@ export default function CreateShiftPage() {
                     <input
                       type="date"
                       id="date"
-                      value={toInputDateFormat(formData.date)}
+                      value={formData.date}
                       onChange={(e) =>
-                        handleFormInputChange(
-                          "date",
-                          fromInputDateFormat(e.target.value)
-                        )
+                        handleFormInputChange("date", e.target.value)
                       }
                       className={`w-full pl-12 pr-4 py-3 border rounded-xl text-gray-900 focus:outline-none focus:ring-2 transition-all duration-200 ${
                         fieldErrors.date
