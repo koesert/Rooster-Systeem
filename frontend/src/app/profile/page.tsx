@@ -94,7 +94,7 @@ export default function ProfilePage() {
 
                   <button
                     onClick={() => router.push("/profile/edit")}
-                    className="flex items-center space-x-2 px-3 py-3 min-[425px]:px-6 rounded-xl text-white font-semibold transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer"
+                    className="flex items-center space-x-2 max-[424px]:space-x-0 px-3 py-3 min-[425px]:px-6 rounded-xl text-white font-semibold transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer"
                     style={{
                       background: "linear-gradient(135deg, #d5896f, #d5896f90)",
                     }}

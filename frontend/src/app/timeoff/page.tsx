@@ -343,7 +343,14 @@ export default function TimeOffPage() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full" style={{ tableLayout: "fixed" }}>
+                  <colgroup>
+                    <col style={{ width: "200px" }} />
+                    <col style={{ width: "200px" }} />
+                    <col style={{ width: "200px" }} />
+                    <col style={{ width: "200px" }} />
+                    <col style={{ width: "200px" }} />
+                  </colgroup>
                   <thead
                     style={{
                       background:
@@ -448,7 +455,7 @@ export default function TimeOffPage() {
                                 style={{ color: "#120309" }}
                                 className="font-medium"
                               >
-                                {formatDate(request.startDate)} -{" "}
+                                {formatDate(request.startDate)} tot{" "}
                                 {formatDate(request.endDate)}
                               </span>
                               <span

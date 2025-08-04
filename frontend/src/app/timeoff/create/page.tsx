@@ -483,7 +483,7 @@ export default function CreateTimeOffPage() {
                   ) : (
                     <>
                       <Plus className="h-5 w-5" />
-                      <span>Aanvraag indienen</span>
+                      <span>Indienen</span>
                     </>
                   )}
                 </button>
