@@ -593,12 +593,6 @@ export default function AvailabilityPage() {
                                 <h4 className="font-semibold text-gray-900">
                                   Week {getWeekNumber(week.weekStart)}
                                 </h4>
-                                {isCurrent && (
-                                  <span className="inline-flex items-center space-x-1 text-xs font-medium px-2 py-1 bg-gray-100 text-gray-700 rounded">
-                                    <Eye className="h-3 w-3" />
-                                    <span>Huidig</span>
-                                  </span>
-                                )}
                               </div>
                               <p className="text-sm text-gray-600">
                                 {formatWeekRange(week.weekStart)}

@@ -81,7 +81,7 @@ export default function LoginPage() {
 
   return (
     <div
-      className="min-h-screen flex max-[500px]:items-start max-[500px]:pt-30 items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden"
+      className="min-h-screen flex max-[500px]:items-start max-[500px]:pt-20 items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden"
       style={{
         background: "linear-gradient(135deg, #e8eef2 0%, #f5f7fa 100%)",
       }}
