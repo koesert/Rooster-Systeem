@@ -17,12 +17,17 @@ import {
   Plane,
   Lock,
   Eye,
+  CheckCircle,
+  XCircle,
+  Minus,
 } from "lucide-react";
 import {
   UpdateWeekAvailability,
   UpdateDayAvailability,
   AvailabilityStatus,
   getAvailabilityStatusFromDay,
+  getAvailabilityStatusText,
+  getAvailabilityStatusColor,
 } from "@/types/availability";
 import * as api from "@/lib/api";
 
@@ -237,6 +242,46 @@ export default function CreateAvailabilityPage() {
     );
   };
 
+  /**
+   * Returns the appropriate icon component based on availability status
+   * Supports legacy isAvailable field and new status enum
+   */
+  const getAvailabilityIcon = (day: UpdateDayAvailability) => {
+    // For form data, we need to check the original data for proper status
+    const originalDay = originalData.find((orig) => orig?.date === day.date);
+    const status = originalDay
+      ? getAvailabilityStatusFromDay(originalDay)
+      : day.isAvailable === true
+      ? AvailabilityStatus.Available
+      : day.isAvailable === false
+      ? AvailabilityStatus.NotAvailable
+      : null;
+
+    if (status === AvailabilityStatus.Available) {
+      return <CheckCircle className="h-4 w-4 text-green-600" />;
+    } else if (status === AvailabilityStatus.NotAvailable) {
+      return <XCircle className="h-4 w-4 text-red-600" />;
+    } else if (status === AvailabilityStatus.TimeOff) {
+      return <Plane className="h-4 w-4" style={{ color: "#8B5CF6" }} />;
+    } else {
+      return <Minus className="h-4 w-4 text-gray-400" />;
+    }
+  };
+
+  const getAvailabilityTextForDay = (day: UpdateDayAvailability): string => {
+    // For form data, we need to check the original data for proper status
+    const originalDay = originalData.find((orig) => orig?.date === day.date);
+    const status = originalDay
+      ? getAvailabilityStatusFromDay(originalDay)
+      : day.isAvailable === true
+      ? AvailabilityStatus.Available
+      : day.isAvailable === false
+      ? AvailabilityStatus.NotAvailable
+      : null;
+
+    return getAvailabilityStatusText(status);
+  };
+
   const updateDayAvailability = (
     dayIndex: number,
     field: keyof UpdateDayAvailability,
@@ -298,6 +343,9 @@ export default function CreateAvailabilityPage() {
       };
 
       await api.updateMyWeekAvailability(updateData);
+
+      // Give database a moment to commit the transaction
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Check if we should go to next week or back to availability page
       if (saveAndGoToNextWeek && selectedWeekIndex < 4) {
@@ -569,56 +617,38 @@ export default function CreateAvailabilityPage() {
                                 </div>
                               </div>
 
-                              {/* Show notes field for verlof days (can still be edited if not current week) */}
-                              <div>
-                                <label
-                                  htmlFor={`notes-${index}`}
-                                  className="text-sm font-medium"
-                                  style={{ color: "#67697c" }}
-                                >
-                                  Notities (optioneel)
-                                </label>
-                                <textarea
-                                  id={`notes-${index}`}
-                                  value={day.notes || ""}
-                                  onChange={(e) =>
-                                    updateDayAvailability(
-                                      index,
-                                      "notes",
-                                      e.target.value
-                                    )
-                                  }
-                                  placeholder="Opmerkingen..."
-                                  rows={2}
-                                  maxLength={500}
-                                  disabled={isReadonly}
-                                  className="mt-1 block w-full px-3 py-2 text-gray-900 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#d5896f] focus:border-transparent resize-none disabled:bg-gray-100 disabled:cursor-not-allowed"
-                                  style={{
-                                    borderColor: "#d1d5db",
-                                  }}
-                                />
-                                <p
-                                  className="mt-1 text-xs"
-                                  style={{ color: "#67697c" }}
-                                >
-                                  {day.notes?.length || 0}/500 tekens
-                                </p>
-                              </div>
+                              {/* Show existing notes read-only for verlof days if any exist */}
+                              {day.notes && day.notes.trim() !== "" && (
+                                <div>
+                                  <label
+                                    className="text-sm font-medium"
+                                    style={{ color: "#67697c" }}
+                                  >
+                                    Bestaande notities
+                                  </label>
+                                  <div className="mt-1 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                                    <p className="text-sm text-purple-700">
+                                      {day.notes}
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           ) : isReadonly ? (
                             // Current week - readonly mode
                             <div className="space-y-3">
                               <div className="flex items-center space-x-3 p-4 bg-gray-100/60 rounded-lg border border-gray-200">
                                 <Lock className="h-5 w-5 text-gray-600" />
-                                <div>
-                                  <p className="text-sm font-medium text-gray-800">
-                                    {day.isAvailable
-                                      ? "Beschikbaar"
-                                      : "Niet beschikbaar"}
-                                  </p>
-                                  <p className="text-xs text-gray-600">
-                                    Huidige week kan niet worden aangepast
-                                  </p>
+                                <div className="flex items-center space-x-3">
+                                  {getAvailabilityIcon(day)}
+                                  <div>
+                                    <p className="text-sm font-medium text-gray-800">
+                                      {getAvailabilityTextForDay(day)}
+                                    </p>
+                                    <p className="text-xs text-gray-600">
+                                      Huidige week kan niet worden aangepast
+                                    </p>
+                                  </div>
                                 </div>
                               </div>
 
