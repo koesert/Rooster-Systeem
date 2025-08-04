@@ -35,14 +35,14 @@ export default function CreateEmployeePage() {
   const { showApiError } = useError();
   const router = useRouter();
 
-  // Form state
+  // Form state - store dates in HTML format (yyyy-MM-dd) during editing
   const [formData, setFormData] = useState<CreateEmployeeRequest>({
     firstName: "",
     lastName: "",
     username: "",
     password: "",
     role: Role.Werknemer,
-    hireDate: getCurrentDate(), // Today's date in DD-MM-YYYY format
+    hireDate: toInputDateFormat(getCurrentDate()), // Convert to HTML format
     birthDate: "",
   });
 
@@ -71,8 +71,7 @@ export default function CreateEmployeePage() {
     field: keyof CreateEmployeeRequest,
     value: string | Role
   ) => {
-    // Store the value as-is, no conversion here for dates
-    // HTML date inputs give us yyyy-MM-dd, we'll convert in handleSubmit
+    // Store the value as-is (dates are already in HTML format yyyy-MM-dd)
     setFormData((prev) => ({ ...prev, [field]: value }));
 
     // Clear field error when user starts typing
@@ -84,8 +83,17 @@ export default function CreateEmployeePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Prepare form data for validation
-    if (!validateForm(formData)) {
+    // Create validation data with dates converted to DD-MM-YYYY for validation
+    const validationData = {
+      ...formData,
+      hireDate: formData.hireDate ? fromInputDateFormat(formData.hireDate) : "",
+      birthDate: formData.birthDate
+        ? fromInputDateFormat(formData.birthDate)
+        : "",
+    };
+
+    // Validate using DD-MM-YYYY format (as expected by validation)
+    if (!validateForm(validationData)) {
       return;
     }
 
@@ -603,7 +611,7 @@ export default function CreateEmployeePage() {
                       <input
                         id="hireDate"
                         type="date"
-                        value={toInputDateFormat(formData.hireDate)}
+                        value={formData.hireDate}
                         onChange={(e) =>
                           handleInputChange("hireDate", e.target.value)
                         }
@@ -658,7 +666,7 @@ export default function CreateEmployeePage() {
                       <input
                         id="birthDate"
                         type="date"
-                        value={toInputDateFormat(formData.birthDate)}
+                        value={formData.birthDate}
                         onChange={(e) =>
                           handleInputChange("birthDate", e.target.value)
                         }

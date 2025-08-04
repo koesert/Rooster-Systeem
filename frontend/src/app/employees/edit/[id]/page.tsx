@@ -38,7 +38,7 @@ export default function EditEmployeePage() {
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [isLoadingEmployee, setIsLoadingEmployee] = useState(true);
 
-  // Form state
+  // Form state - store dates in HTML format (yyyy-MM-dd) during editing
   const [formData, setFormData] = useState<UpdateEmployeeRequest>({
     firstName: "",
     lastName: "",
@@ -84,15 +84,15 @@ export default function EditEmployeePage() {
       const employeeData = await api.getEmployeeById(employeeId);
       setEmployee(employeeData);
 
-      // Pre-fill form with existing data
+      // Pre-fill form with existing data - convert dates to HTML format
       setFormData({
         firstName: employeeData.firstName,
         lastName: employeeData.lastName,
         username: employeeData.username,
         password: "", // Always empty for security
         role: employeeData.role,
-        hireDate: employeeData.hireDate, // Keep in DD-MM-YYYY format
-        birthDate: employeeData.birthDate, // Keep in DD-MM-YYYY format
+        hireDate: toInputDateFormat(employeeData.hireDate), // Convert DD-MM-YYYY to yyyy-MM-dd
+        birthDate: toInputDateFormat(employeeData.birthDate), // Convert DD-MM-YYYY to yyyy-MM-dd
       });
     } catch (error: unknown) {
       console.error("Error loading employee:", error);
@@ -121,8 +121,7 @@ export default function EditEmployeePage() {
     field: keyof UpdateEmployeeRequest,
     value: string | Role
   ) => {
-    // Store the value as-is, no conversion here for dates
-    // HTML date inputs give us yyyy-MM-dd, we'll convert in handleSubmit
+    // Store the value as-is (dates are already in HTML format yyyy-MM-dd)
     setFormData((prev) => ({ ...prev, [field]: value }));
 
     // Clear field error when user starts typing
@@ -138,9 +137,13 @@ export default function EditEmployeePage() {
       return;
     }
 
-    // Prepare form data for validation
+    // Create validation data with dates converted to DD-MM-YYYY for validation
     const formDataForValidation = {
       ...formData,
+      hireDate: formData.hireDate ? fromInputDateFormat(formData.hireDate) : "",
+      birthDate: formData.birthDate
+        ? fromInputDateFormat(formData.birthDate)
+        : "",
       passwordOptional: formData.password, // Map to validation field name
       confirmPassword: confirmPassword,
       isManager: isManager(),
@@ -816,7 +819,7 @@ export default function EditEmployeePage() {
                         <input
                           id="hireDate"
                           type="date"
-                          value={toInputDateFormat(formData.hireDate)}
+                          value={formData.hireDate}
                           onChange={(e) =>
                             handleInputChange("hireDate", e.target.value)
                           }
@@ -847,7 +850,11 @@ export default function EditEmployeePage() {
                       ) : (
                         <input
                           type="text"
-                          value={toInputDateFormat(formData.hireDate)}
+                          value={
+                            formData.hireDate
+                              ? fromInputDateFormat(formData.hireDate)
+                              : ""
+                          }
                           disabled
                           className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-500 cursor-not-allowed"
                         />
@@ -881,7 +888,7 @@ export default function EditEmployeePage() {
                         <input
                           id="birthDate"
                           type="date"
-                          value={toInputDateFormat(formData.birthDate)}
+                          value={formData.birthDate}
                           onChange={(e) =>
                             handleInputChange("birthDate", e.target.value)
                           }
@@ -912,7 +919,11 @@ export default function EditEmployeePage() {
                       ) : (
                         <input
                           type="text"
-                          value={toInputDateFormat(formData.birthDate)}
+                          value={
+                            formData.birthDate
+                              ? fromInputDateFormat(formData.birthDate)
+                              : ""
+                          }
                           disabled
                           className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-500 cursor-not-allowed"
                         />
