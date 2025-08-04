@@ -126,7 +126,6 @@ export default function CreateAvailabilityPage() {
       }
     } catch {
       // If fetching fails (e.g., no availability exists yet), create default data
-      console.log("No existing availability found, using defaults");
       initializeDefaultFormData();
     } finally {
       setIsLoadingAvailability(false);
@@ -297,8 +296,6 @@ export default function CreateAvailabilityPage() {
         weekStart: formatDateString(getSelectedWeekStart()),
         days: filteredFormData,
       };
-
-      console.log("Sending to backend:", updateData); // Debug log
 
       await api.updateMyWeekAvailability(updateData);
 

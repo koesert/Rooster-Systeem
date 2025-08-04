@@ -217,23 +217,16 @@ export default function CreateShiftPage() {
     // Validate form using central validation system
     const isValid = validateForm(validationData);
 
-    // Debug log to see what's happening
-    console.log("Form validation result:", isValid);
-    console.log("Field errors:", fieldErrors);
-    console.log("Employee ID:", formData.employeeId);
-
     // Extra safety check for employeeId specifically
     if (!formData.employeeId || formData.employeeId === 0) {
       setFieldErrors((prev: Record<string, string>) => ({
         ...prev,
         employeeId: "Selecteer een medewerker",
       }));
-      console.log("Employee ID is 0, stopping submit");
       return;
     }
 
     if (!isValid) {
-      console.log("Validation failed, stopping submit");
       return; // Validation errors will be shown via fieldErrors
     }
 
