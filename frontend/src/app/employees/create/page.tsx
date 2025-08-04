@@ -434,7 +434,7 @@ export default function CreateEmployeePage() {
                       </p>
                     )}
                     <p className="mt-2 text-xs" style={{ color: "#67697c" }}>
-                      Minimaal 6 tekens. Alleen letters, cijfers, punten,
+                      Minimaal 5 tekens. Alleen letters, cijfers, punten,
                       underscores en streepjes toegestaan
                     </p>
                   </div>

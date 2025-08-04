@@ -97,10 +97,23 @@ export default function CreateAvailabilityPage() {
             getAvailabilityStatusFromDay(existingDay) ===
               AvailabilityStatus.TimeOff;
 
+          // Convert backend status to isAvailable for frontend form
+          let isAvailable: boolean | null = true; // Default to available
+          if (hasVerlof) {
+            isAvailable = null; // Don't set isAvailable for verlof days
+          } else if (existingDay?.status === AvailabilityStatus.Available) {
+            isAvailable = true;
+          } else if (existingDay?.status === AvailabilityStatus.NotAvailable) {
+            isAvailable = false;
+          } else if (existingDay?.isAvailable !== undefined) {
+            // Fallback to legacy isAvailable field if status not set
+            isAvailable = existingDay.isAvailable;
+          }
+
           weekDays.push({
             date: dateString,
-            isAvailable: hasVerlof ? null : existingDay?.isAvailable ?? true, // Don't set isAvailable for verlof days
-            status: existingDay?.status, // Keep original status
+            isAvailable: isAvailable,
+            status: existingDay?.status, // Keep original status for reference
             notes: existingDay?.notes || "",
           });
         }
@@ -180,14 +193,28 @@ export default function CreateAvailabilityPage() {
     } ${day}-${month}`;
   };
 
+  /**
+   * Calculates ISO week number using the ISO 8601 standard (same as view page)
+   * Week 1 is the first week with at least 4 days in the new year
+   */
   const getWeekNumber = (): number => {
     const startOfWeek = getSelectedWeekStart();
-    const startOfYear = new Date(startOfWeek.getFullYear(), 0, 1);
-    const dayOfYear =
-      Math.floor(
-        (startOfWeek.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000)
-      ) + 1;
-    return Math.ceil(dayOfYear / 7);
+
+    // Create UTC date to avoid timezone issues
+    const d = new Date(
+      Date.UTC(
+        startOfWeek.getFullYear(),
+        startOfWeek.getMonth(),
+        startOfWeek.getDate()
+      )
+    );
+
+    // ISO week calculation: find nearest Thursday
+    const dayNum = d.getUTCDay() || 7; // Make Sunday = 7
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
   };
 
   const getWeekStatusText = (): string => {
@@ -238,7 +265,7 @@ export default function CreateAvailabilityPage() {
     setError(null);
 
     try {
-      // Filter out verlof days from submission - they shouldn't be changed
+      // Convert formData to backend format and filter out verlof days
       const filteredFormData = formData.map((day, index) => {
         if (isDayVerlof(index)) {
           // Keep original verlof status, don't submit isAvailable changes
@@ -248,7 +275,21 @@ export default function CreateAvailabilityPage() {
             notes: day.notes,
           };
         }
-        return day;
+
+        // Convert isAvailable to status for backend
+        let status: AvailabilityStatus | null = null;
+        if (day.isAvailable === true) {
+          status = AvailabilityStatus.Available;
+        } else if (day.isAvailable === false) {
+          status = AvailabilityStatus.NotAvailable;
+        }
+        // If isAvailable is null, status remains null (remove availability record)
+
+        return {
+          date: day.date,
+          status: status,
+          notes: day.notes,
+        };
       });
 
       const updateData: UpdateWeekAvailability = {
@@ -256,6 +297,8 @@ export default function CreateAvailabilityPage() {
         weekStart: formatDateString(getSelectedWeekStart()),
         days: filteredFormData,
       };
+
+      console.log("Sending to backend:", updateData); // Debug log
 
       await api.updateMyWeekAvailability(updateData);
 
@@ -265,8 +308,8 @@ export default function CreateAvailabilityPage() {
         setSelectedWeekIndex((prev) => prev + 1);
         setSaveAndGoToNextWeek(false); // Reset checkbox
       } else {
-        // Success! Redirect back to availability page
-        router.push("/availability");
+        // Success! Redirect back to availability page with updated flag
+        router.push("/availability?updated=true");
       }
     } catch (error: unknown) {
       console.error("Error saving availability:", error);

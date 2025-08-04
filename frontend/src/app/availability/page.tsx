@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useError } from "@/contexts/ErrorContext";
 import { usePageTitle } from "@/hooks/usePageTitle";
@@ -34,6 +34,7 @@ export default function AvailabilityPage() {
   const { user, isLoading, isManager } = useAuth();
   const { showApiError } = useError();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Availability data and navigation state
   const [weekAvailabilities, setWeekAvailabilities] = useState<
@@ -66,6 +67,27 @@ export default function AvailabilityPage() {
 
   usePageTitle(`Dashboard - ${getPageTitle()}`);
 
+  /**
+   * Helper function to get Monday of any given date (consistent with create page)
+   */
+  const getMondayOfWeek = (date: Date): Date => {
+    const dayOfWeek = date.getDay();
+    const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const monday = new Date(date);
+    monday.setDate(date.getDate() + daysToMonday);
+    return monday;
+  };
+
+  /**
+   * Format date as DD-MM-YYYY string (consistent with backend)
+   */
+  const formatDateString = (date: Date): string => {
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
+  };
+
   const loadEmployees = useCallback(async () => {
     setIsLoadingEmployees(true);
     try {
@@ -79,19 +101,45 @@ export default function AvailabilityPage() {
     }
   }, [showApiError]);
 
-  const loadAvailability = useCallback(async () => {
+  const loadAvailability = useCallback(async (forceReload = false) => {
     setIsLoadingAvailability(true);
     setError(null);
     try {
+      // Calculate explicit date range - current Monday + 5 weeks (35 days)
+      const today = new Date();
+      const startDate = getMondayOfWeek(today);
+      const endDate = new Date(startDate);
+      endDate.setDate(startDate.getDate() + 34); // 5 weeks = 35 days (including start day)
+
+      const startDateString = formatDateString(startDate);
+      const endDateString = formatDateString(endDate);
+
       let availability: WeekAvailability[];
 
       if (selectedEmployeeId && isManager()) {
-        availability = await api.getEmployeeAvailability(selectedEmployeeId);
+        availability = await api.getEmployeeAvailability(
+          selectedEmployeeId, 
+          startDateString, 
+          endDateString
+        );
       } else {
-        availability = await api.getMyAvailability();
+        availability = await api.getMyAvailability(
+          startDateString, 
+          endDateString
+        );
       }
 
       setWeekAvailabilities(availability);
+
+      // If we force reloaded and have data, scroll to the first non-current week
+      if (forceReload && availability.length > 0) {
+        const firstEditableWeekIndex = availability.findIndex((week) => 
+          !isCurrentWeek(week.weekStart)
+        );
+        if (firstEditableWeekIndex > 0) {
+          setCurrentWeekIndex(firstEditableWeekIndex);
+        }
+      }
     } catch (error: unknown) {
       console.error("Error loading availability:", error);
       setError("Kon beschikbaarheid niet laden");
@@ -115,12 +163,25 @@ export default function AvailabilityPage() {
     }
   }, [user, isManager, loadEmployees]);
 
-  // Reload availability when user changes or employee selection changes
+  // Check for 'updated' search parameter to force reload
   useEffect(() => {
     if (user) {
-      loadAvailability();
+      const updated = searchParams.get('updated');
+      if (updated === 'true') {
+        // Force reload the data after coming back from create/edit
+        loadAvailability(true);
+        
+        // Clean up the URL parameter
+        const newSearchParams = new URLSearchParams(searchParams);
+        newSearchParams.delete('updated');
+        const newUrl = `${window.location.pathname}${newSearchParams.toString() ? `?${newSearchParams.toString()}` : ''}`;
+        window.history.replaceState({}, '', newUrl);
+      } else {
+        // Normal load
+        loadAvailability();
+      }
     }
-  }, [user, selectedEmployeeId, loadAvailability]);
+  }, [user, selectedEmployeeId, searchParams, loadAvailability]);
 
   /**
    * Handles dropdown selection for managers to switch between viewing
@@ -227,10 +288,7 @@ export default function AvailabilityPage() {
     );
 
     // Get Monday of current week
-    const dayOfWeek = today.getDay();
-    const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-    const currentMondayDate = new Date(today);
-    currentMondayDate.setDate(today.getDate() + daysToMonday);
+    const currentMondayDate = getMondayOfWeek(today);
 
     // Compare week starts
     return (
