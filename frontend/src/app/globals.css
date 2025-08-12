@@ -33,6 +33,18 @@ body {
   padding: 2rem;
 }
 
+/* Mobile browser input field override - force respect our custom CSS */
+@media (max-width: 768px) {
+  input[type="text"],
+  input[type="password"],
+  input[type="email"],
+  input[type="date"] {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    box-sizing: border-box !important;
+  }
+}
+
 /* Mobile styles - screens less than 1250px */
 @media (max-width: 1249px) {
   .layout-main-content {
