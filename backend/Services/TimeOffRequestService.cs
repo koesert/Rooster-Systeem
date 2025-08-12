@@ -395,33 +395,24 @@ public class TimeOffRequestService : ITimeOffRequestService
         _logger.LogInformation("Vrij aanvraag {Id} geannuleerd door werknemer {EmployeeId}", id, employeeId);
     }
 
-
     public async Task DeleteRequestAsync(int id, int employeeId)
     {
-        var request = await _context.TimeOffRequests
-            .FirstOrDefaultAsync(r => r.Id == id && r.EmployeeId == employeeId);
-
-        if (request == null)
-        {
-            throw new InvalidOperationException("Aanvraag niet gevonden of je hebt geen toegang");
-        }
-
         // Check if user is manager
         var currentEmployee = await _context.Employees.FindAsync(employeeId);
         var isManager = currentEmployee?.Role == Role.Manager;
 
-        // If not manager, only allow deletion of own pending requests
+        // Only managers can delete requests
         if (!isManager)
         {
-            if (request.EmployeeId != employeeId)
-            {
-                throw new InvalidOperationException("Je kunt alleen je eigen aanvragen verwijderen");
-            }
+            throw new InvalidOperationException("Alleen managers kunnen vrij aanvragen verwijderen");
+        }
 
-            if (request.Status != TimeOffStatus.Pending)
-            {
-                throw new InvalidOperationException("Alleen aanvragen met status 'Pending' kunnen worden verwijderd");
-            }
+        // Managers can delete any request - don't filter by employeeId
+        var request = await _context.TimeOffRequests.FirstOrDefaultAsync(r => r.Id == id);
+
+        if (request == null)
+        {
+            throw new InvalidOperationException("Aanvraag niet gevonden");
         }
 
         // If was approved, remove availability (back to "not specified")
@@ -437,8 +428,7 @@ public class TimeOffRequestService : ITimeOffRequestService
         _context.TimeOffRequests.Remove(request);
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Vrij aanvraag {Id} verwijderd door {Role}",
-            id, isManager ? "manager" : "werknemer");
+        _logger.LogInformation("Vrij aanvraag {Id} verwijderd door manager {ManagerId}", id, employeeId);
     }
 
     public async Task<bool> HasOverlappingRequestsAsync(int employeeId, DateTime startDate, DateTime endDate, int? excludeRequestId = null)
