@@ -351,7 +351,7 @@ export default function ScheduleManagePage() {
   ) => {
     clearAllErrors();
 
-    let localFormData = { ...initialData };
+    const localFormData = { ...initialData };
     let localFieldErrors: Record<string, string> = {};
 
     const handleFormSubmit = async () => {
