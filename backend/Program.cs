@@ -98,6 +98,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 // Register custom services with dependency injection
+builder.Services.AddScoped<ICompanyService, CompanyService>();
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IShiftService, ShiftService>();
@@ -135,6 +136,10 @@ builder.Services.AddAuthentication(options =>
 // Configure Authorization policies for role-based access control
 builder.Services.AddAuthorization(options =>
 {
+    // SuperAdmin policy - only super administrators can access
+    options.AddPolicy("SuperAdminOnly", policy =>
+        policy.RequireClaim("Role", "SuperAdmin"));
+
     // Manager policy - only managers can access
     options.AddPolicy("ManagerOnly", policy =>
         policy.RequireClaim("Role", "Manager"));
@@ -145,7 +150,7 @@ builder.Services.AddAuthorization(options =>
 
     // All authenticated users (any role)
     options.AddPolicy("AllRoles", policy =>
-        policy.RequireClaim("Role", "Manager", "ShiftLeider", "Werknemer"));
+        policy.RequireClaim("Role", "Manager", "ShiftLeider", "Werknemer", "SuperAdmin"));
 });
 
 // Configure Swagger/OpenAPI
