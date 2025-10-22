@@ -12,7 +12,7 @@ using backend.Data;
 namespace backend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251022115526_AddCompanyAndMultiTenancy")]
+    [Migration("20251022123551_AddCompanyAndMultiTenancy")]
     partial class AddCompanyAndMultiTenancy
     {
         /// <inheritdoc />

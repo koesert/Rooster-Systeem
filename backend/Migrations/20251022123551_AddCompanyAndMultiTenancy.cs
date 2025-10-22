@@ -105,6 +105,38 @@ namespace backend.Migrations
                 column: "ShortName",
                 unique: true);
 
+            // Seed Jill company
+            migrationBuilder.Sql(@"
+                INSERT INTO ""Companies"" (""Name"", ""ShortName"", ""PrimaryColor"", ""SecondaryColor"", ""AccentColor"", ""CreatedAt"", ""UpdatedAt"")
+                SELECT 'Jill Sushi', 'JILL', '#d5896f', '#d5896f', '#c17c5e', NOW(), NOW()
+                WHERE NOT EXISTS (SELECT 1 FROM ""Companies"" WHERE ""ShortName"" = 'JILL');
+            ");
+
+            // Update existing records to use Jill company (ID will be 1 as first company)
+            migrationBuilder.Sql(@"
+                UPDATE ""Employees""
+                SET ""CompanyId"" = (SELECT ""Id"" FROM ""Companies"" WHERE ""ShortName"" = 'JILL')
+                WHERE ""CompanyId"" IS NULL OR ""CompanyId"" = 0;
+            ");
+
+            migrationBuilder.Sql(@"
+                UPDATE ""Shifts""
+                SET ""CompanyId"" = (SELECT ""Id"" FROM ""Companies"" WHERE ""ShortName"" = 'JILL')
+                WHERE ""CompanyId"" = 0;
+            ");
+
+            migrationBuilder.Sql(@"
+                UPDATE ""Availabilities""
+                SET ""CompanyId"" = (SELECT ""Id"" FROM ""Companies"" WHERE ""ShortName"" = 'JILL')
+                WHERE ""CompanyId"" = 0;
+            ");
+
+            migrationBuilder.Sql(@"
+                UPDATE ""TimeOffRequests""
+                SET ""CompanyId"" = (SELECT ""Id"" FROM ""Companies"" WHERE ""ShortName"" = 'JILL')
+                WHERE ""CompanyId"" = 0;
+            ");
+
             migrationBuilder.AddForeignKey(
                 name: "FK_Availabilities_Companies_CompanyId",
                 table: "Availabilities",

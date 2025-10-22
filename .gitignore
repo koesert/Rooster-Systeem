@@ -595,3 +595,4 @@ appsettings.Local.json
 *.pem
 
 CLAUDE.md
+*.claude

@@ -293,13 +293,149 @@ if (app.Environment.IsProduction())
                 }
             }
 
-            // Ensure admin user exists for fresh databases
+            // Ensure Jill company exists
+            Console.WriteLine("Checking for Jill company...");
+            var jillCompany = await context.Companies.FirstOrDefaultAsync(c => c.ShortName == "JILL");
+
+            if (jillCompany == null)
+            {
+                Console.WriteLine("Jill company not found, creating...");
+
+                var utcNow = DateTime.UtcNow;
+                jillCompany = new backend.Models.Company
+                {
+                    Name = "Jill Sushi",
+                    ShortName = "JILL",
+                    PrimaryColor = "#d5896f",
+                    SecondaryColor = "#d5896f",
+                    AccentColor = "#c17c5e",
+                    CreatedAt = utcNow,
+                    UpdatedAt = utcNow
+                };
+
+                context.Companies.Add(jillCompany);
+                await context.SaveChangesAsync();
+                Console.WriteLine("Jill company created successfully!");
+            }
+            else
+            {
+                Console.WriteLine("Jill company already exists.");
+            }
+
+            // Assign all existing employees without a company to Jill
+            var employeesWithoutCompany = await context.Employees
+                .Where(e => e.CompanyId == null && e.Role != backend.Models.Role.SuperAdmin)
+                .ToListAsync();
+
+            if (employeesWithoutCompany.Any())
+            {
+                Console.WriteLine($"Assigning {employeesWithoutCompany.Count} employees to Jill company...");
+                foreach (var emp in employeesWithoutCompany)
+                {
+                    emp.CompanyId = jillCompany.Id;
+                }
+                await context.SaveChangesAsync();
+                Console.WriteLine("Employees assigned to Jill company successfully!");
+            }
+
+            // Assign all shifts without a company to Jill
+            var shiftsWithoutCompany = await context.Shifts
+                .Where(s => s.CompanyId == 0)
+                .ToListAsync();
+
+            if (shiftsWithoutCompany.Any())
+            {
+                Console.WriteLine($"Assigning {shiftsWithoutCompany.Count} shifts to Jill company...");
+                foreach (var shift in shiftsWithoutCompany)
+                {
+                    shift.CompanyId = jillCompany.Id;
+                }
+                await context.SaveChangesAsync();
+                Console.WriteLine("Shifts assigned to Jill company successfully!");
+            }
+
+            // Assign all availabilities without a company to Jill
+            var availabilitiesWithoutCompany = await context.Availabilities
+                .Where(a => a.CompanyId == 0)
+                .ToListAsync();
+
+            if (availabilitiesWithoutCompany.Any())
+            {
+                Console.WriteLine($"Assigning {availabilitiesWithoutCompany.Count} availabilities to Jill company...");
+                foreach (var avail in availabilitiesWithoutCompany)
+                {
+                    avail.CompanyId = jillCompany.Id;
+                }
+                await context.SaveChangesAsync();
+                Console.WriteLine("Availabilities assigned to Jill company successfully!");
+            }
+
+            // Assign all time-off requests without a company to Jill
+            var timeOffRequestsWithoutCompany = await context.TimeOffRequests
+                .Where(t => t.CompanyId == 0)
+                .ToListAsync();
+
+            if (timeOffRequestsWithoutCompany.Any())
+            {
+                Console.WriteLine($"Assigning {timeOffRequestsWithoutCompany.Count} time-off requests to Jill company...");
+                foreach (var request in timeOffRequestsWithoutCompany)
+                {
+                    request.CompanyId = jillCompany.Id;
+                }
+                await context.SaveChangesAsync();
+                Console.WriteLine("Time-off requests assigned to Jill company successfully!");
+            }
+
+            // Handle admin user migration for production
             Console.WriteLine("Checking for admin user...");
             var adminUser = await context.Employees.FirstOrDefaultAsync(e => e.Username == "admin");
+            var alyssaUser = await context.Employees.FirstOrDefaultAsync(e => e.Username == "alyssahe");
 
-            if (adminUser == null)
+            // If admin exists but is a Manager (not SuperAdmin), this is the production Alyssa He
+            // Rename her to alyssahe and create a new SuperAdmin
+            if (adminUser != null && adminUser.Role == backend.Models.Role.Manager && alyssaUser == null)
             {
-                Console.WriteLine("Admin user not found, creating default admin user...");
+                Console.WriteLine("Found existing Manager 'admin' - migrating to 'alyssahe'...");
+
+                // Update the existing admin (Alyssa He) to new username and assign to Jill company
+                adminUser.Username = "alyssahe";
+                adminUser.FirstName = "Alyssa";
+                adminUser.LastName = "He";
+                adminUser.CompanyId = jillCompany.Id; // Assign to Jill company
+                adminUser.UpdatedAt = DateTime.UtcNow;
+
+                Console.WriteLine($"Renamed Manager 'admin' to 'alyssahe' (Alyssa He) and assigned to {jillCompany.ShortName}");
+
+                // Create new SuperAdmin with username 'admin'
+                var utcNow = DateTime.UtcNow;
+                var birthDate = new DateTime(1990, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                var adminPasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123");
+
+                var newSuperAdmin = new backend.Models.Employee
+                {
+                    FirstName = "Admin",
+                    LastName = "User",
+                    Username = "admin",
+                    PasswordHash = adminPasswordHash,
+                    Role = backend.Models.Role.SuperAdmin,
+                    CompanyId = null, // SuperAdmin is not tied to a specific company
+                    HireDate = utcNow,
+                    BirthDate = birthDate,
+                    CreatedAt = utcNow,
+                    UpdatedAt = utcNow
+                };
+
+                context.Employees.Add(newSuperAdmin);
+                await context.SaveChangesAsync();
+
+                Console.WriteLine("New SuperAdmin user 'admin' created successfully!");
+                Console.WriteLine("Login credentials: username='admin', password='Admin123'");
+                Console.WriteLine("Alyssa He can now login with username='alyssahe' and her existing password");
+            }
+            else if (adminUser == null)
+            {
+                // No admin user exists - create default SuperAdmin
+                Console.WriteLine("Admin user not found, creating default SuperAdmin user...");
 
                 var utcNow = DateTime.UtcNow;
                 var birthDate = new DateTime(1990, 1, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -311,7 +447,8 @@ if (app.Environment.IsProduction())
                     LastName = "User",
                     Username = "admin",
                     PasswordHash = adminPasswordHash,
-                    Role = backend.Models.Role.Manager,
+                    Role = backend.Models.Role.SuperAdmin,
+                    CompanyId = null, // SuperAdmin is not tied to a specific company
                     HireDate = utcNow,
                     BirthDate = birthDate,
                     CreatedAt = utcNow,
@@ -321,12 +458,21 @@ if (app.Environment.IsProduction())
                 context.Employees.Add(newAdmin);
                 await context.SaveChangesAsync();
 
-                Console.WriteLine("Default admin user created successfully!");
+                Console.WriteLine("Default SuperAdmin user created successfully!");
                 Console.WriteLine("Login credentials: username='admin', password='Admin123'");
+            }
+            else if (adminUser.Role != backend.Models.Role.SuperAdmin)
+            {
+                // Admin exists but is not SuperAdmin - upgrade them
+                Console.WriteLine("Upgrading existing admin to SuperAdmin...");
+                adminUser.Role = backend.Models.Role.SuperAdmin;
+                adminUser.CompanyId = null; // SuperAdmin is not tied to a specific company
+                await context.SaveChangesAsync();
+                Console.WriteLine("Admin upgraded to SuperAdmin successfully!");
             }
             else
             {
-                Console.WriteLine("Admin user already exists.");
+                Console.WriteLine("Admin user already exists as SuperAdmin.");
             }
         }
         catch (Exception ex)
