@@ -104,6 +104,7 @@ public class EmployeeController : ControllerBase
                 LastName = request.LastName,
                 Username = request.Username,
                 Role = request.Role,
+                CompanyId = request.CompanyId,
                 HireDate = request.HireDate,
                 BirthDate = request.BirthDate
             };

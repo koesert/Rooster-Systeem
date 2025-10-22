@@ -25,6 +25,9 @@ public class CreateEmployeeDto
     [Required(ErrorMessage = "Role is required")]
     public Role Role { get; set; } = Role.Werknemer;
 
+    // CompanyId is required for non-SuperAdmin employees
+    public int? CompanyId { get; set; }
+
     [Required(ErrorMessage = "Hire date is required")]
     public DateTime HireDate { get; set; } = DateTime.UtcNow;
 

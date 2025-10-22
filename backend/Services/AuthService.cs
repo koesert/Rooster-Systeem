@@ -39,7 +39,10 @@ public class AuthService : IAuthService
                 return null;
             }
 
-            var employee = await _employeeService.GetEmployeeByUsernameAsync(username);
+            var employee = await _context.Employees
+                .Include(e => e.Company)
+                .FirstOrDefaultAsync(e => e.Username == username);
+
             if (employee == null)
             {
                 return null;
@@ -69,6 +72,18 @@ public class AuthService : IAuthService
                     CreatedAt = employee.CreatedAt,
                     UpdatedAt = employee.UpdatedAt
                 },
+                Company = employee.Company != null ? new CompanyInfoDto
+                {
+                    Id = employee.Company.Id,
+                    Name = employee.Company.Name,
+                    ShortName = employee.Company.ShortName,
+                    Colors = new CompanyColorsDto
+                    {
+                        Primary = employee.Company.PrimaryColor,
+                        Secondary = employee.Company.SecondaryColor,
+                        Accent = employee.Company.AccentColor
+                    }
+                } : null,
                 ExpiresAt = DateTime.UtcNow.AddMinutes(30)
             };
 
@@ -113,6 +128,7 @@ public class AuthService : IAuthService
             // Find valid, non-revoked, non-expired refresh token
             var token = await _context.RefreshTokens
                 .Include(rt => rt.Employee)
+                    .ThenInclude(e => e.Company)
                 .FirstOrDefaultAsync(rt => rt.Token == refreshToken && !rt.IsRevoked && rt.ExpiresAt > DateTime.UtcNow);
 
             if (token == null)
@@ -146,6 +162,18 @@ public class AuthService : IAuthService
                     CreatedAt = token.Employee.CreatedAt,
                     UpdatedAt = token.Employee.UpdatedAt
                 },
+                Company = token.Employee.Company != null ? new CompanyInfoDto
+                {
+                    Id = token.Employee.Company.Id,
+                    Name = token.Employee.Company.Name,
+                    ShortName = token.Employee.Company.ShortName,
+                    Colors = new CompanyColorsDto
+                    {
+                        Primary = token.Employee.Company.PrimaryColor,
+                        Secondary = token.Employee.Company.SecondaryColor,
+                        Accent = token.Employee.Company.AccentColor
+                    }
+                } : null,
                 ExpiresAt = DateTime.UtcNow.AddMinutes(30)
             };
         }
@@ -166,7 +194,7 @@ public class AuthService : IAuthService
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        var claims = new[]
+        var claimsList = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, employee.Id.ToString()),
             new Claim(ClaimTypes.Name, employee.Username),
@@ -175,6 +203,14 @@ public class AuthService : IAuthService
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64)
         };
+
+        // Add CompanyId claim if employee belongs to a company (not SuperAdmin)
+        if (employee.CompanyId.HasValue)
+        {
+            claimsList.Add(new Claim("CompanyId", employee.CompanyId.Value.ToString()));
+        }
+
+        var claims = claimsList.ToArray();
 
         var token = new JwtSecurityToken(
             issuer: _configuration["JwtSettings:Issuer"],
