@@ -593,3 +593,5 @@ appsettings.Local.json
 *.key
 *.crt
 *.pem
+
+CLAUDE.md

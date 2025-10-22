@@ -527,7 +527,7 @@ export default function HomePage() {
       <main className="layout-main-content overflow-y-auto">
         <div className="max-w-7xl mx-auto">
           {/* Header Section */}
-          <div className="mb-8">
+          <div className="mb-8 hidden-below-500">
             <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8 relative overflow-hidden">
               {/* Decorative background elements */}
               <div
@@ -694,7 +694,7 @@ export default function HomePage() {
                         className="w-full text-sm text-center py-2 px-4 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors cursor-pointer"
                         style={{ color: "#67697c" }}
                       >
-                        Bekijk volledig rooster
+                        Bekijk rooster
                       </button>
                     </div>
                   </div>
@@ -900,6 +900,11 @@ export default function HomePage() {
         }
         .animate-slide-in {
           animation: slide-in 0.5s ease-out;
+        }
+        @media (max-width: 500px) {
+          .hidden-below-500 {
+            display: none;
+          }
         }
       `}</style>
     </div>
