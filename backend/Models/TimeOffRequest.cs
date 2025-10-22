@@ -10,6 +10,9 @@ public class TimeOffRequest
     public int EmployeeId { get; set; }
 
     [Required]
+    public int CompanyId { get; set; }
+
+    [Required]
     public TimeOffStatus Status { get; set; } = TimeOffStatus.Pending;
 
     [Required]
@@ -31,6 +34,7 @@ public class TimeOffRequest
     // Navigation properties
     public Employee Employee { get; set; } = null!;
     public Employee? Approver { get; set; }
+    public Company Company { get; set; } = null!;
 }
 
 public enum TimeOffStatus

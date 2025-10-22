@@ -9,6 +9,9 @@ public class Shift
     [Required(ErrorMessage = "Employee ID is required")]
     public int EmployeeId { get; set; }
 
+    [Required(ErrorMessage = "Company ID is required")]
+    public int CompanyId { get; set; }
+
     [Required(ErrorMessage = "Date is required")]
     public DateTime Date { get; set; }
 
@@ -42,8 +45,9 @@ public class Shift
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
-    // Navigation property
+    // Navigation properties
     public Employee Employee { get; set; } = null!;
+    public Company Company { get; set; } = null!;
 
     /// <summary>
     /// Computed property for display purposes

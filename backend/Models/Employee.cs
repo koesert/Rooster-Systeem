@@ -25,6 +25,9 @@ public class Employee
     [Required(ErrorMessage = "Role is required")]
     public Role Role { get; set; } = Role.Werknemer;
 
+    // CompanyId is nullable for SuperAdmin users who are not tied to a specific company
+    public int? CompanyId { get; set; }
+
     [Required(ErrorMessage = "Hire date is required")]
     public DateTime HireDate { get; set; } = DateTime.UtcNow;
 
@@ -38,4 +41,7 @@ public class Employee
     /// Computed property that combines first and last name for display purposes
     /// </summary>
     public string FullName => $"{FirstName} {LastName}";
+
+    // Navigation property
+    public Company? Company { get; set; }
 }

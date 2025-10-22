@@ -9,6 +9,7 @@ public class ApplicationDbContext : DbContext
 	{
 	}
 
+	public DbSet<Company> Companies { get; set; }
 	public DbSet<Employee> Employees { get; set; }
 	public DbSet<RefreshToken> RefreshTokens { get; set; }
 	public DbSet<Shift> Shifts { get; set; }
@@ -18,6 +19,45 @@ public class ApplicationDbContext : DbContext
 	protected override void OnModelCreating(ModelBuilder modelBuilder)
 	{
 		base.OnModelCreating(modelBuilder);
+
+		// Configure Company entity
+		modelBuilder.Entity<Company>(entity =>
+		{
+			entity.Property(c => c.Name)
+				  .IsRequired()
+				  .HasMaxLength(100);
+
+			entity.Property(c => c.ShortName)
+				  .IsRequired()
+				  .HasMaxLength(20);
+
+			entity.Property(c => c.PrimaryColor)
+				  .IsRequired()
+				  .HasMaxLength(7);
+
+			entity.Property(c => c.SecondaryColor)
+				  .IsRequired()
+				  .HasMaxLength(7);
+
+			entity.Property(c => c.AccentColor)
+				  .IsRequired()
+				  .HasMaxLength(7);
+
+			entity.Property(c => c.CreatedAt)
+				  .HasDefaultValueSql("NOW()");
+
+			entity.Property(c => c.UpdatedAt)
+				  .HasDefaultValueSql("NOW()");
+
+			// Ensure uniqueness
+			entity.HasIndex(c => c.Name)
+				  .IsUnique()
+				  .HasDatabaseName("IX_Companies_Name");
+
+			entity.HasIndex(c => c.ShortName)
+				  .IsUnique()
+				  .HasDatabaseName("IX_Companies_ShortName");
+		});
 
 		// Configure Employee entity
 		modelBuilder.Entity<Employee>(entity =>
@@ -61,6 +101,17 @@ public class ApplicationDbContext : DbContext
 
 			entity.Property(e => e.UpdatedAt)
 				  .HasDefaultValueSql("NOW()");
+
+			// Set up foreign key relationship with Company
+			// CompanyId is nullable for SuperAdmin users
+			entity.HasOne(e => e.Company)
+				  .WithMany(c => c.Employees)
+				  .HasForeignKey(e => e.CompanyId)
+				  .OnDelete(DeleteBehavior.Restrict); // Don't allow company deletion if employees exist
+
+			// Index for company lookups
+			entity.HasIndex(e => e.CompanyId)
+				  .HasDatabaseName("IX_Employees_CompanyId");
 		});
 
 		// Configure RefreshToken entity
@@ -137,6 +188,16 @@ public class ApplicationDbContext : DbContext
 				  .HasForeignKey(s => s.EmployeeId)
 				  .OnDelete(DeleteBehavior.Cascade); // Delete shifts when employee is deleted
 
+			// Set up foreign key relationship with Company
+			entity.HasOne(s => s.Company)
+				  .WithMany()
+				  .HasForeignKey(s => s.CompanyId)
+				  .OnDelete(DeleteBehavior.Cascade); // Delete shifts when company is deleted
+
+			// Indexes for efficient querying
+			entity.HasIndex(s => s.CompanyId)
+				  .HasDatabaseName("IX_Shifts_CompanyId");
+
 			// Indexes for efficient querying
 			entity.HasIndex(s => s.EmployeeId)
 				  .HasDatabaseName("IX_Shifts_EmployeeId");
@@ -156,6 +217,9 @@ public class ApplicationDbContext : DbContext
 
 			entity.HasIndex(s => new { s.EmployeeId, s.Date })
 				  .HasDatabaseName("IX_Shifts_EmployeeId_Date");
+
+			entity.HasIndex(s => new { s.CompanyId, s.Date })
+				  .HasDatabaseName("IX_Shifts_CompanyId_Date");
 		});
 
 		// Configure Availability entity
@@ -188,6 +252,16 @@ public class ApplicationDbContext : DbContext
 				  .HasForeignKey(a => a.EmployeeId)
 				  .OnDelete(DeleteBehavior.Cascade);
 
+			// Set up foreign key relationship with Company
+			entity.HasOne(a => a.Company)
+				  .WithMany()
+				  .HasForeignKey(a => a.CompanyId)
+				  .OnDelete(DeleteBehavior.Cascade);
+
+			// Indexes
+			entity.HasIndex(a => a.CompanyId)
+				  .HasDatabaseName("IX_Availabilities_CompanyId");
+
 			// Indexes
 			entity.HasIndex(a => a.EmployeeId)
 				  .HasDatabaseName("IX_Availabilities_EmployeeId");
@@ -198,6 +272,9 @@ public class ApplicationDbContext : DbContext
 			// Composite index for common queries
 			entity.HasIndex(a => new { a.EmployeeId, a.Date })
 				  .HasDatabaseName("IX_Availabilities_EmployeeId_Date");
+
+			entity.HasIndex(a => new { a.CompanyId, a.Date })
+				  .HasDatabaseName("IX_Availabilities_CompanyId_Date");
 		});
 
 		// Configure TimeOffRequest entity
@@ -239,6 +316,16 @@ public class ApplicationDbContext : DbContext
 				  .HasForeignKey(tor => tor.ApprovedBy)
 				  .OnDelete(DeleteBehavior.SetNull);
 
+			// Set up foreign key relationship with Company
+			entity.HasOne(tor => tor.Company)
+				  .WithMany()
+				  .HasForeignKey(tor => tor.CompanyId)
+				  .OnDelete(DeleteBehavior.Cascade);
+
+			// Indexes
+			entity.HasIndex(tor => tor.CompanyId)
+				  .HasDatabaseName("IX_TimeOffRequests_CompanyId");
+
 			// Indexes
 			entity.HasIndex(tor => tor.EmployeeId)
 				  .HasDatabaseName("IX_TimeOffRequests_EmployeeId");
@@ -252,6 +339,9 @@ public class ApplicationDbContext : DbContext
 
 			entity.HasIndex(tor => new { tor.StartDate, tor.EndDate })
 				  .HasDatabaseName("IX_TimeOffRequests_Dates");
+
+			entity.HasIndex(tor => new { tor.CompanyId, tor.Status })
+				  .HasDatabaseName("IX_TimeOffRequests_CompanyId_Status");
 		});
 	}
 }
