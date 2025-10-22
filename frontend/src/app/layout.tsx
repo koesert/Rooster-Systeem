@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ModalProvider } from "@/contexts/ModalContext";
 import { ErrorProvider } from "@/contexts/ErrorContext";
 import Modal from "@/components/Modal";
@@ -32,12 +33,14 @@ export default function RootLayout({
     <html lang="nl">
       <body className={inter.className}>
         <AuthProvider>
-          <ModalProvider>
-            <ErrorProvider>
-              {children}
-              <Modal />
-            </ErrorProvider>
-          </ModalProvider>
+          <ThemeProvider>
+            <ModalProvider>
+              <ErrorProvider>
+                {children}
+                <Modal />
+              </ErrorProvider>
+            </ModalProvider>
+          </ThemeProvider>
         </AuthProvider>
       </body>
     </html>

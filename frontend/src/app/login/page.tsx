@@ -7,6 +7,7 @@ import { useError } from "@/contexts/ErrorContext";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useValidation, ValidationConfigs } from "@/hooks/useValidation";
 import LoadingScreen from "@/components/LoadingScreen";
+import { DEFAULT_THEME } from "@/config/theme";
 import { User, Lock, LogIn, Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
@@ -90,15 +91,15 @@ export default function LoginPage() {
       <div className="absolute inset-0 overflow-hidden">
         <div
           className="absolute -top-40 -right-40 w-80 h-80 rounded-full blur-3xl opacity-20"
-          style={{ background: "linear-gradient(135deg, #3b82f6, #e0e7ff)" }}
+          style={{ background: `linear-gradient(135deg, ${DEFAULT_THEME.primary}, #e0e7ff)` }}
         ></div>
         <div
           className="absolute -bottom-40 -left-40 w-80 h-80 rounded-full blur-3xl opacity-15"
-          style={{ background: "linear-gradient(45deg, #6366f1, #64748b)" }}
+          style={{ background: `linear-gradient(45deg, ${DEFAULT_THEME.secondary}, #64748b)` }}
         ></div>
         <div
           className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-60 h-60 rounded-full blur-2xl opacity-10"
-          style={{ background: "linear-gradient(135deg, #3b82f6, #e0e7ff)" }}
+          style={{ background: `linear-gradient(135deg, ${DEFAULT_THEME.primary}, #e0e7ff)` }}
         ></div>
       </div>
 
@@ -108,8 +109,8 @@ export default function LoginPage() {
           <div
             className="mx-auto h-20 w-20 rounded-2xl flex items-center justify-center mb-6 shadow-lg"
             style={{
-              background: "linear-gradient(135deg, #3b82f6, #2563eb)",
-              boxShadow: "0 10px 25px rgba(59, 130, 246, 0.25)",
+              background: `linear-gradient(135deg, ${DEFAULT_THEME.primary}, ${DEFAULT_THEME.secondary})`,
+              boxShadow: `0 10px 25px ${DEFAULT_THEME.primary}40`,
             }}
           >
             <User className="h-10 w-10 text-white" />
@@ -122,7 +123,7 @@ export default function LoginPage() {
               WebkitTextFillColor: "transparent",
             }}
           >
-            Werknemers Dashboard
+            Dashboard
           </h2>
           <p className="mt-3 font-medium" style={{ color: "#64748b" }}>
             Log in om je dashboard te bekijken
@@ -178,8 +179,8 @@ export default function LoginPage() {
                       if (!fieldErrors.username) {
                         const target = e.target as HTMLInputElement;
                         target.style.boxShadow =
-                          "0 0 0 2px rgba(59, 130, 246, 0.5), 0 10px 25px rgba(59, 130, 246, 0.15)";
-                        target.style.borderColor = "#3b82f6";
+                          `0 0 0 2px ${DEFAULT_THEME.primary}80, 0 10px 25px ${DEFAULT_THEME.primary}26`;
+                        target.style.borderColor = DEFAULT_THEME.primary;
                       }
                     }}
                     onBlur={(e) => {
@@ -238,8 +239,8 @@ export default function LoginPage() {
                       if (!fieldErrors.password) {
                         const target = e.target as HTMLInputElement;
                         target.style.boxShadow =
-                          "0 0 0 2px rgba(59, 130, 246, 0.5), 0 10px 25px rgba(59, 130, 246, 0.15)";
-                        target.style.borderColor = "#3b82f6";
+                          `0 0 0 2px ${DEFAULT_THEME.primary}80, 0 10px 25px ${DEFAULT_THEME.primary}26`;
+                        target.style.borderColor = DEFAULT_THEME.primary;
                       }
                     }}
                     onBlur={(e) => {
@@ -285,25 +286,25 @@ export default function LoginPage() {
                 disabled={isSubmitting}
                 className="group relative w-full flex items-center justify-center py-3.5 px-4 border border-transparent text-sm font-semibold rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:-translate-y-0.5 cursor-pointer"
                 style={{
-                  background: "linear-gradient(135deg, #3b82f6, #2563eb)",
-                  boxShadow: "0 10px 25px rgba(59, 130, 246, 0.25)",
+                  background: `linear-gradient(135deg, ${DEFAULT_THEME.primary}, ${DEFAULT_THEME.secondary})`,
+                  boxShadow: `0 10px 25px ${DEFAULT_THEME.primary}40`,
                 }}
                 onMouseEnter={(e) => {
                   if (!isSubmitting) {
                     const target = e.target as HTMLButtonElement;
                     target.style.boxShadow =
-                      "0 15px 35px rgba(59, 130, 246, 0.35)";
+                      `0 15px 35px ${DEFAULT_THEME.primary}59`;
                     target.style.background =
-                      "linear-gradient(135deg, #2563eb, #1d4ed8)";
+                      `linear-gradient(135deg, ${DEFAULT_THEME.secondary}, ${DEFAULT_THEME.accent})`;
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!isSubmitting) {
                     const target = e.target as HTMLButtonElement;
                     target.style.boxShadow =
-                      "0 10px 25px rgba(59, 130, 246, 0.25)";
+                      `0 10px 25px ${DEFAULT_THEME.primary}40`;
                     target.style.background =
-                      "linear-gradient(135deg, #3b82f6, #2563eb)";
+                      `linear-gradient(135deg, ${DEFAULT_THEME.primary}, ${DEFAULT_THEME.secondary})`;
                   }
                 }}
               >
