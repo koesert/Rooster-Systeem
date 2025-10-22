@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { Employee, AuthContextType, Role } from "@/types/auth";
+import { Employee, AuthContextType, Role, CompanyInfo } from "@/types/auth";
 import * as api from "@/lib/api";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -18,6 +18,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [user, setUser] = useState<Employee | null>(null);
+  const [company, setCompany] = useState<CompanyInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [justLoggedIn, setJustLoggedIn] = useState(false);
 
@@ -33,8 +34,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             // Note: We would need a /me endpoint to get current user info
             // For now, we'll handle this differently by storing user data
             const userData = localStorage.getItem("userData");
+            const companyData = localStorage.getItem("companyData");
             if (userData) {
               setUser(JSON.parse(userData));
+            }
+            if (companyData) {
+              setCompany(JSON.parse(companyData));
             }
 
             // Check if user just logged in (only show notification once)
@@ -64,10 +69,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setIsLoading(true);
       const response = await api.login({ username, password });
       setUser(response.user);
+      setCompany(response.company);
       setJustLoggedIn(true);
 
-      // Store user data for session persistence
+      // Store user and company data for session persistence
       localStorage.setItem("userData", JSON.stringify(response.user));
+      if (response.company) {
+        localStorage.setItem("companyData", JSON.stringify(response.company));
+      }
       // Store justLoggedIn state to show notification only once
       localStorage.setItem("justLoggedIn", "true");
 
@@ -100,8 +109,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       console.error("Logout error:", error);
     } finally {
       setUser(null);
+      setCompany(null);
       setJustLoggedIn(false);
       localStorage.removeItem("userData");
+      localStorage.removeItem("companyData");
       localStorage.removeItem("justLoggedIn");
       // Redirect to login page
       window.location.href = "/login";
@@ -133,6 +144,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   // Role-based helper methods
+  const isSuperAdmin = (): boolean => {
+    return user?.role === Role.SuperAdmin;
+  };
+
   const isManager = (): boolean => {
     return user?.role === Role.Manager;
   };
@@ -143,6 +158,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const hasAccess = (requiredRole: Role): boolean => {
     if (!user) return false;
+    // SuperAdmin has access to everything
+    if (user.role === Role.SuperAdmin) return true;
     // Only managers have access to employee management
     if (requiredRole === Role.Manager) {
       return user.role === Role.Manager;
@@ -152,6 +169,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const getRoleName = (role: Role): string => {
     switch (role) {
+      case Role.SuperAdmin:
+        return "Super Admin";
       case Role.Manager:
         return "Manager";
       case Role.ShiftLeider:
@@ -165,12 +184,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const value = {
     user,
+    company,
     login,
     logout,
     isLoading,
     justLoggedIn,
     clearJustLoggedIn,
     refreshUserData,
+    isSuperAdmin,
     isManager,
     isManagerOrShiftLeider,
     hasAccess,

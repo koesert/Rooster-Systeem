@@ -90,15 +90,15 @@ export default function LoginPage() {
       <div className="absolute inset-0 overflow-hidden">
         <div
           className="absolute -top-40 -right-40 w-80 h-80 rounded-full blur-3xl opacity-20"
-          style={{ background: "linear-gradient(135deg, #d5896f, #e8eef2)" }}
+          style={{ background: "linear-gradient(135deg, #3b82f6, #e0e7ff)" }}
         ></div>
         <div
           className="absolute -bottom-40 -left-40 w-80 h-80 rounded-full blur-3xl opacity-15"
-          style={{ background: "linear-gradient(45deg, #d5896f, #67697c)" }}
+          style={{ background: "linear-gradient(45deg, #6366f1, #64748b)" }}
         ></div>
         <div
           className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-60 h-60 rounded-full blur-2xl opacity-10"
-          style={{ background: "linear-gradient(135deg, #d5896f, #e8eef2)" }}
+          style={{ background: "linear-gradient(135deg, #3b82f6, #e0e7ff)" }}
         ></div>
       </div>
 
@@ -108,8 +108,8 @@ export default function LoginPage() {
           <div
             className="mx-auto h-20 w-20 rounded-2xl flex items-center justify-center mb-6 shadow-lg"
             style={{
-              background: "linear-gradient(135deg, #d5896f, #d5896f90)",
-              boxShadow: "0 10px 25px rgba(213, 137, 111, 0.25)",
+              background: "linear-gradient(135deg, #3b82f6, #2563eb)",
+              boxShadow: "0 10px 25px rgba(59, 130, 246, 0.25)",
             }}
           >
             <User className="h-10 w-10 text-white" />
@@ -117,14 +117,14 @@ export default function LoginPage() {
           <h2
             className="text-3xl font-bold"
             style={{
-              background: "linear-gradient(135deg, #120309, #67697c)",
+              background: "linear-gradient(135deg, #1e293b, #475569)",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
             }}
           >
-            Jill Dashboard
+            Werknemers Dashboard
           </h2>
-          <p className="mt-3 font-medium" style={{ color: "#67697c" }}>
+          <p className="mt-3 font-medium" style={{ color: "#64748b" }}>
             Log in om je dashboard te bekijken
           </p>
         </div>
@@ -178,8 +178,8 @@ export default function LoginPage() {
                       if (!fieldErrors.username) {
                         const target = e.target as HTMLInputElement;
                         target.style.boxShadow =
-                          "0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)";
-                        target.style.borderColor = "#d5896f";
+                          "0 0 0 2px rgba(59, 130, 246, 0.5), 0 10px 25px rgba(59, 130, 246, 0.15)";
+                        target.style.borderColor = "#3b82f6";
                       }
                     }}
                     onBlur={(e) => {
@@ -238,8 +238,8 @@ export default function LoginPage() {
                       if (!fieldErrors.password) {
                         const target = e.target as HTMLInputElement;
                         target.style.boxShadow =
-                          "0 0 0 2px rgba(213, 137, 111, 0.5), 0 10px 25px rgba(213, 137, 111, 0.15)";
-                        target.style.borderColor = "#d5896f";
+                          "0 0 0 2px rgba(59, 130, 246, 0.5), 0 10px 25px rgba(59, 130, 246, 0.15)";
+                        target.style.borderColor = "#3b82f6";
                       }
                     }}
                     onBlur={(e) => {
@@ -285,25 +285,25 @@ export default function LoginPage() {
                 disabled={isSubmitting}
                 className="group relative w-full flex items-center justify-center py-3.5 px-4 border border-transparent text-sm font-semibold rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:-translate-y-0.5 cursor-pointer"
                 style={{
-                  background: "linear-gradient(135deg, #d5896f, #d5896f90)",
-                  boxShadow: "0 10px 25px rgba(213, 137, 111, 0.25)",
+                  background: "linear-gradient(135deg, #3b82f6, #2563eb)",
+                  boxShadow: "0 10px 25px rgba(59, 130, 246, 0.25)",
                 }}
                 onMouseEnter={(e) => {
                   if (!isSubmitting) {
                     const target = e.target as HTMLButtonElement;
                     target.style.boxShadow =
-                      "0 15px 35px rgba(213, 137, 111, 0.35)";
+                      "0 15px 35px rgba(59, 130, 246, 0.35)";
                     target.style.background =
-                      "linear-gradient(135deg, #c17c5e, #d5896f)";
+                      "linear-gradient(135deg, #2563eb, #1d4ed8)";
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!isSubmitting) {
                     const target = e.target as HTMLButtonElement;
                     target.style.boxShadow =
-                      "0 10px 25px rgba(213, 137, 111, 0.25)";
+                      "0 10px 25px rgba(59, 130, 246, 0.25)";
                     target.style.background =
-                      "linear-gradient(135deg, #d5896f, #d5896f90)";
+                      "linear-gradient(135deg, #3b82f6, #2563eb)";
                   }
                 }}
               >

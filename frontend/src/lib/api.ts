@@ -6,6 +6,11 @@ import {
   UpdateEmployeeRequest,
 } from "@/types/auth";
 import {
+  Company,
+  CreateCompanyRequest,
+  UpdateCompanyRequest,
+} from "@/types/company";
+import {
   Shift,
   CreateShiftRequest,
   UpdateShiftRequest,
@@ -213,8 +218,11 @@ export const refreshAccessToken = async (): Promise<boolean> => {
       setAccessToken(data.accessToken);
       setRefreshToken(data.refreshToken);
 
-      // Update stored user data
+      // Update stored user and company data
       localStorage.setItem("userData", JSON.stringify(data.user));
+      if (data.company) {
+        localStorage.setItem("companyData", JSON.stringify(data.company));
+      }
 
       return true;
     }
@@ -696,4 +704,60 @@ export const updateTimeOffRequestAsManager = async (
     options
   );
   return convertTimeOffRequest(apiResponse);
+};
+
+// Company API functions
+export const getAllCompanies = async (
+  options: ApiCallOptions = {}
+): Promise<Company[]> => {
+  return apiRequest("/company", {}, options);
+};
+
+export const getCompany = async (
+  id: number,
+  options: ApiCallOptions = {}
+): Promise<Company> => {
+  return apiRequest(`/company/${id}`, {}, options);
+};
+
+export const createCompany = async (
+  companyData: CreateCompanyRequest,
+  options: ApiCallOptions = {}
+): Promise<Company> => {
+  return apiRequest(
+    "/company",
+    {
+      method: "POST",
+      body: JSON.stringify(companyData),
+    },
+    options
+  );
+};
+
+export const updateCompany = async (
+  id: number,
+  companyData: UpdateCompanyRequest,
+  options: ApiCallOptions = {}
+): Promise<Company> => {
+  return apiRequest(
+    `/company/${id}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(companyData),
+    },
+    options
+  );
+};
+
+export const deleteCompany = async (
+  id: number,
+  options: ApiCallOptions = {}
+): Promise<void> => {
+  return apiRequest(
+    `/company/${id}`,
+    {
+      method: "DELETE",
+    },
+    options
+  );
 };
