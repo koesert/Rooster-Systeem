@@ -190,7 +190,7 @@ export default function Sidebar() {
           }}
           onClick={() => router.push("/home")}
         >
-          <h1 className="text-lg font-bold text-white">Jill Dashboard</h1>
+          <h1 className="text-lg font-bold text-white">Dashboard</h1>
         </div>
 
         {/* Spacer to center logo */}
@@ -241,7 +241,7 @@ export default function Sidebar() {
               }}
               onClick={() => router.push("/home")}
             >
-              <h1 className="text-xl font-bold text-white">Jill Dashboard</h1>
+              <h1 className="text-xl font-bold text-white">Dashboard</h1>
             </div>
             {/* Close button - only visible on mobile when menu is open */}
             <button
